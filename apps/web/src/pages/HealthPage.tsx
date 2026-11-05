@@ -96,6 +96,7 @@ export const HealthPage: React.FC = () => {
           <LoadingState />
         ) : isError ? (
           <ErrorState
+            title="Failed to load system status"
             message={error instanceof Error ? error.message : 'Unable to reach API server'}
             onRetry={() => refetch()}
           />

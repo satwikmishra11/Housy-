@@ -6,7 +6,7 @@ import { Input } from '../components/Input.js';
 import { Select } from '../components/Select.js';
 import { Textarea } from '../components/Textarea.js';
 import { Checkbox } from '../components/Checkbox.js';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/Card.js';
+import { Card } from '../components/Card.js';
 import { Badge } from '../components/Badge.js';
 import { Tabs } from '../components/Tabs.js';
 import { Modal } from '../components/Modal.js';
@@ -23,12 +23,9 @@ import {
   Sparkles,
   ArrowRight,
   Phone,
-  Search,
   CheckCircle,
-  Plus,
   Layout,
   MessageSquare,
-  Clock,
   Layers,
 } from 'lucide-react';
 
