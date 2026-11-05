@@ -193,6 +193,15 @@ describe('Dashboard Shared Schemas & Formatting Utilities', () => {
       const parsed = SalesDashboardDataSchema.parse(sample);
       expect(parsed.summary.totalLeads).toBe(57);
       expect(parsed.funnel).toHaveLength(2);
+
+      const kpiParsed = SalesKpiSummarySchema.parse(sample.summary);
+      expect(kpiParsed.totalLeads).toBe(57);
+
+      const sourceParsed = SourceMetricItemSchema.parse(sample.bySource[0]);
+      expect(sourceParsed.source).toBe('property_portal');
+
+      const funnelParsed = FunnelStageItemSchema.parse(sample.funnel[0]);
+      expect(funnelParsed.stage).toBe('leads');
     });
   });
 });
