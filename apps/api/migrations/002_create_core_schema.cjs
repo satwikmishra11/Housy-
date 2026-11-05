@@ -345,3 +345,4 @@ exports.down = (pgm) => {
     DROP TYPE IF EXISTS user_role CASCADE;
   `);
 };
+
