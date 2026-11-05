@@ -569,6 +569,75 @@ The Buyer Chat interface (`apps/web/src/pages/BuyerChatPage.tsx`) provides a mob
   - Network interruptions or upstream failures trigger in-stream fallback messaging reassuring the buyer of human executive follow-up, keeping response SLA under 2 minutes.
 - **Regulatory Footing**: Persistent footer displaying project GujRERA registration number (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP compliance notice.
 
+---
+
+## Phase 8: Human Workflow, Flagged Chat Review, DPDP 2023 Consent & Messaging Engine
+
+### 1. Human Handoff Workflow (`createHandoff`)
+The human handoff subsystem coordinates the transition from automated AI assistance to human sales consultation:
+- **Trigger Mechanisms**:
+  - `request_human`: Direct escalation from the buyer or deterministic pre-filter.
+  - `visit_booked`: Automated handoff when a site visit appointment is confirmed.
+  - `serious_intent`: Explicit interest with budget range and BHK preference captured.
+  - `flagged_conversation`: Flagged security, policy, or unanswered query escalations.
+- **Executive Assignment Engine**:
+  - Preferred host assignment: When a confirmed visit exists, assigns the executive who owns the booked slot.
+  - Least-loaded fallback: In the absence of a booked slot, assigns the active executive with the fewest open leads (`leads.status NOT IN ('visited', 'lost')`).
+- **Multilingual Buyer Notification**:
+  - Immediately notifies the buyer in their language:
+    - English: `<Executive name> from our sales team will contact you. I have connected you with our sales team.`
+    - Hindi: `<Executive name> हमारी सेल्स टीम से जल्द ही आपसे संपर्क करेंगे। मैंने आपकी बात हमारी सेल्स टीम से जोड़ दी है।`
+    - Gujarati: `<Executive name> અમારી સેલ્સ ટીમમાંથી ટૂંક સમયમાં તમારો સંપર્ક કરશે. મેં તમને અમારી સેલ્સ ટીમ સાથે જોડી દીધા છે.`
+- **Strict JSON Summary & Deterministic Fallback**:
+  - Summary structure conforming to `HandoffSummarySchema` (`name`, `phone`, `language`, `project`, `wants`, `budgetRange`, `timeline`, `keyQuestionsAsked`, `openQuestions`, `visitTime`, `sentiment`).
+  - Generated via active LLM provider; on model timeout, API failure, or schema invalidation, automatically uses a profile-derived deterministic template fallback so handoffs never fail.
+- **Executive Inbox & Live Conversation Takeover**:
+  - Inbox view at `/handoffs` with summary cards, sentiment badges, transcript viewer, and call/WhatsApp links (`tel:` and `wa.me`).
+  - Executive thread reply (`POST /api/handoffs/:id/message`) transitions `conversations.status = 'human'`, pausing the AI assistant.
+  - The buyer chat interface polls `/api/chat/history` every 5 seconds when in human mode to display executive messages in real-time.
+
+### 2. Flagged Chat Daily Review Queue (Sales Head)
+- **Review Queue Endpoint**: `GET /api/admin/flagged-chats` and `POST /api/admin/flagged-chats/:id/review` (restricted to `sales_head`).
+- **Dashboard Banner**: Prominent count indicator `"N flagged chats to review today"` tracking pending audits.
+- **Filter by Reason**: Immediate filtering by flag reason (`price_ask`, `human_requested`, `missing_fact`, `banned_claim`, `low_confidence`).
+- **Citation Inspection**: Full conversational transcript viewer highlighting cited fact IDs (e.g. `[F12]`).
+- **Audit Trails**: Recording reviewer ID, timestamp, and audit notes. "Convert to Fact" action pre-routes to the Fact Sheet Editor (`/fact-sheet`) to patch knowledge gaps.
+
+### 3. DPDP Act 2023 Consent & Immediate Opt-Out
+- **Compliance Matrix (`canContact`)**:
+  - Pure function evaluating `consent_status === 'granted'` and `opted_out_at === null`.
+  - Enforced across all communication pipelines (first response links, promotional dispatches, visit reminders).
+- **Opt-Out Pathways**:
+  - Conversational keyword: `STOP`, `unsubscribe`, or natural language opt-out caught by `opt_out` pre-filter.
+  - Self-service portal: "Opt out of updates" button on the visit management page (`/visit/:token`).
+  - Staff administrative action: Staff opt-out action (`POST /api/leads/:id/opt-out`).
+- **Immediate Cancellation**:
+  - Opting out sets `leads.opted_out_at = NOW()`, updates `consent_status = 'withdrawn'`, logs negative consent in `consents`, and immediately marks all pending visit reminders for the lead as `cancelled`.
+
+### 4. WhatsApp Channel Rules & Outbox Logging
+- **Channel Architecture**: `OutboxChannelAdapter` writing to the `outbound_messages` table.
+- **Approved Template Registry**:
+  - `visit_confirmation`: Appointment time in IST, host executive, location pin, and RERA number.
+  - `reminder_24h` & `reminder_2h`: Timed visit reminders with management link.
+  - `first_response_link`: Welcome message, brochure link, and opt-out notice.
+- **Template-Only WhatsApp Enforcement**: Free-form text dispatches over WhatsApp are strictly rejected with `ValidationError`.
+- **Statutory RERA Inclusion**: Every promotional, reminder, and transactional body prominently includes the project GujRERA registration number (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`).
+- **Outbox Audit View**: Staff screen at `/outbox` tracking recipient, channel, template key, rendered body, dispatch status, and IST timestamps.
+
+### 5. Reminder Background Worker & Concurrency Control
+- **Worker Execution**: `ReminderService.processDueReminders()` runs periodically and on internal cron triggers.
+- **Concurrency Safety**: Claims due reminders (`scheduled_at <= NOW()`, status `pending`) using `SELECT ... FOR UPDATE SKIP LOCKED`.
+- **Pre-Dispatch Checks**: Re-verifies that the associated booking is still `confirmed` and `canContact` is true.
+- **Retry Policy**: Retries failed dispatches up to 3 attempts with exponential backoff before marking status `failed`.
+- **Internal Cron Endpoint**: Authenticated `POST /api/internal/run-reminders` accepting `X-Internal-Key` or staff JWT for external serverless cron triggers (e.g., GitHub Actions, Cloud Scheduler).
+
+### 6. Interactive Demo Controls (`/demo`)
+- **Dashboard**: Available at `/demo` for sales head users when `DEMO_MODE=true`.
+- **Multi-Source Ingestion Simulation**: Simulates incoming leads from 9 marketing channels (`social_ad`, `portal_housing`, `portal_99acres`, `portal_magicbricks`, `qr_outdoor`, `qr_print`, `hoarding_call`, `website`, `walk_in`) with custom name, phone, and wants.
+- **Time Fast-Forwarding**: `POST /api/demo/fast-forward-reminders` shifts pending reminders into the past (NOW - 5 minutes), simulating the passage of 24h/2h intervals.
+- **On-Demand Worker Execution**: `POST /api/demo/run-reminders` triggers worker processing immediately, rendering processed/sent/failed outcome statistics.
+
+
 
 
 
