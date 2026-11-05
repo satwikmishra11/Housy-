@@ -46,3 +46,15 @@ export function formatDateInKolkata(utcIsoString: string | Date): string {
   });
 }
 
+export function formatDayDisplay(dateStr: string): { dayName: string; dayNumber: string; monthName: string } {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 6, 0, 0));
+    const dayName = new Intl.DateTimeFormat('en-IN', { timeZone: IST_TIMEZONE, weekday: 'short' }).format(d);
+    const dayNumber = new Intl.DateTimeFormat('en-IN', { timeZone: IST_TIMEZONE, day: 'numeric' }).format(d);
+    const monthName = new Intl.DateTimeFormat('en-IN', { timeZone: IST_TIMEZONE, month: 'short' }).format(d);
+    return { dayName, dayNumber, monthName };
+  }
+  return { dayName: '', dayNumber: '', monthName: '' };
+}
+
