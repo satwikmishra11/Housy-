@@ -14,4 +14,9 @@ This document records all architectural and product assumptions made during the 
 - **A10**: The serif font family chosen for headings is Cormorant Garamond, self-hosted via `@fontsource/cormorant-garamond`, paired with `@fontsource/inter`, `@fontsource/noto-sans-devanagari`, and `@fontsource/noto-sans-gujarati`.
 - **A11**: The `/styleguide` route is accessible in development and preview environments to showcase all design system tokens, states, layouts, and components.
 - **A12**: Buyer-facing i18n namespace covers English (`en`), Hindi (`hi`), and Gujarati (`gu`) with default language initialized to English and stored in localStorage.
+- **A13**: Fictional developer staff (Sales Head Harshil Mehta, 5 executives) and RERA numbers (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126` and `PR/GJ/AHMEDABAD/AUDA/RAA05678/011126`) are demo placeholders for Ahmedabad.
+- **A14**: All fact entries (pricing ranges ₹65L–₹85L for 2 BHK, ₹95L–₹1.2Cr for 3 BHK, possession Dec 2026/Mar 2027, amenities, bank loan approvals, and parking specifications) are simulated data for evaluation and testing.
+- **A15**: Seed script generates deterministic pseudo-random sequences using a linear congruential generator (LCG) with a fixed seed to guarantee idempotent database resets.
+- **A16**: Hardik Patel's visit (LD-58210) was booked for 2026-11-01 11:00 IST (in the past relative to current date 2026-11-05), and is recorded in `visit_bookings` with status `'confirmed'` and flagged as awaiting outcome.
+
 
