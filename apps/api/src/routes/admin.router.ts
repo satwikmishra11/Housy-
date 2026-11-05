@@ -17,6 +17,7 @@ import {
   UnansweredQuestionStatusSchema,
   type FactStatus,
   type UnansweredQuestionStatus,
+  MarkFlaggedReviewedPayloadSchema,
 } from '@housy/shared';
 
 export const adminRouter = Router();
@@ -29,6 +30,7 @@ adminRouter.use('/availability-rules', ...requireSalesHead);
 adminRouter.use('/blackout-dates', ...requireSalesHead);
 adminRouter.use('/admin/slots', ...requireSalesHead);
 adminRouter.use('/admin/executives', ...requireSalesHead);
+adminRouter.use('/admin/flagged-chats', ...requireSalesHead);
 adminRouter.use('/ad-spend', ...requireSalesHead);
 
 const UuidParamSchema = z.object({
@@ -517,3 +519,188 @@ adminRouter.get(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// Flagged Chat Review Endpoints (Sales Head)
+// ---------------------------------------------------------------------------
+
+import type { QueryResultRow } from 'pg';
+
+interface DbFlaggedChatRow extends QueryResultRow {
+  id: string;
+  lead_id: string;
+  lead_public_id: string;
+  lead_name: string;
+  lead_phone: string | null;
+  source: string;
+  language: string;
+  flagged: boolean;
+  flag_reasons: string[];
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: string;
+}
+
+/**
+ * GET /api/admin/flagged-chats
+ * List flagged chats for sales head daily review queue.
+ */
+adminRouter.get(
+  '/admin/flagged-chats',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const reason = req.query['reason'] as string | undefined;
+      const status = req.query['status'] as string | undefined;
+
+      // Count unreviewed flagged chats for banner
+      const countRes = await query<{ count: string }>(
+        `SELECT COUNT(*)::text as count
+         FROM conversations
+         WHERE flagged = true AND reviewed_at IS NULL`,
+      );
+      const unreviewedCount = parseInt(countRes.rows[0]?.count ?? '0', 10);
+
+      const rowsRes = await query<DbFlaggedChatRow>(
+        `SELECT c.id, c.lead_id, l.public_id AS lead_public_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
+                l.source, c.language, c.flagged, c.flag_reasons,
+                c.reviewed_by, u.name AS reviewed_by_name,
+                c.reviewed_at::text, c.review_note,
+                c.created_at::text, c.updated_at::text,
+                (SELECT COUNT(*)::text FROM messages m WHERE m.conversation_id = c.id) AS message_count
+         FROM conversations c
+         JOIN leads l ON c.lead_id = l.id
+         LEFT JOIN users u ON c.reviewed_by = u.id
+         WHERE c.flagged = true
+           AND ($1::text IS NULL OR $1 = ANY(c.flag_reasons))
+           AND (
+             $2::text IS NULL
+             OR ($2 = 'unreviewed' AND c.reviewed_at IS NULL)
+             OR ($2 = 'reviewed' AND c.reviewed_at IS NOT NULL)
+           )
+         ORDER BY (c.reviewed_at IS NULL) DESC, c.created_at DESC`,
+        [reason ?? null, status ?? null],
+      );
+
+      const data = rowsRes.rows.map((r) => ({
+        id: r.id,
+        leadId: r.lead_id,
+        leadPublicId: r.lead_public_id,
+        leadName: r.lead_name,
+        leadPhone: r.lead_phone,
+        source: r.source,
+        language: r.language,
+        flagged: r.flagged,
+        flagReasons: r.flag_reasons,
+        reviewedBy: r.reviewed_by,
+        reviewedByName: r.reviewed_by_name,
+        reviewedAt: r.reviewed_at,
+        reviewNote: r.review_note,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        messageCount: parseInt(r.message_count, 10),
+      }));
+
+      res.status(200).json({
+        success: true,
+        data,
+        unreviewedCount,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /api/admin/flagged-chats/:id/transcript
+ * Returns transcript with cited facts resolved.
+ */
+adminRouter.get(
+  '/admin/flagged-chats/:id/transcript',
+  validateRequest({ params: UuidParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const conversationId = req.params['id'] as string;
+      const msgsRes = await query<{
+        id: string;
+        role: string;
+        content: string;
+        cited_fact_ids: string[];
+        meta: Record<string, unknown>;
+        created_at: string;
+      }>(
+        `SELECT id, role, content, cited_fact_ids, meta, created_at::text
+         FROM messages
+         WHERE conversation_id = $1
+         ORDER BY created_at ASC`,
+        [conversationId],
+      );
+
+      // Collect cited facts
+      const citedFactIds = Array.from(
+        new Set(msgsRes.rows.flatMap((m) => m.cited_fact_ids || [])),
+      );
+
+      const factsMap: Record<string, { id: string; key: string; title: string; value: string }> = {};
+      if (citedFactIds.length > 0) {
+        const factsRes = await query<{ id: string; key: string; title: string; value: string }>(
+          `SELECT id, key, title, value FROM fact_entries WHERE id = ANY($1::uuid[])`,
+          [citedFactIds],
+        );
+        for (const f of factsRes.rows) {
+          factsMap[f.id] = f;
+        }
+      }
+
+      const messages = msgsRes.rows.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.created_at,
+        meta: m.meta,
+        citedFacts: (m.cited_fact_ids || []).map((fid) => factsMap[fid] || { id: fid, key: '', title: 'Fact', value: '' }),
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: messages,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /api/admin/flagged-chats/:id/review
+ * Marks a flagged conversation reviewed with a note.
+ */
+adminRouter.post(
+  '/admin/flagged-chats/:id/review',
+  validateRequest({ params: UuidParamSchema, body: MarkFlaggedReviewedPayloadSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const conversationId = req.params['id'] as string;
+      const { note } = req.body;
+
+      await query(
+        `UPDATE conversations
+         SET reviewed_by = $1, reviewed_at = NOW(), review_note = $2, updated_at = NOW()
+         WHERE id = $3`,
+        [req.user!.id, note, conversationId],
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Flagged chat marked as reviewed',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+

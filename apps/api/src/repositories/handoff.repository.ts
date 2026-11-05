@@ -1,4 +1,4 @@
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 import { query } from '../db/index.js';
 import type { HandoffSummary, HandoffStatus, HandoffItem } from '@housy/shared';
 
@@ -8,7 +8,7 @@ export interface DbExecutiveAssignment {
   phone: string | null;
 }
 
-export interface DbHandoffRow {
+export interface DbHandoffRow extends QueryResultRow {
   id: string;
   lead_id: string;
   lead_public_id: string;

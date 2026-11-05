@@ -20,7 +20,7 @@ export const OutboxMessageSchema = z.object({
   sentAt: z.string().datetime().nullable().optional(),
 });
 
-export type OutboxMessage = z.infer<typeof OutboxMessageSchema>;
+export type OutboxMessage = z.input<typeof OutboxMessageSchema>;
 
 export interface ChannelSender {
   channel: ChannelType;

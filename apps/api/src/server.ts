@@ -3,6 +3,7 @@ import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { closePool } from './db/index.js';
 import { runSlotGeneration } from './jobs/slot-generator.job.js';
+import { reminderJob } from './jobs/reminder.job.js';
 import { slotRepository } from './repositories/slot.repository.js';
 
 const server = app.listen(config.PORT, () => {
@@ -20,6 +21,14 @@ const server = app.listen(config.PORT, () => {
     runSlotGeneration(slotRepository, 21).catch((err) => {
       logger.warn({ err }, 'Initial slot generation skipped/failed on startup');
     });
+
+    // Run reminder worker every minute
+    const reminderInterval = setInterval(() => {
+      reminderJob.execute().catch((err) => {
+        logger.warn({ err }, 'Periodic reminder job execution error');
+      });
+    }, 60 * 1000);
+    reminderInterval.unref();
   }
 });
 

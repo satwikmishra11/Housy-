@@ -16,7 +16,9 @@ export function csrfProtection(req: Request, _res: Response, next: NextFunction)
   if (
     req.path.startsWith('/api/ingest') ||
     req.path.startsWith('/ingest') ||
-    Boolean(req.headers['x-source-key'])
+    req.path.includes('/internal/') ||
+    Boolean(req.headers['x-source-key']) ||
+    Boolean(req.headers['x-internal-key'])
   ) {
     return next();
   }
