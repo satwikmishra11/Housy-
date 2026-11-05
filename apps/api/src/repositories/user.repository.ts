@@ -1,7 +1,8 @@
+import type { QueryResultRow } from 'pg';
 import { query } from '../db/index.js';
 import type { UserRole } from '@housy/shared';
 
-export interface UserDbRow {
+export interface UserDbRow extends QueryResultRow {
   id: string;
   name: string;
   email: string;

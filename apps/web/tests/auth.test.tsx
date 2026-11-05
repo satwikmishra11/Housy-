@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { LoginPage } from '../src/pages/LoginPage.js';
 import { ProtectedRoute } from '../src/components/ProtectedRoute.js';
-import { AuthContextValue, AuthProvider } from '../src/context/AuthContext.js';
+import { AuthProvider } from '../src/context/AuthContext.js';
 import { ToastProvider } from '../src/components/Toast.js';
 import * as apiModule from '../src/lib/api.js';
 

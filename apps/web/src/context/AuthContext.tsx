@@ -17,7 +17,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { addToast } = useToast();
+  const { showToast } = useToast();
 
   const refetchUser = useCallback(async () => {
     try {
@@ -38,10 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleSessionExpired = (): void => {
       setUser(null);
-      addToast({
+      showToast({
+        type: 'warning',
         title: 'Session Expired',
         message: 'Your staff session has expired. Please log in again.',
-        variant: 'warning',
       });
     };
 
@@ -49,31 +49,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       window.removeEventListener('housy:session-expired', handleSessionExpired);
     };
-  }, [addToast]);
+  }, [showToast]);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<AuthUser> => {
     const res = await loginStaff(credentials);
     setUser(res.user);
-    addToast({
+    showToast({
+      type: 'success',
       title: 'Welcome Back',
       message: `Signed in as ${res.user.name} (${res.user.role === 'sales_head' ? 'Sales Head' : 'Sales Executive'})`,
-      variant: 'success',
     });
     return res.user;
-  }, [addToast]);
+  }, [showToast]);
 
   const logout = useCallback(async (): Promise<void> => {
     try {
       await logoutStaff();
     } finally {
       setUser(null);
-      addToast({
+      showToast({
+        type: 'info',
         title: 'Signed Out',
         message: 'You have been successfully logged out.',
-        variant: 'neutral',
       });
     }
-  }, [addToast]);
+  }, [showToast]);
 
   return (
     <AuthContext.Provider

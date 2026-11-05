@@ -102,6 +102,22 @@ describe('RBAC & Resource Ownership Matrix', () => {
       expect(res.body.error.message).toContain('Forbidden');
     });
 
+    it('allows Executive 2 to view their own assigned lead (200), and denies Executive 1 (403)', async () => {
+      const res2 = await request(app)
+        .get(`/api/leads/${leadAssignedToExec2Id}`)
+        .set('Authorization', `Bearer ${exec2Token}`);
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.lead.id).toBe(leadAssignedToExec2Id);
+
+      const res1 = await request(app)
+        .get(`/api/leads/${leadAssignedToExec2Id}`)
+        .set('Authorization', `Bearer ${exec1Token}`);
+
+      expect(res1.status).toBe(403);
+      expect(res1.body.error.code).toBe('FORBIDDEN');
+    });
+
     it('allows Sales Head to view any assigned lead across the organization (200)', async () => {
       const res = await request(app)
         .get(`/api/leads/${leadAssignedToExec1Id}`)
