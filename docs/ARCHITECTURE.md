@@ -276,5 +276,34 @@ A comprehensive set of accessible, strictly typed React components:
 
 ---
 
-## 15. Styleguide Route (`/styleguide`)
-- Route accessible at `/styleguide` showcasing every design system token, atomic primitive, domain component, and state (default, active, loading, disabled, error) in both Staff and Buyer layouts.
+## 16. Unified Lead Intake, Deduplication & Staff UI
+
+### Overview
+The lead intake pipeline unifies inbound leads across property portals (`MagicBricks`, `99acres`), social ads (`Meta Ads`), website chat forms, and offline hoarding phone calls. It provides automated multi-tier deduplication, idempotency, consent-based first response automation, and a rich staff management interface.
+
+### Deduplication Pipeline (`apps/api/src/services/lead-ingest.service.ts`)
+1. **Idempotency Check**: If an `external_id` is supplied, `lead_touchpoints(source, external_id)` is checked. If found, returns `{ outcome: 'idempotent', leadId }` without duplicating data.
+2. **Exact Phone / Email Match**:
+   - `normalizePhone`: Parses spaces, dashes, `+91`, `91`, leading `0`, validating 10-digit Indian mobile numbers starting with 6–9 and converting to E.164 (`+91XXXXXXXXXX`).
+   - `normalizeEmail`: Trims and converts to lower case with RFC format validation.
+   - Exact match on phone or email updates `last_activity_at`, records a new `lead_touchpoints` row, preserves original first-touch attribution, and returns `{ outcome: 'merged', leadId }`.
+3. **Fuzzy Trigram Deduplication (PostgreSQL `pg_trgm`)**:
+   - If no exact match is found, queries PostgreSQL using the GIN trigram index:
+     `SELECT id FROM leads WHERE project_id = $1 AND similarity(name, $2) >= 0.85`
+   - If matched, creates the lead with `possible_duplicate_of` pointing to the matched lead for human review (`{ outcome: 'possible_duplicate', leadId, duplicateOf }`).
+4. **Late Phone Arrival**:
+   - Anonymous web chat leads are created without phone numbers.
+   - When the buyer provides a phone number later in the conversation (`POST /api/conversations/:id/phone`), deduplication evaluates the phone. If an existing lead matches, the conversation is moved to the existing lead and the anonymous stub lead is deleted.
+5. **Consent & First-Response Automation (DPDP Act 2023)**:
+   - If consent is granted (`consent === true`), records a row in `consents`, sets `consent_status = 'granted'`, queues a template message (`first_response_link`) in `outbound_messages`, and sets `first_response_at = NOW()`.
+   - If consent is denied or withdrawn, sets `consent_status = 'withdrawn'`, displays a "Cannot Contact" warning badge in the UI, and prevents automated messaging.
+6. **Atomic Lead Merge**:
+   - `leadRepository.mergeLeadsTransaction(primaryId, secondaryId)` runs inside a single database transaction (`BEGIN ... COMMIT`): moves all touchpoints, conversations, bookings, handoffs, and consents to the primary lead, re-parents existing possible duplicate links, updates `last_activity_at`, and deletes the secondary lead.
+   - "Keep separate" clears `possible_duplicate_of` to NULL.
+
+### Staff Frontend (`apps/web/src/pages/LeadsPage.tsx`)
+- **Three-State Rule Compliance**: Explicitly handles Loading (skeletons), Empty (custom illustration & action), and Error (retry trigger).
+- **Desktop Table & Mobile Cards**: Responsive layout showing Lead ID, Buyer Name, Source tags, Touchpoint count badges, Duplicate flags, Status badges, and Cannot Contact indicators.
+- **Review Duplicates Tab**: Dedicated tab filtered to pending possible duplicates with one-click "Merge" or "Keep Separate" operations.
+- **CSV Import Modal (`apps/web/src/components/CsvImportModal.tsx`)**: Two-step upload / text paste with full row-level preview classifying rows into `New Lead`, `Matches Existing`, `Possible Duplicate`, and `Invalid` with actionable reason pills.
+- **Lead Detail Drawer (`apps/web/src/components/LeadDetailDrawer.tsx`)**: Modal drawer presenting buyer profile, touchpoint timeline with raw metadata, conversation history, site visits, and handoffs.

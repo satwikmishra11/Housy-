@@ -22,5 +22,10 @@ This document records all architectural and product assumptions made during the 
 - **A18**: CSRF protection enforces the presence of a custom header (`X-Requested-With`, `X-CSRF-Token`, or `X-Housy-Client`) on all mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`), rejecting requests missing these headers with HTTP 403 Forbidden.
 - **A19**: Resource authorization strictly returns HTTP 403 Forbidden (not 404) when an authenticated sales executive attempts to access or modify a lead that exists in the database but is assigned to a different executive.
 - **A20**: Buyer session tokens and magic link tokens for the "manage my visit" page are signed with HMAC-SHA256 using `SESSION_SECRET` with 30-day and 48-hour expirations respectively.
+- **A21**: During manual merge of two leads in `mergeLeadsTransaction`, all touchpoints, conversations, visit bookings, consents, and handoffs are re-parented to the primary lead, references in `leads.possible_duplicate_of` pointing to the secondary lead are re-pointed to the primary lead, and the secondary lead record is permanently removed within a single atomic PostgreSQL transaction.
+- **A22**: "Keep separate" on a lead flagged with `possible_duplicate_of` sets `possible_duplicate_of = NULL` and updates `last_activity_at = NOW()`, clearing the duplicate review flag without modifying either lead's data.
+- **A23**: Ingestion authentication for webhook and server-to-server partners (`property_portal`, `social_ad`, `website`, `hoarding_call`) authenticates via a hashed SHA-256 API key in the `X-Source-Key` header against the `source_api_keys` table and is exempt from browser-specific CSRF header checks.
+- **A24**: Idempotent ingest evaluates `(source, external_id)` against existing `lead_touchpoints`. If an exact `(source, external_id)` match exists, the system returns `{ outcome: 'idempotent', leadId }` without creating duplicate touchpoints or duplicate leads.
+- **A25**: Leads with `consent === false` or `consent_status === 'withdrawn'` are marked with the "Cannot Contact" badge and omitted from outbound messaging pipelines in compliance with the Digital Personal Data Protection (DPDP) Act 2023.
 
 
