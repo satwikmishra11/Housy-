@@ -1,8 +1,17 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { AppError, SlotUnavailableError } from './AppError.js';
+import { AppError, DatabaseError, SlotUnavailableError } from './AppError.js';
 import type { ApiErrorResponse, ErrorDetail } from '@housy/shared';
 import { logger } from '../utils/logger.js';
+
+const SQL_LEAK_REGEX = /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INTO|TABLE|syntax error at or near|violates foreign key|relation "[^"]+" does not exist|column "[^"]+" does not exist)\b/i;
+
+function sanitizeErrorMessage(msg: string, statusCode: number): string {
+  if (statusCode >= 500 || SQL_LEAK_REGEX.test(msg)) {
+    return 'An unexpected database or internal server error occurred';
+  }
+  return msg;
+}
 
 export function errorHandler(
   err: unknown,
@@ -23,11 +32,15 @@ export function errorHandler(
       logger.warn({ err, path: req.path, requestId }, err.message);
     }
 
+    const safeMessage = err instanceof DatabaseError
+      ? 'An unexpected database or internal server error occurred'
+      : sanitizeErrorMessage(err.message, err.statusCode);
+
     const payload: ApiErrorResponse = {
       success: false,
       error: {
         code: err.code,
-        message: err.message,
+        message: safeMessage,
         statusCode: err.statusCode,
         details: err.details,
         alternatives: err instanceof SlotUnavailableError ? err.alternatives : undefined,

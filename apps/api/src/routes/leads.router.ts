@@ -1,4 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
+import { z } from 'zod';
 import {
   LeadFilterQuerySchema,
   LeadMergePayloadSchema,
@@ -6,6 +7,7 @@ import {
   LeadSourceSchema,
 } from '@housy/shared';
 import { requireAuth } from '../middleware/auth.js';
+import { validateRequest } from '../middleware/validate.js';
 import { assertLeadOwnership } from '../middleware/ownership.js';
 import { leadRepository } from '../repositories/lead.repository.js';
 import { chatRepository } from '../repositories/chat.repository.js';
@@ -13,6 +15,15 @@ import { leadIngestService } from '../services/lead-ingest.service.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../errors/index.js';
 
 export const leadsRouter = Router();
+
+const LeadIdParamSchema = z.object({
+  id: z.string().uuid({ message: 'Lead ID must be a valid UUID' }),
+});
+
+const CsvPreviewBodySchema = z.object({
+  rows: z.array(z.record(z.string())),
+  source: LeadSourceSchema.optional(),
+});
 
 /**
  * GET /api/leads
@@ -103,6 +114,7 @@ leadsRouter.get(
 leadsRouter.get(
   '/leads/:id',
   requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const leadId = req.params['id'] as string;
@@ -231,6 +243,7 @@ leadsRouter.post(
 leadsRouter.post(
   '/leads/:id/keep-separate',
   requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const leadId = req.params['id'] as string;
@@ -253,21 +266,11 @@ leadsRouter.post(
 leadsRouter.post(
   '/leads/csv-preview',
   requireAuth,
+  validateRequest({ body: CsvPreviewBodySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { rows, source } = req.body as {
-        rows?: Record<string, string>[];
-        source?: string;
-      };
-
-      if (!rows || !Array.isArray(rows)) {
-        throw new ValidationError('CSV rows must be an array of objects');
-      }
-
-      const parsedSource = LeadSourceSchema.safeParse(source || 'property_portal');
-      const defaultSource = parsedSource.success ? parsedSource.data : 'property_portal';
-
-      const preview = await leadIngestService.previewCsv(rows, defaultSource);
+      const { rows, source } = req.body;
+      const preview = await leadIngestService.previewCsv(rows, source || 'property_portal');
 
       res.status(200).json({
         success: true,
@@ -320,6 +323,7 @@ leadsRouter.post(
 leadsRouter.patch(
   '/leads/:id',
   requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const leadId = req.params['id'] as string;
@@ -342,6 +346,7 @@ leadsRouter.patch(
 leadsRouter.post(
   '/leads/:id/opt-out',
   requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const leadId = req.params['id'] as string;

@@ -124,6 +124,7 @@ chatRouter.post(
  */
 chatRouter.get(
   '/history',
+  chatRateLimiter,
   validateQuery(ChatHistoryQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

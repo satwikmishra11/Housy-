@@ -4,6 +4,7 @@ import { LeadSourceSchema, LeadIngestPayloadSchema } from '@housy/shared';
 import { leadRepository } from '../repositories/lead.repository.js';
 import { leadIngestService } from '../services/lead-ingest.service.js';
 import { BadRequestError, UnauthorizedError, ValidationError } from '../errors/index.js';
+import { ingestRateLimiter } from '../middleware/rateLimit.js';
 
 export const ingestRouter = Router();
 
@@ -15,6 +16,7 @@ export const ingestRouter = Router();
  */
 ingestRouter.post(
   '/ingest/:source',
+  ingestRateLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // 1. Validate source parameter

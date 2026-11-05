@@ -44,6 +44,15 @@ const FactQuerySchema = z.object({
   search: z.string().optional(),
 });
 
+const ProjectOptionalQuerySchema = z.object({
+  projectId: z.string().uuid({ message: 'Must be a valid UUID' }).optional(),
+});
+
+const FlaggedChatsQuerySchema = z.object({
+  reason: z.string().max(50).optional(),
+  status: z.enum(['reviewed', 'unreviewed']).optional(),
+});
+
 const UnansweredQuerySchema = z.object({
   status: UnansweredQuestionStatusSchema.optional(),
 });
@@ -91,6 +100,7 @@ adminRouter.get(
  */
 adminRouter.get(
   '/fact-sheet/preview/assistant',
+  validateRequest({ query: ProjectOptionalQuerySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = req.query['projectId'] as string | undefined;
@@ -253,6 +263,7 @@ adminRouter.post(
  */
 adminRouter.get(
   '/availability-rules',
+  validateRequest({ query: ProjectOptionalQuerySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = req.query['projectId'] as string | undefined;
@@ -313,6 +324,7 @@ adminRouter.delete(
  */
 adminRouter.get(
   '/blackout-dates',
+  validateRequest({ query: ProjectOptionalQuerySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = req.query['projectId'] as string | undefined;
@@ -551,6 +563,7 @@ interface DbFlaggedChatRow extends QueryResultRow {
  */
 adminRouter.get(
   '/admin/flagged-chats',
+  validateRequest({ query: FlaggedChatsQuerySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const reason = req.query['reason'] as string | undefined;

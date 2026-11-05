@@ -15,6 +15,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
     "typecheck": "npm run build --workspace=@housy/shared && npm run typecheck --workspaces --if-present",
     "eval:ai": "npm run eval:ai --workspace=@housy/api",
     "dev": "node scripts/dev.mjs",
@@ -32,6 +33,10 @@
     "prettier": "^3.5.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.1"
+  },
+  "overrides": {
+    "glob": "^14.0.3",
+    "minimatch": "^11.0.4"
   }
 }
 

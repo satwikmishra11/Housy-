@@ -20,16 +20,29 @@ export function createApp(): Express {
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 
-  // 2. Security headers via Helmet
+  // 2. Strict CORS allowlist from configuration
+  const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
+
+  // 3. Security headers via Helmet with Content Security Policy
   app.use(
     helmet({
-      contentSecurityPolicy: false, // Let Vite/frontend control CSP
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+          connectSrc: ["'self'", ...allowedOrigins],
+          fontSrc: ["'self'", 'data:', 'https:'],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
       crossOriginEmbedderPolicy: false,
     }),
   );
 
-  // 3. Strict CORS allowlist from configuration
-  const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
   app.use(
     cors({
       origin: (origin, callback) => {

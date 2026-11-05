@@ -17,7 +17,7 @@ internalRouter.post(
     try {
       const internalKey = req.headers['x-internal-key'];
       const authHeader = req.headers.authorization;
-      const token = req.cookies?.['auth_token'] || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
+      const token = req.cookies?.['staff_token'] || req.cookies?.['auth_token'] || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
 
       let isAuthorized = false;
 
@@ -26,8 +26,10 @@ internalRouter.post(
         isAuthorized = true;
       }
 
-      // 2. Or check staff token
-      if (!isAuthorized && token) {
+      // 2. Or check authenticated staff user / token
+      if (!isAuthorized && req.user) {
+        isAuthorized = true;
+      } else if (!isAuthorized && token) {
         const payload = await verifyStaffToken(token);
         if (payload) {
           isAuthorized = true;

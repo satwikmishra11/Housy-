@@ -71,3 +71,23 @@ export const chatRateLimiter = rateLimit({
     'Chat rate limit reached. Please wait a moment before sending another message.',
   ),
 });
+
+/**
+ * Ingest API rate limiter to protect server-to-server lead ingestion against denial-of-service.
+ */
+export const ingestRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120, // 120 requests per minute
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test',
+  validate: { keyGeneratorIpFallback: false },
+  keyGenerator: (req: Request): string => {
+    const rawKey = (req.headers['x-source-key'] as string | undefined) || req.ip || 'unknown-ip';
+    return rawKey;
+  },
+  handler: createRateLimitHandler(
+    'Lead ingest rate limit exceeded. Please slow down submission rate.',
+  ),
+});
+

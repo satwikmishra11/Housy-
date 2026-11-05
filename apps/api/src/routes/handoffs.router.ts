@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import { handoffService } from '../services/handoff.service.js';
+import { handoffRepository } from '../repositories/handoff.repository.js';
 import { chatRepository } from '../repositories/chat.repository.js';
 import { HandoffStatusSchema } from '@housy/shared';
 import { NotFoundError } from '../errors/AppError.js';
@@ -66,25 +67,14 @@ handoffsRouter.get(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const handoffId = req.params['id'] as string;
-      const handoff = await handoffService.listHandoffs(req.user!, { limit: 1 });
-      const found = handoff.data.find((h) => h.id === handoffId);
-
-      const conversationId = found ? found.conversationId : null;
-      if (!conversationId) {
-        // Fall back to direct lookup if user is sales head or owner
-        const item = await (await import('../repositories/handoff.repository.js')).handoffRepository.findHandoffById(handoffId);
-        if (!item) {
-          throw new NotFoundError('Handoff not found');
-        }
-        if (req.user!.role === 'executive' && item.executiveId !== req.user!.id) {
-          throw new NotFoundError('Handoff not found');
-        }
-        const messages = await chatRepository.getMessages(item.conversationId);
-        res.status(200).json({ success: true, data: messages });
-        return;
+      const item = await handoffRepository.findHandoffById(handoffId);
+      if (!item) {
+        throw new NotFoundError('Handoff not found');
       }
-
-      const messages = await chatRepository.getMessages(conversationId);
+      if (req.user!.role === 'executive' && item.executiveId !== req.user!.id) {
+        throw new NotFoundError('Handoff not found');
+      }
+      const messages = await chatRepository.getMessages(item.conversationId);
       res.status(200).json({ success: true, data: messages });
     } catch (err) {
       next(err);
