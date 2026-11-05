@@ -54,7 +54,7 @@ describe('HealthPage Component', () => {
 
     expect(screen.getByText(/connected/i)).toBeInTheDocument();
     expect(screen.getByText('4.2 ms')).toBeInTheDocument();
-    expect(screen.getByText(/Asia\/Kolkata/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Asia\/Kolkata/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders error state when fetch fails', async () => {

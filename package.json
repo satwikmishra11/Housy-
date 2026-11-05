@@ -1,6 +1,7 @@
 {
   "name": "housy-monorepo",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "Production-quality full-stack TypeScript platform for Company A",
   "workspaces": [
