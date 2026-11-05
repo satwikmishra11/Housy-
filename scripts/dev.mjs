@@ -17,11 +17,11 @@ function handleExit(code = 0) {
   try {
     api.kill();
     // eslint-disable-next-line no-empty
-  } catch {}
+  } catch { }
   try {
     web.kill();
     // eslint-disable-next-line no-empty
-  } catch {}
+  } catch { }
   process.exit(code);
 }
 
