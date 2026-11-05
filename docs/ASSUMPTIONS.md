@@ -28,5 +28,6 @@ This document records all architectural and product assumptions made during the 
 - **A24**: Idempotent ingest evaluates `(source, external_id)` against existing `lead_touchpoints`. If an exact `(source, external_id)` match exists, the system returns `{ outcome: 'idempotent', leadId }` without creating duplicate touchpoints or duplicate leads.
 - **A25**: Leads with `consent === false` or `consent_status === 'withdrawn'` are marked with the "Cannot Contact" badge and omitted from outbound messaging pipelines in compliance with the Digital Personal Data Protection (DPDP) Act 2023.
 - **A26**: Client API calls via `apiFetch` safely consume the response stream as text before parsing JSON to gracefully handle empty bodies (e.g. 204 No Content, proxy disconnects, or gateway timeouts) without throwing unhandled `Unexpected end of JSON input` SyntaxErrors, reporting actionable backend-unreachable errors instead.
+- **A27**: In cloud serverless demo environments (e.g. Vercel preview) where an external PostgreSQL database is not connected, `AuthService` falls back to verified credentials for seeded demo accounts (`harshil.mehta@example.com` and `amit.shah@example.com` with `DemoPass123!`), allowing UI evaluation while maintaining full database authentication in local and configured production environments.
 
 
