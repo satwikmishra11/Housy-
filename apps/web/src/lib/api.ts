@@ -19,6 +19,21 @@ import {
   type VisitDetail,
   type ExecutiveVisitItem,
   type VisitOutcomePayload,
+  type FactEntry,
+  type FactEntryVersion,
+  type CreateFactPayload,
+  type UpdateFactPayload,
+  type FactAssistantPreviewItem,
+  type FactStatus,
+  type UnansweredQuestion,
+  type UnansweredQuestionStatus,
+  type AdminAvailabilityRule,
+  type CreateAvailabilityRulePayload,
+  type AdminBlackoutDate,
+  type CreateBlackoutDatePayload,
+  type AdminSlotItem,
+  type MonthSpendRecord,
+  type UpdateMonthlySpendPayload,
 } from '@housy/shared';
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
@@ -214,6 +229,31 @@ export async function commitCsv(
   });
 }
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  rera_number?: string;
+  address?: string;
+  bhk_types?: string[];
+}
+
+export async function fetchProjects(): Promise<ProjectItem[]> {
+  const res = await apiFetch<{ success: boolean; data: ProjectItem[] }>('/api/projects');
+  return res.data;
+}
+
+export interface AdminExecutiveItem {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+}
+
+export async function fetchAdminExecutives(): Promise<AdminExecutiveItem[]> {
+  const res = await apiFetch<{ success: boolean; data: AdminExecutiveItem[] }>('/api/admin/executives');
+  return res.data;
+}
+
 // ---------------------------------------------------------------------------
 // Visits & Slots API Helpers
 // ---------------------------------------------------------------------------
@@ -321,5 +361,230 @@ export async function recordVisitOutcome(
       body: JSON.stringify(payload),
     },
   );
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Admin Area: Fact Sheet, Unanswered Questions, Slot Rules, and Ad Spend
+// ---------------------------------------------------------------------------
+
+export interface FetchFactEntriesParams {
+  projectId?: string;
+  category?: string;
+  status?: FactStatus;
+  search?: string;
+}
+
+export async function fetchFactEntries(params: FetchFactEntriesParams = {}): Promise<FactEntry[]> {
+  const query = new URLSearchParams();
+  if (params.projectId) query.set('projectId', params.projectId);
+  if (params.category) query.set('category', params.category);
+  if (params.status) query.set('status', params.status);
+  if (params.search) query.set('search', params.search);
+  const url = `/api/fact-sheet${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: FactEntry[] }>(url);
+  return res.data;
+}
+
+export async function fetchFactById(id: string): Promise<FactEntry> {
+  const res = await apiFetch<{ success: boolean; data: FactEntry }>(`/api/fact-sheet/${id}`);
+  return res.data;
+}
+
+export async function createFactEntry(payload: CreateFactPayload): Promise<FactEntry> {
+  const res = await apiFetch<{ success: boolean; data: FactEntry }>('/api/fact-sheet', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return res.data;
+}
+
+export async function updateFactEntry(id: string, payload: UpdateFactPayload): Promise<FactEntry> {
+  const res = await apiFetch<{ success: boolean; data: FactEntry }>(`/api/fact-sheet/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return res.data;
+}
+
+export async function archiveFactEntry(id: string): Promise<FactEntry> {
+  const res = await apiFetch<{ success: boolean; data: FactEntry }>(`/api/fact-sheet/${id}/archive`, {
+    method: 'POST',
+  });
+  return res.data;
+}
+
+export async function fetchFactVersions(id: string): Promise<FactEntryVersion[]> {
+  const res = await apiFetch<{ success: boolean; data: FactEntryVersion[] }>(`/api/fact-sheet/${id}/versions`);
+  return res.data;
+}
+
+export async function fetchAssistantPreview(projectId?: string): Promise<FactAssistantPreviewItem[]> {
+  const query = new URLSearchParams();
+  if (projectId) query.set('projectId', projectId);
+  const url = `/api/fact-sheet/preview/assistant${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: FactAssistantPreviewItem[] }>(url);
+  return res.data;
+}
+
+export async function fetchUnansweredQuestions(status?: UnansweredQuestionStatus): Promise<UnansweredQuestion[]> {
+  const query = new URLSearchParams();
+  if (status) query.set('status', status);
+  const url = `/api/unanswered-questions${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: UnansweredQuestion[] }>(url);
+  return res.data;
+}
+
+export async function resolveUnansweredQuestion(
+  id: string,
+  status: 'resolved' | 'dismissed',
+): Promise<UnansweredQuestion> {
+  const res = await apiFetch<{ success: boolean; data: UnansweredQuestion }>(
+    `/api/unanswered-questions/${id}/resolve`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    },
+  );
+  return res.data;
+}
+
+export async function fetchAvailabilityRules(projectId?: string): Promise<AdminAvailabilityRule[]> {
+  const query = new URLSearchParams();
+  if (projectId) query.set('projectId', projectId);
+  const url = `/api/availability-rules${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: AdminAvailabilityRule[] }>(url);
+  return res.data;
+}
+
+export async function createAvailabilityRule(
+  payload: CreateAvailabilityRulePayload,
+): Promise<{ rule: AdminAvailabilityRule; createdSlotsCount: number }> {
+  const res = await apiFetch<{ success: boolean; data: AdminAvailabilityRule; createdSlotsCount: number }>(
+    '/api/availability-rules',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return { rule: res.data, createdSlotsCount: res.createdSlotsCount };
+}
+
+export async function deleteAvailabilityRule(
+  id: string,
+): Promise<{ success: boolean; createdSlotsCount: number }> {
+  return apiFetch<{ success: boolean; createdSlotsCount: number }>(`/api/availability-rules/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchBlackoutDates(projectId?: string): Promise<AdminBlackoutDate[]> {
+  const query = new URLSearchParams();
+  if (projectId) query.set('projectId', projectId);
+  const url = `/api/blackout-dates${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: AdminBlackoutDate[] }>(url);
+  return res.data;
+}
+
+export async function createBlackoutDate(
+  payload: CreateBlackoutDatePayload,
+): Promise<{ blackoutDate: AdminBlackoutDate; createdSlotsCount: number }> {
+  const res = await apiFetch<{ success: boolean; data: AdminBlackoutDate; createdSlotsCount: number }>(
+    '/api/blackout-dates',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return { blackoutDate: res.data, createdSlotsCount: res.createdSlotsCount };
+}
+
+export async function deleteBlackoutDate(
+  id: string,
+): Promise<{ success: boolean; createdSlotsCount: number }> {
+  return apiFetch<{ success: boolean; createdSlotsCount: number }>(`/api/blackout-dates/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export interface FetchAdminSlotsPreviewParams {
+  projectId?: string;
+  executiveId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export async function fetchAdminSlotsPreview(
+  params: FetchAdminSlotsPreviewParams = {},
+): Promise<AdminSlotItem[]> {
+  const query = new URLSearchParams();
+  if (params.projectId) query.set('projectId', params.projectId);
+  if (params.executiveId) query.set('executiveId', params.executiveId);
+  if (params.fromDate) query.set('fromDate', params.fromDate);
+  if (params.toDate) query.set('toDate', params.toDate);
+  const url = `/api/admin/slots/preview${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: AdminSlotItem[] }>(url);
+  return res.data;
+}
+
+export async function blockAdminSlot(
+  id: string,
+): Promise<{ success: boolean; message: string; slot: AdminSlotItem }> {
+  return apiFetch<{ success: boolean; message: string; slot: AdminSlotItem }>(
+    `/api/admin/slots/${id}/block`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function unblockAdminSlot(
+  id: string,
+): Promise<{ success: boolean; message: string; slot: AdminSlotItem }> {
+  return apiFetch<{ success: boolean; message: string; slot: AdminSlotItem }>(
+    `/api/admin/slots/${id}/unblock`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function triggerSlotGeneration(
+  days: number = 21,
+): Promise<{ success: boolean; message: string; createdSlotsCount: number }> {
+  return apiFetch<{ success: boolean; message: string; createdSlotsCount: number }>(
+    '/api/admin/slots/generate',
+    {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    },
+  );
+}
+
+export interface MonthlySpendData {
+  month: string;
+  allocations: MonthSpendRecord[];
+  totalInr: number;
+  isDefault: boolean;
+}
+
+export async function fetchMonthlySpend(month?: string): Promise<MonthlySpendData> {
+  const query = new URLSearchParams();
+  if (month) query.set('month', month);
+  const url = `/api/ad-spend${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: MonthlySpendData }>(url);
+  return res.data;
+}
+
+export async function updateMonthlySpend(payload: UpdateMonthlySpendPayload): Promise<MonthlySpendData> {
+  const res = await apiFetch<{ success: boolean; data: MonthlySpendData }>('/api/ad-spend', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return res.data;
+}
+
+export async function fetchSpendMonths(): Promise<string[]> {
+  const res = await apiFetch<{ success: boolean; data: string[] }>('/api/ad-spend/months');
   return res.data;
 }

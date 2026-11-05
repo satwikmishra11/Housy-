@@ -4,6 +4,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher.js';
 import {
   Users,
   Calendar,
+  Clock,
   FileText,
   BarChart3,
   Activity,
@@ -58,6 +59,12 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       label: 'Fact Sheet',
       path: '/fact-sheet',
       icon: <FileText className="w-4 h-4" />,
+      adminOnly: true,
+    },
+    {
+      label: 'Slot Availability',
+      path: '/slot-rules',
+      icon: <Clock className="w-4 h-4" />,
       adminOnly: true,
     },
     {

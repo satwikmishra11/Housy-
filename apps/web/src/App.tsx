@@ -7,6 +7,9 @@ import { LoginPage } from './pages/LoginPage.js';
 import { LeadsPage } from './pages/LeadsPage.js';
 import { VisitsPage } from './pages/VisitsPage.js';
 import { VisitManagePage } from './pages/VisitManagePage.js';
+import { FactSheetPage } from './pages/FactSheetPage.js';
+import { SlotEditorPage } from './pages/SlotEditorPage.js';
+import { AdSpendPage } from './pages/AdSpendPage.js';
 import { ToastProvider } from './components/Toast.js';
 import { AuthProvider } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
@@ -57,6 +60,38 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <VisitsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/fact-sheet"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <FactSheetPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/slot-rules"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <SlotEditorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <AdSpendPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ad-spend"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <AdSpendPage />
                   </ProtectedRoute>
                 }
               />
