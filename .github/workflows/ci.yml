@@ -57,9 +57,25 @@ jobs:
       - name: Run typecheck
         run: npm run typecheck
 
+      - name: Setup environment
+        run: cp apps/api/.env.example apps/api/.env
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          NODE_ENV: test
+        run: npm run db:migrate
+
+      - name: Seed test database
+        env:
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          NODE_ENV: test
+        run: npm run db:seed
+
       - name: Run tests
         env:
           DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
           NODE_ENV: test
+          TZ: Asia/Kolkata
         run: npm test
 
