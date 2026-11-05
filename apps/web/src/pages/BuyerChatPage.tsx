@@ -548,7 +548,7 @@ export const BuyerChatPage: React.FC = () => {
               </div>
             )}
 
-            {activeBooking && activeUiAction === null && (
+            {activeBooking && activeUiAction === null && !messages.some((m) => m.bookingId === activeBooking.bookingId) && (
               <div className="pl-0 sm:pl-9 my-3">
                 <BookingConfirmationCard
                   bookingId={activeBooking.bookingId}
