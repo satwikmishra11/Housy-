@@ -1,0 +1,13 @@
+# Assumptions Log
+
+This document records all architectural and product assumptions made during the design and development of the system. Any newly introduced assumptions must be appended here sequentially as `A<n>: ...`.
+
+- **A1**: Project 1 / Project 2 names are kept from the brief. Locations, amenities, possession dates, RERA numbers, map coordinates and ad spend per source are invented demo data, not client facts.
+- **A2**: A site visit lasts 60 minutes, one buyer per executive per slot, visits run 10:00-18:00 IST.
+- **A3**: "Visit" in cost-per-visit and lead-to-visit means a completed visit; booked visits are reported separately.
+- **A4**: The sales head is an admin role that is also an executive.
+- **A5**: WhatsApp, SMS and email are mocked through an outbox table behind a channel adapter.
+- **A6**: Buyers have no password; they get a session at chat start and a signed magic link to manage a visit.
+- **A7**: Monthly spend of Rs 30 lakh is split across sources by an admin-editable table.
+- **A8**: The health check endpoint `GET /api/health` queries PostgreSQL with `SELECT 1` to verify database connectivity and returns HTTP 200 with status `ok` or HTTP 503 with status `degraded`/`error` if the database is unreachable.
+- **A9**: API server defaults to port 3001 in development, and the web Vite dev server runs on port 5173 with proxy configured to route `/api/*` requests to the API server.
