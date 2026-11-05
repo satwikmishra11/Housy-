@@ -136,6 +136,7 @@ export const LeadIngestPayloadSchema = z.object({
   externalId: z.string().max(255).optional().nullable(),
   meta: z.record(z.unknown()).optional().default({}),
 });
+export type LeadIngestInput = z.input<typeof LeadIngestPayloadSchema>;
 export type LeadIngestPayload = z.infer<typeof LeadIngestPayloadSchema>;
 
 export const LeadIngestOutcomeSchema = z.object({
