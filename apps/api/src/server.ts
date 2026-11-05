@@ -2,6 +2,8 @@ import { app } from './app.js';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { closePool } from './db/index.js';
+import { runSlotGeneration } from './jobs/slot-generator.job.js';
+import { slotRepository } from './repositories/slot.repository.js';
 
 const server = app.listen(config.PORT, () => {
   logger.info(
@@ -12,6 +14,13 @@ const server = app.listen(config.PORT, () => {
     },
     `Housy API server running on port ${config.PORT}`,
   );
+
+  // Run initial slot generation on startup asynchronously
+  if (config.NODE_ENV !== 'test') {
+    runSlotGeneration(slotRepository, 21).catch((err) => {
+      logger.warn({ err }, 'Initial slot generation skipped/failed on startup');
+    });
+  }
 });
 
 async function handleShutdown(signal: string): Promise<void> {
