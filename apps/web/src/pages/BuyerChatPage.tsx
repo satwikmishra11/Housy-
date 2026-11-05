@@ -466,7 +466,7 @@ export const BuyerChatPage: React.FC = () => {
                   type="button"
                   onClick={() => handleLanguageChange(l.code)}
                   aria-pressed={currentLang === l.code}
-                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${currentLang === l.code
+                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${currentLang === l.code
                     ? 'bg-accent text-white shadow-xs'
                     : 'text-muted hover:text-ink'
                     }`}
@@ -623,7 +623,7 @@ export const BuyerChatPage: React.FC = () => {
                 key={idx}
                 type="button"
                 onClick={() => handleSendMessage(chip)}
-                className="flex-shrink-0 px-3 py-1.5 rounded-full border border-accent/25 bg-surface hover:bg-accent-soft text-accent text-xs font-medium transition-colors shadow-subtle hover:border-accent"
+                className="flex-shrink-0 px-3 py-1.5 rounded-full border border-accent/25 bg-surface hover:bg-accent-soft text-accent text-xs font-medium transition-colors shadow-subtle hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {chip}
               </button>

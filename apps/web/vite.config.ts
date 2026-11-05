@@ -10,6 +10,17 @@ export default defineConfig({
       '@housy/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          recharts: ['recharts'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

@@ -232,17 +232,23 @@ export const HandoffsPage: React.FC = () => {
                         </Button>
                       )}
                       {telUrl && (
-                        <a href={telUrl} className="inline-flex">
-                          <Button variant="outline" size="sm" leftIcon={<Phone className="w-4 h-4" />}>
-                            Call
-                          </Button>
+                        <a
+                          href={telUrl}
+                          className="inline-flex items-center justify-center font-medium rounded-xl transition-colors min-h-[44px] px-3 py-2 text-xs gap-1.5 border border-hairline text-ink hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>Call</span>
                         </a>
                       )}
                       {waUrl && (
-                        <a href={waUrl} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                          <Button variant="outline" size="sm" leftIcon={<MessageSquare className="w-4 h-4 text-emerald-600" />}>
-                            WhatsApp
-                          </Button>
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center font-medium rounded-xl transition-colors min-h-[44px] px-3 py-2 text-xs gap-1.5 border border-hairline text-ink hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          <MessageSquare className="w-4 h-4 text-emerald-600" />
+                          <span>WhatsApp</span>
                         </a>
                       )}
                       <Button
