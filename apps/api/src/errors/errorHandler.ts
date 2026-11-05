@@ -11,12 +11,16 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   const timestamp = new Date().toISOString();
+  const requestId =
+    (req.headers['x-request-id'] as string) ||
+    (res.locals['requestId'] as string) ||
+    undefined;
 
   if (err instanceof AppError) {
     if (err.statusCode >= 500) {
-      logger.error({ err, path: req.path }, err.message);
+      logger.error({ err, path: req.path, requestId }, err.message);
     } else {
-      logger.warn({ err, path: req.path }, err.message);
+      logger.warn({ err, path: req.path, requestId }, err.message);
     }
 
     const payload: ApiErrorResponse = {
@@ -27,6 +31,7 @@ export function errorHandler(
         statusCode: err.statusCode,
         details: err.details,
         timestamp,
+        requestId,
       },
     };
     res.status(err.statusCode).json(payload);
@@ -48,6 +53,7 @@ export function errorHandler(
         statusCode: 400,
         details,
         timestamp,
+        requestId,
       },
     };
     res.status(400).json(payload);
@@ -55,7 +61,7 @@ export function errorHandler(
   }
 
   const error = err instanceof Error ? err : new Error(String(err));
-  logger.error({ err: error, path: req.path }, 'Unhandled server error');
+  logger.error({ err: error, path: req.path, requestId }, 'Unhandled server error');
 
   const payload: ApiErrorResponse = {
     success: false,
@@ -64,6 +70,7 @@ export function errorHandler(
       message: 'An unexpected internal server error occurred',
       statusCode: 500,
       timestamp,
+      requestId,
     },
   };
 

@@ -87,3 +87,12 @@ export class ServiceUnavailableError extends AppError {
   }
 }
 
+export class TooManyRequestsError extends AppError {
+  public readonly statusCode = 429;
+  public readonly code = 'TOO_MANY_REQUESTS';
+
+  constructor(message = 'Too many requests, please try again later') {
+    super(message);
+  }
+}
+
