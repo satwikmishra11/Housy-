@@ -187,10 +187,11 @@ export const DashboardPage: React.FC = () => {
                   <button
                     key={p}
                     onClick={() => setPeriod(p)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${period === p
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      period === p
                         ? 'bg-ink text-white font-semibold'
                         : 'bg-surface hover:bg-hover text-ink border border-hairline'
-                      }`}
+                    }`}
                   >
                     {labels[p]}
                   </button>
@@ -334,13 +335,13 @@ export const DashboardPage: React.FC = () => {
                 delta={
                   data.summary.medianFirstResponseSeconds !== null
                     ? {
-                      value:
-                        data.summary.medianFirstResponseSeconds <= 300
-                          ? 'On Target (≤ 5m)'
-                          : 'Above Target (> 5m)',
-                      isPositive: data.summary.medianFirstResponseSeconds <= 300,
-                      label: '',
-                    }
+                        value:
+                          data.summary.medianFirstResponseSeconds <= 300
+                            ? 'On Target (≤ 5m)'
+                            : 'Above Target (> 5m)',
+                        isPositive: data.summary.medianFirstResponseSeconds <= 300,
+                        label: '',
+                      }
                     : undefined
                 }
               />
@@ -354,13 +355,13 @@ export const DashboardPage: React.FC = () => {
                 delta={
                   data.summary.unreached48hPercent !== null
                     ? {
-                      value:
-                        data.summary.unreached48hPercent <= 5.0
-                          ? 'On Target (< 5%)'
-                          : 'Exceeds SLA (> 5%)',
-                      isPositive: data.summary.unreached48hPercent <= 5.0,
-                      label: '',
-                    }
+                        value:
+                          data.summary.unreached48hPercent <= 5.0
+                            ? 'On Target (< 5%)'
+                            : 'Exceeds SLA (> 5%)',
+                        isPositive: data.summary.unreached48hPercent <= 5.0,
+                        label: '',
+                      }
                     : undefined
                 }
               />
@@ -374,15 +375,15 @@ export const DashboardPage: React.FC = () => {
                 delta={
                   data.summary.leadToVisitRate !== null
                     ? {
-                      value:
-                        data.summary.leadToVisitRate >= 0.08
-                          ? 'Target Achieved (≥ 8%)'
-                          : data.summary.leadToVisitRate >= 0.06
-                            ? 'Above Baseline (≥ 6%)'
-                            : 'Below Baseline (< 6%)',
-                      isPositive: data.summary.leadToVisitRate >= 0.08,
-                      label: '',
-                    }
+                        value:
+                          data.summary.leadToVisitRate >= 0.08
+                            ? 'Target Achieved (≥ 8%)'
+                            : data.summary.leadToVisitRate >= 0.06
+                              ? 'Above Baseline (≥ 6%)'
+                              : 'Below Baseline (< 6%)',
+                        isPositive: data.summary.leadToVisitRate >= 0.08,
+                        label: '',
+                      }
                     : undefined
                 }
               />
@@ -396,11 +397,11 @@ export const DashboardPage: React.FC = () => {
                 delta={
                   data.summary.showUpRate !== null
                     ? {
-                      value: `${(data.summary.showUpRate * 100).toFixed(0)}% attendance`,
-                      isPositive: data.summary.showUpRate >= 0.7,
-                      isNeutral: data.summary.showUpRate < 0.7,
-                      label: '',
-                    }
+                        value: `${(data.summary.showUpRate * 100).toFixed(0)}% attendance`,
+                        isPositive: data.summary.showUpRate >= 0.7,
+                        isNeutral: data.summary.showUpRate < 0.7,
+                        label: '',
+                      }
                     : undefined
                 }
               />
@@ -674,7 +675,7 @@ export const DashboardPage: React.FC = () => {
                               <span
                                 className={
                                   sourceItem.medianResponseSeconds !== null &&
-                                    sourceItem.medianResponseSeconds <= 300
+                                  sourceItem.medianResponseSeconds <= 300
                                     ? 'text-success font-medium'
                                     : sourceItem.medianResponseSeconds !== null
                                       ? 'text-amber-600 font-medium'
