@@ -60,6 +60,7 @@ export const chatRateLimiter = rateLimit({
   limit: config.RATE_LIMIT_CHAT_MAX,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
   keyGenerator: (req: Request): string => {
     const sessionToken = req.cookies?.['buyer_session'] as string | undefined;
     const ip = req.ip || req.socket.remoteAddress || 'unknown-ip';
