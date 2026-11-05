@@ -15,7 +15,6 @@ export function formatInKolkataTime(
   }
 
   const defaultOptions: Intl.DateTimeFormatOptions = {
-    timeZone: IST_TIMEZONE,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -25,7 +24,12 @@ export function formatInKolkataTime(
     hour12: true,
   };
 
-  return new Intl.DateTimeFormat('en-IN', options ?? defaultOptions).format(date);
+  const effectiveOptions: Intl.DateTimeFormatOptions = {
+    timeZone: IST_TIMEZONE,
+    ...(options ?? defaultOptions),
+  };
+
+  return new Intl.DateTimeFormat('en-IN', effectiveOptions).format(date);
 }
 
 export function formatTimeInKolkata(utcIsoString: string | Date): string {
