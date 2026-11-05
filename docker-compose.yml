@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: housy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: housy_user
+      POSTGRES_PASSWORD: housy_password
+      POSTGRES_DB: housy_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housy_user -d housy_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
