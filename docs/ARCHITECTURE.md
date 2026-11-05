@@ -438,4 +438,98 @@ The Sales Head Admin Area provides executive-level operational control over the 
 - **Strict Role-Based Routing**: Protected by `ProtectedRoute allowedRoles={['sales_head']}` with access-denied fallback for sales executives.
 - **Timezone Integrity**: All presentation timestamps formatted in `Asia/Kolkata` (IST) via `formatInKolkataTime`.
 
+---
+
+## 19. AI Chat Assistant Server-Side Architecture & Strict Guardrails
+
+### Overview
+The AI Chat Assistant provides an intelligent, luxury-grade conversational advisor for prospective homebuyers exploring Company A's residential portfolio. It is architected as an autonomous agent operating under deterministic guardrails: the model is strictly grounded in the sales head's active fact sheet, forbidden from quoting unauthorized prices or discounts, shielded against prompt injections, and prohibited from inventing site visit reservations.
+
+```
++------------------------------------------------------------------------------------------------+
+|                                    BUYER WEB INTERACTION                                       |
++------------------------------------------------------------------------------------------------+
+                                                 │
+                                                 ▼
++------------------------------------------------------------------------------------------------+
+| PRE-FILTER PIPELINE (Zero LLM Tokens, Zero Latency)                                            |
+|   • Opt-Out Check ("STOP", "unsubscribe", "band karo")       -> Lead opted_out_at, stop contact   |
+|   • Human Escalation ("talk to person", "insan se baat")      -> Flag human_requested, handoff  |
+|   • Price / Negotiation ("discount", "best price", "bhav")    -> Canned policy reply, price_ask |
++------------------------------------------------------------------------------------------------+
+                                                 │ (clean)
+                                                 ▼
++------------------------------------------------------------------------------------------------+
+| AGENT LOOP (Max 4 Tool Execution Rounds)                                                        |
+|   • Injects active fact sheet with stable IDs: [FACT ID: <uuid>]                               |
+|   • Tools: update_lead_profile, get_open_slots, request_human, send_reply                      |
+|   • If phone/consent missing on visit intent -> emits ui_action: collect_contact               |
++------------------------------------------------------------------------------------------------+
+                                                 │ (model send_reply)
+                                                 ▼
++------------------------------------------------------------------------------------------------+
+| POST-CHECK GUARDRAIL (Deterministic Verification)                                               |
+|   • Fact ID Verification: Cited fact IDs must exist and be active                             |
+|   • Grounding Check: Every number, amount, or date must appear in cited facts                   |
+|   • Banned Claims: Prohibits "guarantee", "assured returns", "appreciation", "best price"     |
+|   • Confidence Check: Rejects replies with confidence score < 0.70                              |
++------------------------------------------------------------------------------------------------+
+                                ├── FAILED ──► Localized safe fallback ("Team will confirm shortly")
+                                │              + Log unanswered_questions + Flag conversation + Handoff
+                                │
+                                └── PASSED ──► Persist message + Return ChatReply to buyer
+```
+
+### 1. Provider Adapter Layer (`apps/api/src/llm/`)
+- **Unified Interface**:
+  ```ts
+  interface LLMProvider {
+    chat(params: {
+      system?: string;
+      messages: LLMMessage[];
+      tools?: LLMToolDefinition[];
+      maxTokens?: number;
+      signal?: AbortSignal;
+    }): Promise<LLMChatResult>;
+  }
+  ```
+- **Implementations**:
+  - `AnthropicProvider`: Implements Anthropic `/v1/messages` with tool-use blocks and system instruction formatting via native `fetch`.
+  - `GeminiProvider`: Implements Google Gemini `generateContent` with function declarations and candidates parsing.
+  - `MockProvider`: Scriptable test double supporting queued responses, simulated tool execution, timeout injection, and call introspection.
+- **Safety Enforcement**:
+  - Refuses startup in production if `LLM_PROVIDER=mock`, enforced by Zod configuration refinement and `LLMService` runtime guards.
+  - 20-second timeout per call with exactly 1 retry on transient network drops or timeouts.
+  - Daily message cap enforced via `LLM_DAILY_MESSAGE_CAP` (default 1000 calls / day).
+  - Telemetry written to `llm_calls` table (`provider`, `model`, `latency_ms`, `input_tokens`, `output_tokens`, `outcome`), strictly omitting message contents for privacy.
+
+### 2. Deterministic Guardrail Pipeline
+- **Pre-Filter**:
+  - Multi-lingual regex scanning covering English, Hindi (Devanagari and Hinglish), and Gujarati (Gujarati script and Latin).
+  - Canned localized responses for price negotiations ("Final pricing is confirmed by our sales team"), human requests ("I have connected you with our sales team"), and opt-outs ("You have been unsubscribed").
+- **Post-Check**:
+  - Regex extraction of all numeric and date tokens from the model reply. Every token is verified against the concatenated text of cited active facts.
+  - Rejection of financial guarantees and speculative investment claims.
+  - Low confidence or missing facts instantly route to the safe localized fallback ("A member of our team will confirm this with you shortly"), insert a row into `unanswered_questions`, flag the conversation, and create a `handoffs` ticket.
+- **Preserved SLA on Outage**:
+  - In the event of an upstream LLM timeout or outage, the assistant responds instantly with the safe fallback, preserving the developer's 2-minute response guarantee.
+
+### 3. Agent Tooling & Visit Booking Integration
+- **Lead Profile Qualification**:
+  - `update_lead_profile`: Updates `budget_min`, `budget_max`, `wants`, `timeline`, and `language` directly on the lead record.
+- **Real-Time Availability**:
+  - `get_open_slots`: Queries real open slots from `visitService.getSlotsForProject`.
+- **Site Visit Booking Workflow**:
+  - The model **never** reserves slots via text. It emits `ui_action: 'show_slots'` to present interactive slot chips.
+  - If the buyer's phone or DPDP consent is missing, the action is coerced to `ui_action: 'collect_contact'`.
+  - Direct booking is executed via `POST /api/chat/book`, validating phone format and recording consent in the `consents` table.
+  - The booking confirmation is generated from a deterministic template in the `Asia/Kolkata` time zone, eliminating booking hallucinations.
+
+### 4. API Endpoints & Buyer Session Security
+- `POST /api/chat/start`: Initializes buyer conversation, creates anonymous lead, records greeting, and sets httpOnly `buyer_session` cookie signed with HMAC-SHA256 (30-day expiry).
+- `POST /api/chat/message`: Verifies buyer session ownership of `conversationId`, passes message through guardrail pipeline, and returns `ChatReply`.
+- `POST /api/chat/book`: Enforces phone and consent verification, runs atomic booking transaction via `visitService.bookVisit`, and records template confirmation.
+- `GET /api/chat/history`: Returns full conversation history for the verified buyer session.
+
+
 
