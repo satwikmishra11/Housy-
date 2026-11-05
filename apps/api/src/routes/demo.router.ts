@@ -15,7 +15,7 @@ import {
 export const demoRouter = Router();
 
 // Middleware: ensure DEMO_MODE is true
-demoRouter.use((_req: Request, _res: Response, next: NextFunction) => {
+demoRouter.use('/demo', (_req: Request, _res: Response, next: NextFunction) => {
   if (!config.DEMO_MODE) {
     throw new NotFoundError('Demo endpoints are disabled when DEMO_MODE is false.');
   }
@@ -23,7 +23,7 @@ demoRouter.use((_req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Require sales_head role for all demo control mutations
-demoRouter.use(requireAuth, requireRole('sales_head'));
+demoRouter.use('/demo', requireAuth, requireRole('sales_head'));
 
 /**
  * POST /api/demo/simulate-lead

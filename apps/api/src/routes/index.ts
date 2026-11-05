@@ -10,6 +10,7 @@ import { handoffsRouter } from './handoffs.router.js';
 import { outboxRouter } from './outbox.router.js';
 import { internalRouter } from './internal.router.js';
 import { demoRouter } from './demo.router.js';
+import { dashboardRouter } from './dashboard.router.js';
 
 export const apiRouter = Router();
 
@@ -24,6 +25,7 @@ apiRouter.use(handoffsRouter);
 apiRouter.use(outboxRouter);
 apiRouter.use(internalRouter);
 apiRouter.use(demoRouter);
+apiRouter.use(dashboardRouter);
 
 
 
