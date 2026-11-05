@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HealthPage } from './pages/HealthPage.js';
 import { StyleguidePage } from './pages/StyleguidePage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { LeadsPage } from './pages/LeadsPage.js';
 import { ToastProvider } from './components/Toast.js';
 import { AuthProvider } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
