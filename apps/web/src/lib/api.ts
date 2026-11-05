@@ -13,9 +13,21 @@ import {
   type CsvPreviewRow,
   type CsvCommitPayload,
   type LeadSource,
+  type DaySlots,
+  type SlotAlternative,
+  type BookVisitPayload,
+  type VisitDetail,
+  type ExecutiveVisitItem,
+  type VisitOutcomePayload,
 } from '@housy/shared';
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
+
+export interface ApiError extends Error {
+  statusCode?: number;
+  code?: string;
+  alternatives?: SlotAlternative[];
+}
 
 /**
  * Universal API fetch helper with credentials and CSRF custom header support.
@@ -58,7 +70,7 @@ export async function apiFetch<T>(
       window.dispatchEvent(new CustomEvent('housy:session-expired'));
     }
 
-    const errorObj = data as { error?: { message?: string; code?: string } } | null;
+    const errorObj = data as { error?: { message?: string; code?: string; alternatives?: SlotAlternative[] } } | null;
     let message = errorObj?.error?.message;
     if (!message) {
       if (response.status === 502 || response.status === 504 || (response.status === 500 && !rawText)) {
@@ -72,9 +84,10 @@ export async function apiFetch<T>(
       }
     }
 
-    const error = new Error(message);
-    (error as { statusCode?: number }).statusCode = response.status;
-    (error as { code?: string }).code = errorObj?.error?.code;
+    const error: ApiError = new Error(message);
+    error.statusCode = response.status;
+    error.code = errorObj?.error?.code;
+    error.alternatives = errorObj?.error?.alternatives;
     throw error;
   }
 
@@ -199,4 +212,114 @@ export async function commitCsv(
     method: 'POST',
     body: JSON.stringify({ source, rows }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Visits & Slots API Helpers
+// ---------------------------------------------------------------------------
+
+export interface ProjectSlotsResult {
+  days: DaySlots[];
+  nextAvailableDate?: string;
+}
+
+export async function fetchProjectSlots(
+  projectId: string,
+  from?: string,
+  to?: string,
+): Promise<ProjectSlotsResult> {
+  const query = new URLSearchParams();
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  const url = `/api/projects/${projectId}/slots${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await apiFetch<{ success: boolean; data: ProjectSlotsResult }>(url);
+  return res.data;
+}
+
+export interface BookVisitResult {
+  bookingId: string;
+  token: string;
+  startsAt: string;
+  endsAt: string;
+  manageUrl: string;
+}
+
+export async function bookVisitSlot(
+  projectId: string,
+  payload: BookVisitPayload,
+): Promise<BookVisitResult> {
+  const res = await apiFetch<{ success: boolean; data: BookVisitResult }>(
+    `/api/projects/${projectId}/book`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return res.data;
+}
+
+export async function fetchVisitManage(token: string): Promise<VisitDetail> {
+  const res = await apiFetch<{ success: boolean; data: VisitDetail }>(
+    `/api/visits/manage/${encodeURIComponent(token)}`,
+  );
+  return res.data;
+}
+
+export interface RescheduleVisitResult {
+  bookingId: string;
+  token: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export async function rescheduleVisitSlot(
+  token: string,
+  newStartsAt: string,
+): Promise<RescheduleVisitResult> {
+  const res = await apiFetch<{ success: boolean; data: RescheduleVisitResult }>(
+    `/api/visits/manage/${encodeURIComponent(token)}/reschedule`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ newStartsAt }),
+    },
+  );
+  return res.data;
+}
+
+export async function cancelVisitBooking(
+  token: string,
+  reason?: string,
+): Promise<{ message: string }> {
+  const res = await apiFetch<{ success: boolean; data: { message: string } }>(
+    `/api/visits/manage/${encodeURIComponent(token)}/cancel`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
+  return res.data;
+}
+
+export interface StaffVisitsResult {
+  upcoming: ExecutiveVisitItem[];
+  awaitingOutcome: ExecutiveVisitItem[];
+}
+
+export async function fetchStaffVisits(): Promise<StaffVisitsResult> {
+  const res = await apiFetch<{ success: boolean; data: StaffVisitsResult }>('/api/visits/my');
+  return res.data;
+}
+
+export async function recordVisitOutcome(
+  bookingId: string,
+  payload: VisitOutcomePayload,
+): Promise<{ message: string; status: string }> {
+  const res = await apiFetch<{ success: boolean; data: { message: string; status: string } }>(
+    `/api/visits/${bookingId}/outcome`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return res.data;
 }

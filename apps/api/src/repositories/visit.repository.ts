@@ -1,8 +1,8 @@
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 import { query, pool } from '../db/index.js';
 import type { BookingStatus, ReminderKind, ReminderStatus } from '@housy/shared';
 
-export interface DbBookingRow {
+export interface DbBookingRow extends QueryResultRow {
   id: string;
   lead_id: string;
   slot_id: string;
@@ -12,7 +12,7 @@ export interface DbBookingRow {
   updated_at: Date;
 }
 
-export interface DbVisitDetailsRow {
+export interface DbVisitDetailsRow extends QueryResultRow {
   booking_id: string;
   lead_id: string;
   lead_name: string;
@@ -34,7 +34,7 @@ export interface DbVisitDetailsRow {
   updated_at: Date;
 }
 
-export interface DbReminderRow {
+export interface DbReminderRow extends QueryResultRow {
   id: string;
   booking_id: string;
   kind: ReminderKind;

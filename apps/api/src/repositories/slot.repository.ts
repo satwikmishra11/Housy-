@@ -1,9 +1,9 @@
-import type { PoolClient } from 'pg';
-import { query, pool } from '../db/index.js';
+import type { PoolClient, QueryResultRow } from 'pg';
+import { query } from '../db/index.js';
 import type { GeneratedSlotRow, AvailabilityRuleInput, BlackoutDateInput } from '../services/slot-generator.js';
 import type { SlotAlternative } from '@housy/shared';
 
-export interface DbSlotRow {
+export interface DbSlotRow extends QueryResultRow {
   id: string;
   project_id: string;
   executive_id: string;
@@ -13,11 +13,14 @@ export interface DbSlotRow {
   created_at: Date;
 }
 
-export interface GroupedSlotSummary {
+export interface GroupedSlotSummary extends QueryResultRow {
   starts_at: Date;
   ends_at: Date;
   available_count: number;
 }
+
+interface DbAvailabilityRuleRow extends QueryResultRow, AvailabilityRuleInput {}
+interface DbBlackoutDateRow extends QueryResultRow, BlackoutDateInput {}
 
 export class SlotRepository {
   /**
@@ -233,7 +236,7 @@ export class SlotRepository {
     }
     sql += ' ORDER BY weekday, start_time ASC';
 
-    const res = await query<AvailabilityRuleInput>(sql, params);
+    const res = await query<DbAvailabilityRuleRow>(sql, params);
     return res.rows;
   }
 
@@ -250,7 +253,7 @@ export class SlotRepository {
     }
     sql += ' ORDER BY blackout_date ASC';
 
-    const res = await query<BlackoutDateInput>(sql, params);
+    const res = await query<DbBlackoutDateRow>(sql, params);
     return res.rows;
   }
 }
