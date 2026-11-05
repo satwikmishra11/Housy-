@@ -1,0 +1,44 @@
+{
+  "common": {
+    "appName": "Housy",
+    "developer": "Company A, Ahmedabad",
+    "rera": "RERA No: PR/GJ/AHMEDABAD/CITY/AUDA/RAA00000/011126",
+    "dpdpConsent": "Your contact details are protected under the DPDP Act 2023. We only contact you regarding your explicit enquiry.",
+    "continue": "Continue",
+    "back": "Back",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "close": "Close",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "language": "Language",
+    "selectLanguage": "Select language"
+  },
+  "buyer": {
+    "title": "Find Your Home in Ahmedabad",
+    "subtitle": "Direct enquiries with Company A. Instant answers, verified details, and effortless site visit booking.",
+    "welcome": "Namaste! Welcome to Company A. I can assist you with floor plans, pricing, amenities, and booking a site visit for Project 1 and Project 2.",
+    "askQuestionPlaceholder": "Ask a question in English, Hindi, or Gujarati...",
+    "bookVisit": "Book a Site Visit",
+    "selectProject": "Select Project",
+    "selectConfiguration": "Select Configuration",
+    "twoBhk": "2 BHK (₹65L – ₹85L)",
+    "threeBhk": "3 BHK (₹95L – ₹1.2 Cr)",
+    "selectDate": "Select Date",
+    "selectSlot": "Select Slot",
+    "slotDuration": "60-minute personalized tour with a senior sales advisor",
+    "visitConfirmed": "Site Visit Confirmed",
+    "visitDetails": "We have reserved your slot. A calendar invitation and location pin will be shared with you.",
+    "talkToExecutive": "Speak with Sales Executive",
+    "executiveAssigned": "A dedicated executive from Company A has been assigned to your enquiry."
+  },
+  "navigation": {
+    "overview": "Overview",
+    "leads": "Leads",
+    "visits": "Site Visits",
+    "factSheet": "Fact Sheet",
+    "analytics": "Source Analytics",
+    "styleguide": "Design System Styleguide"
+  }
+}
