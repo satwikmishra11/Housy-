@@ -177,11 +177,10 @@ export const LeadsPage: React.FC = () => {
         <div className="flex border-b border-hairline gap-4">
           <button
             type="button"
-            className={`pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${
-              activeTab === 'all'
+            className={`pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'all'
                 ? 'border-accent text-accent font-semibold'
                 : 'border-transparent text-ink-muted hover:text-ink-base'
-            }`}
+              }`}
             onClick={() => {
               setActiveTab('all');
               setPage(1);
@@ -193,11 +192,10 @@ export const LeadsPage: React.FC = () => {
           </button>
           <button
             type="button"
-            className={`pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${
-              activeTab === 'duplicates'
+            className={`pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'duplicates'
                 ? 'border-accent text-accent font-semibold'
                 : 'border-transparent text-ink-muted hover:text-ink-base'
-            }`}
+              }`}
             onClick={() => {
               setActiveTab('duplicates');
               setPage(1);

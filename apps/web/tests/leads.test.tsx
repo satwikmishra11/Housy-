@@ -90,7 +90,7 @@ describe('Unified Leads UI & Deduplication Views', () => {
   };
 
   it('State 1: Explicit Loading state renders skeletons during fetch', () => {
-    vi.spyOn(api, 'fetchLeads').mockImplementation(() => new Promise(() => {}));
+    vi.spyOn(api, 'fetchLeads').mockImplementation(() => new Promise(() => { }));
 
     renderWithProviders(<LeadsPage />);
     expect(screen.getByRole('heading', { name: /Unified Leads/i })).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe('Unified Leads UI & Deduplication Views', () => {
       });
 
       renderWithProviders(
-        <CsvImportModal isOpen={true} onClose={() => {}} onImportComplete={() => {}} />,
+        <CsvImportModal isOpen={true} onClose={() => { }} onImportComplete={() => { }} />,
       );
 
       expect(screen.getByText(/Import Leads from CSV/i)).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('Unified Leads UI & Deduplication Views', () => {
         <LeadDetailDrawer
           leadId={sampleLead1.id}
           isOpen={true}
-          onClose={() => {}}
+          onClose={() => { }}
         />,
       );
 

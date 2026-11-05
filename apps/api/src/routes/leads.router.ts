@@ -107,85 +107,85 @@ leadsRouter.get(
       const leadId = req.params['id'] as string;
       const details = await leadRepository.findDetailsById(leadId);
 
-      if (!details) {
-        throw new NotFoundError(`Lead with ID '${leadId}' not found`);
+        if (!details) {
+          throw new NotFoundError(`Lead with ID '${leadId}' not found`);
+        }
+
+        // Enforce ownership: 403 Forbidden for forbidden leads
+        if (req.user!.role === 'executive' && details.lead.assigned_to !== req.user!.id) {
+          throw new ForbiddenError('Forbidden: Lead is assigned to another executive');
+        }
+
+        const l = details.lead;
+        const formatted = {
+          id: l.id,
+          publicId: l.public_id,
+          name: l.name,
+          phoneE164: l.phone_e164,
+          email: l.email,
+          source: l.source,
+          projectId: l.project_id,
+          projectName: l.project_name ?? null,
+          wants: l.wants,
+          budgetMin: l.budget_min ? Number(l.budget_min) : null,
+          budgetMax: l.budget_max ? Number(l.budget_max) : null,
+          timeline: l.timeline,
+          language: l.language,
+          status: l.status,
+          assignedTo: l.assigned_to,
+          assignedToName: l.assigned_to_name ?? null,
+          possibleDuplicateOf: l.possible_duplicate_of,
+          possibleDuplicateName: l.possible_duplicate_name ?? null,
+          touchpointsCount: Number(l.touchpoints_count ?? 1),
+          consentStatus: l.consent_status,
+          firstTouchAt: l.first_touch_at.toISOString(),
+          firstResponseAt: l.first_response_at ? l.first_response_at.toISOString() : null,
+          lastActivityAt: l.last_activity_at.toISOString(),
+          touchpoints: details.touchpoints.map((t) => ({
+            id: t.id,
+            leadId: t.lead_id,
+            source: t.source,
+            channel: t.channel,
+            occurredAt: t.occurred_at.toISOString(),
+            externalId: t.external_id,
+            raw: t.raw,
+          })),
+          conversations: details.conversations.map((c) => ({
+            id: c.id,
+            status: c.status,
+            language: c.language,
+            flagged: c.flagged,
+            flagReasons: c.flag_reasons,
+            createdAt: c.created_at.toISOString(),
+            messagesCount: c.messages_count,
+          })),
+          bookings: details.bookings.map((b) => ({
+            id: b.id,
+            status: b.status,
+            startsAt: b.starts_at.toISOString(),
+            endsAt: b.ends_at.toISOString(),
+            projectName: b.project_name,
+            executiveName: b.executive_name,
+          })),
+          handoffs: details.handoffs.map((h) => ({
+            id: h.id,
+            reason: h.reason,
+            summary: h.summary,
+            status: h.status,
+            executiveName: h.executive_name,
+            createdAt: h.created_at.toISOString(),
+          })),
+        };
+
+        res.status(200).json({
+          success: true,
+          data: formatted,
+          lead: formatted,
+        });
+      } catch (err) {
+        next(err);
       }
-
-      // Enforce ownership: 403 Forbidden for forbidden leads
-      if (req.user!.role === 'executive' && details.lead.assigned_to !== req.user!.id) {
-        throw new ForbiddenError('Forbidden: Lead is assigned to another executive');
-      }
-
-      const l = details.lead;
-      const formatted = {
-        id: l.id,
-        publicId: l.public_id,
-        name: l.name,
-        phoneE164: l.phone_e164,
-        email: l.email,
-        source: l.source,
-        projectId: l.project_id,
-        projectName: l.project_name ?? null,
-        wants: l.wants,
-        budgetMin: l.budget_min ? Number(l.budget_min) : null,
-        budgetMax: l.budget_max ? Number(l.budget_max) : null,
-        timeline: l.timeline,
-        language: l.language,
-        status: l.status,
-        assignedTo: l.assigned_to,
-        assignedToName: l.assigned_to_name ?? null,
-        possibleDuplicateOf: l.possible_duplicate_of,
-        possibleDuplicateName: l.possible_duplicate_name ?? null,
-        touchpointsCount: Number(l.touchpoints_count ?? 1),
-        consentStatus: l.consent_status,
-        firstTouchAt: l.first_touch_at.toISOString(),
-        firstResponseAt: l.first_response_at ? l.first_response_at.toISOString() : null,
-        lastActivityAt: l.last_activity_at.toISOString(),
-        touchpoints: details.touchpoints.map((t) => ({
-          id: t.id,
-          leadId: t.lead_id,
-          source: t.source,
-          channel: t.channel,
-          occurredAt: t.occurred_at.toISOString(),
-          externalId: t.external_id,
-          raw: t.raw,
-        })),
-        conversations: details.conversations.map((c) => ({
-          id: c.id,
-          status: c.status,
-          language: c.language,
-          flagged: c.flagged,
-          flagReasons: c.flag_reasons,
-          createdAt: c.created_at.toISOString(),
-          messagesCount: c.messages_count,
-        })),
-        bookings: details.bookings.map((b) => ({
-          id: b.id,
-          status: b.status,
-          startsAt: b.starts_at.toISOString(),
-          endsAt: b.ends_at.toISOString(),
-          projectName: b.project_name,
-          executiveName: b.executive_name,
-        })),
-        handoffs: details.handoffs.map((h) => ({
-          id: h.id,
-          reason: h.reason,
-          summary: h.summary,
-          status: h.status,
-          executiveName: h.executive_name,
-          createdAt: h.created_at.toISOString(),
-        })),
-      };
-
-      res.status(200).json({
-        success: true,
-        data: formatted,
-        lead: formatted,
-      });
-    } catch (err) {
-      next(err);
-    }
-  },
+    },
 );
 
 /**

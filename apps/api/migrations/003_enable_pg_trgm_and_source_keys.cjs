@@ -45,3 +45,4 @@ exports.down = (pgm) => {
     DROP EXTENSION IF EXISTS pg_trgm;
   `);
 };
+

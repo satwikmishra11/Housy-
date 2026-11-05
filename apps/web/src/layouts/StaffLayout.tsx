@@ -101,11 +101,11 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`min-h-[44px] px-3.5 py-2.5 rounded-token text-sm font-medium flex items-center justify-between transition-colors ${
-                  isActive
-                    ? 'bg-accent-soft text-accent font-semibold'
-                    : 'text-muted hover:text-ink hover:bg-background'
-                }`}
+                className={`min - h - [44px] px - 3.5 py - 2.5 rounded - token text - sm font - medium flex items - center justify - between transition - colors ${
+            isActive
+            ? 'bg-accent-soft text-accent font-semibold'
+              : 'text-muted hover:text-ink hover:bg-background'
+          }`}
               >
                 <div className="flex items-center gap-3">
                   <span className={isActive ? 'text-accent' : 'text-muted'}>{item.icon}</span>
@@ -204,9 +204,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`min-h-[44px] px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
-                    isActive ? 'bg-accent-soft text-accent font-semibold' : 'text-ink'
-                  }`}
+                  className={`min - h - [44px] px - 4 py - 3 rounded - xl text - sm font - medium flex items - center justify - between ${
+            isActive? 'bg-accent-soft text-accent font-semibold': 'text-ink'
+          }`}
                 >
           <div className="flex items-center gap-3">
             {item.icon}
