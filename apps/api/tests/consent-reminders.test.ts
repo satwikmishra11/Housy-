@@ -279,6 +279,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
         .set('X-Requested-With', 'XMLHttpRequest')
         .send({
           source: 'social_ad',
+          projectId,
         });
 
       expect(simRes.status).toBe(201);

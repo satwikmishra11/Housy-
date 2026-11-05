@@ -41,3 +41,4 @@ exports.down = (pgm) => {
     DROP INDEX IF EXISTS idx_leads_source_time;
   `);
 };
+

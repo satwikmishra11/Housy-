@@ -62,7 +62,9 @@ demoRouter.post(
       // Lookup project
       let targetProjectId = projectId;
       if (!targetProjectId) {
-        const projRes = await query<{ id: string }>(`SELECT id FROM projects ORDER BY name ASC LIMIT 1`);
+        const projRes = await query<{ id: string }>(
+          `SELECT id FROM projects WHERE rera_number NOT LIKE '%TEST%' ORDER BY created_at ASC LIMIT 1`,
+        );
         targetProjectId = projRes.rows[0]?.id;
       }
 
