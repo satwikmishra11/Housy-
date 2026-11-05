@@ -34,12 +34,14 @@ Housy-/
 │   │   └── package.json
 │   └── web/                     # React 18 + Vite + Tailwind CSS frontend
 │       ├── src/
-│       │   ├── components/      # UI components (State views: LoadingState, EmptyState, ErrorState)
+│       │   ├── components/      # UI primitives and domain design system components
+│       │   ├── i18n/            # react-i18next setup and en, hi, gu translation bundles
+│       │   ├── layouts/         # BuyerLayout (single-column) and StaffLayout (sidebar/drawer)
 │       │   ├── lib/             # API client, date formatters (Asia/Kolkata), QueryClient
-│       │   ├── pages/           # Page routes (HealthPage diagnostic dashboard)
-│       │   ├── App.tsx          # Router and QueryClientProvider
+│       │   ├── pages/           # HealthPage diagnostic dashboard, StyleguidePage
+│       │   ├── App.tsx          # Router, ToastProvider, and QueryClientProvider
 │       │   └── main.tsx         # React root
-│       ├── tests/               # Vitest + React Testing Library component tests
+│       ├── tests/               # Vitest + React Testing Library component and layout tests
 │       ├── .env.example
 │       └── package.json
 ├── packages/
@@ -120,10 +122,73 @@ In adherence to Assumption **A5**, all promotional, notification, and reminder m
 
 ---
 
-## 10. Frontend Architecture (`apps/web`)
-- **Framework**: React 18 + Vite + Tailwind CSS + React Router + TanStack Query.
-- **Three-State View Requirement**:
-  - `LoadingState`: Animated spinner and status indicator during asynchronous fetches.
-  - `EmptyState`: Actionable empty view when records/telemetry are missing.
-  - `ErrorState`: Error banner with message and retry trigger (`onRetry`).
-- **Health Diagnostic Page (`HealthPage.tsx`)**: Real-time telemetry dashboard monitoring API uptime, database connection state, query latency, environment, and architectural compliance.
+## 10. Design Tokens & Styling (`apps/web`)
+The client requested a calm, minimal, and premium aesthetic fitting ₹65L – ₹1.2 Cr residences:
+- **Palette**:
+  - `background`: `#FBFAF8`
+  - `surface`: `#FFFFFF`
+  - `ink`: `#16181D`
+  - `muted`: `#6B6F76`
+  - `hairline`: `#E7E4DE`
+  - `accent`: `#1F4D45` (deep green; exactly one accent color across the app)
+  - `accent-soft`: `#E8EFEC`
+  - `success`: `#2F6B4F`
+  - `warning`: `#A8741A`
+  - `danger`: `#A33A3A`
+  - Zero gradients, zero emojis, and zero heavy shadows.
+- **Typography**:
+  - Headings: `Cormorant Garamond` (refined serif).
+  - Body: `Inter` (geometric sans-serif).
+  - Fallbacks: `Noto Sans Devanagari` and `Noto Sans Gujarati`.
+  - Self-hosted locally via `@fontsource/*` (zero external network font requests).
+- **Spatial Geometry & Accessibility**:
+  - 8px spacing grid.
+  - 12px border radius (`rounded-xl`).
+  - 44px minimum touch targets on interactive controls (`min-h-[44px]`, `min-w-[44px]`).
+  - Explicit focus ring styling: `focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2`.
+  - `prefers-reduced-motion` media query compliance disabling animations and transitions for sensitive users.
+
+---
+
+## 11. Component Catalog (`apps/web/src/components/`)
+A comprehensive set of accessible, strictly typed React components:
+- **`Button`**: Primary, secondary, outline, ghost, danger variants; sm/md/lg sizes; loading & disabled states; 44px min touch target.
+- **`Input`**: Text, number, tel, email; label, helper text, error state, left/right icons, disabled.
+- **`Select`**: Dropdown with custom chevron, label, error state, options.
+- **`Textarea`**: Multi-line input with label, error state, rows.
+- **`Checkbox`**: Custom checkmark with label, description, error state, 44px touch area.
+- **`Card`**: Surface card with hairline border, subtle shadow, compound header/title/description/content/footer.
+- **`Badge`**: Source tags as subtle outlined chips (`Property Portal`, `Social Media`, `Hoarding Call`, `Website`), plus neutral, accent, success, warning, danger chips.
+- **`Tabs`**: Underline and pill variants, keyboard accessible (ArrowLeft/Right, Home/End), badge support.
+- **`Modal`**: Centered dialog or slide-over drawer/sheet with backdrop blur, focus handling, Escape key listener.
+- **`Toast`**: Context-driven notification provider with auto-dismiss and accessible polite live regions.
+- **`Skeleton`**: Subtle pulsing placeholders (text, circular, rectangular).
+- **`EmptyState`**: Purposeful empty view with icon, description, and useful next action button.
+- **`ErrorState`**: Error view with retry action button and optional technical details disclosure.
+- **`StatTile`**: Executive metric tile with serif value, trend delta indicator, and subtitle.
+- **`ChatBubble`**: Buyer (user), assistant, executive, and system chat bubbles with timestamps and status indicators.
+- **`SlotChip`**: 60-minute site visit slot chip (available, selected, booked/disabled) with 44px touch target.
+- **`ResponsiveTable`**: Full table view on desktop (`>= md`), stacked mobile card view on phones (`< md`).
+- **`PageHeader`**: Serif page title, description, optional badge, and responsive action button toolbar.
+- **`LanguageSwitcher`**: Pill component to toggle between English, Hindi, and Gujarati.
+
+---
+
+## 12. Application Shell Layouts (`apps/web/src/layouts/`)
+- **`BuyerLayout`**: Single centered column (`max-w-2xl`), mobile-first design, clean top bar with language switcher, and regulatory footer displaying RERA registration (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP Act 2023 privacy consent notice.
+- **`StaffLayout`**: Desktop persistent sidebar with company identity, role badges (`Sales Head (Admin)` vs `Sales Executive`), navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Design System`), and mobile responsive top bar with drawer navigation.
+
+---
+
+## 13. Internationalization (i18n) (`apps/web/src/i18n/`)
+- Configured via `react-i18next` with three language bundles:
+  - English (`en`): default
+  - Hindi (`hi`): हिन्दी
+  - Gujarati (`gu`): ગુજરાતી
+- Covers all buyer-facing strings, greeting messages, project details, legal statements, and slot booking interactions.
+- Selected language is persisted in `localStorage`.
+
+---
+
+## 14. Styleguide Route (`/styleguide`)
+- Route accessible at `/styleguide` showcasing every design system token, atomic primitive, domain component, and state (default, active, loading, disabled, error) in both Staff and Buyer layouts.
