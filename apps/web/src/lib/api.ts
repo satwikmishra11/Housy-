@@ -41,15 +41,35 @@ import {
       credentials: 'include', // Include httpOnly auth cookies
     });
 
-    const data: unknown = await response.json();
+    // Safely read response body as text first to handle empty responses (204, proxy errors, timeouts)
+    // without triggering "Unexpected end of JSON input" SyntaxErrors
+    const rawText = await response.text();
+    let data: unknown = null;
+    if (rawText && rawText.trim().length > 0) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        data = null;
+      }
+    }
 
     if (!response.ok) {
       if (response.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.dispatchEvent(new CustomEvent('housy:session-expired'));
       }
 
-      const errorObj = data as { error?: { message?: string; code?: string } };
-      const message = errorObj?.error?.message || `Request failed with status ${response.status}`;
+      const errorObj = data as { error?: { message?: string; code?: string } } | null;
+      let message = errorObj?.error?.message;
+      if (!message) {
+        if (response.status === 502 || response.status === 504 || (response.status === 500 && !rawText)) {
+          message = `API server unavailable (HTTP ${response.status}). Please check that the backend API server is running on port 3001.`;
+        } else if (response.status === 404) {
+          message = `API endpoint not found: ${endpoint} (HTTP 404)`;
+        } else {
+          message = rawText.trim() || `Request failed with status ${response.status}`;
+        }
+      }
+
       const error = new Error(message);
       (error as { statusCode?: number }).statusCode = response.status;
       (error as { code?: string }).code = errorObj?.error?.code;
