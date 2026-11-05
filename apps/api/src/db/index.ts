@@ -5,7 +5,7 @@ const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: config.DATABASE_URL,
-  max: 10,
+  max: 30, // Support up to 30 concurrent transactions without pool starvation
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });

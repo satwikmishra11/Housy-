@@ -176,7 +176,7 @@ export class VisitService {
       // 3. Acquire open slot with SELECT ... FOR UPDATE SKIP LOCKED (preferring lowest load)
       const slot = await this.slotRepo.lockBestSlotForBooking(client, projectId, startsAt, 3);
       if (!slot) {
-        const alternatives = await this.slotRepo.findAlternativeSlots(projectId, startsAt, 3, 3);
+        const alternatives = await this.slotRepo.findAlternativeSlots(projectId, startsAt, 3, 3, client);
         throw new SlotUnavailableError(
           'The requested slot is no longer available.',
           alternatives,
@@ -287,6 +287,7 @@ export class VisitService {
           newStartsAt,
           3,
           3,
+          client,
         );
         throw new SlotUnavailableError(
           'The requested new slot is not available.',
@@ -448,12 +449,12 @@ export class VisitService {
 
       // Add touchpoint recording the visit outcome
       await client.query(
-        `INSERT INTO lead_touchpoints (lead_id, source, event_type, metadata)
-         VALUES ($1, 'website', $2, $3)`,
+        `INSERT INTO lead_touchpoints (lead_id, source, channel, raw)
+         VALUES ($1, 'website', 'visit', $2)`,
         [
           details.lead_id,
-          payload.outcome === 'visited' ? 'visit_completed' : 'visit_no_show',
           JSON.stringify({
+            event: payload.outcome === 'visited' ? 'visit_completed' : 'visit_no_show',
             bookingId,
             recordedBy: userId,
             notes: payload.notes || null,

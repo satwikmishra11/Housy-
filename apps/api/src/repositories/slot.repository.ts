@@ -133,7 +133,9 @@ export class SlotRepository {
     targetStartsAt: Date,
     limit = 3,
     minLeadTimeHours = 3,
+    client?: PoolClient,
   ): Promise<SlotAlternative[]> {
+    const q = client ? client.query.bind(client) : query;
     const sql = `
       SELECT DISTINCT starts_at, ends_at
       FROM visit_slots
@@ -145,7 +147,7 @@ export class SlotRepository {
       LIMIT $4
     `;
 
-    const res = await query<{ starts_at: Date; ends_at: Date }>(sql, [
+    const res = await q<{ starts_at: Date; ends_at: Date }>(sql, [
       projectId,
       minLeadTimeHours,
       targetStartsAt.toISOString(),

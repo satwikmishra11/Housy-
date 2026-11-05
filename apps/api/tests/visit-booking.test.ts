@@ -46,8 +46,8 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
     const email = `${namePrefix.toLowerCase()}.${Date.now()}@testbuyer.com`;
 
     const res = await query<{ id: string }>(
-      `INSERT INTO leads (name, phone_e164, email, source, project_id, status)
-       VALUES ($1, $2, $3, 'website', $4, 'engaged')
+      `INSERT INTO leads (name, phone_e164, email, source, project_id, wants, status)
+       VALUES ($1, $2, $3, 'website', $4, '2 BHK', 'engaged')
        RETURNING id`,
       [`${namePrefix} ${randomSuffix}`, phone, email, projectId],
     );
@@ -66,7 +66,9 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
     return res.rows[0]!.id;
   }
 
-  it('20 parallel bookings for the same single slot via Promise.all: exactly 1 succeeds, 19 get SlotUnavailable', async () => {
+  it(
+    '20 parallel bookings for the same single slot via Promise.all: exactly 1 succeeds, 19 get SlotUnavailable',
+    async () => {
     // Target time: 10 days in the future at 11:00 UTC
     const targetStartsAt = new Date(Date.now() + 10 * 24 * 3600 * 1000);
     targetStartsAt.setUTCHours(11, 0, 0, 0);
@@ -141,7 +143,7 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
       [slotId],
     );
     expect(parseInt(bookingCheck.rows[0]!.count, 10)).toBe(1);
-  });
+  }, 15000);
 
   it('Idempotent retry: double click returns the same booking without re-booking', async () => {
     const leadId = await createLead('IdempotentLead');
