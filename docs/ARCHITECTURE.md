@@ -637,6 +637,53 @@ The human handoff subsystem coordinates the transition from automated AI assista
 - **Time Fast-Forwarding**: `POST /api/demo/fast-forward-reminders` shifts pending reminders into the past (NOW - 5 minutes), simulating the passage of 24h/2h intervals.
 - **On-Demand Worker Execution**: `POST /api/demo/run-reminders` triggers worker processing immediately, rendering processed/sent/failed outcome statistics.
 
+---
+
+## Phase 9: Sales Analytics & Executive Performance Dashboard
+
+### 1. Architectural Scope & Role Scoping
+The Sales Analytics Dashboard provides real-time visibility into marketing efficiency, executive response SLAs, and sales conversion velocity.
+- **Role-Based Access Control (RBAC)**:
+  - `sales_head`: Views developer-wide aggregate performance across all sales executives, marketing channels, and projects. Can filter by individual project.
+  - `executive`: Automatically scoped to leads assigned to the authenticated user (`assigned_to = userId`), empowering executives to track their own response times and visit outcomes.
+- **First-Touch Attribution**: All metrics attribute leads, visits, and conversions to the initial discovery channel (`leads.first_touch_source`).
+
+### 2. Metrics & Mathematical Definitions
+| Metric | Mathematical Formula | Target Benchmark | Divide-by-Zero Handling |
+| :--- | :--- | :--- | :--- |
+| **Median First Response Time** | `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response_at - first_touch_at)))` | `< 5 minutes` (300 seconds) | Returns `"-"` if 0 responded leads |
+| **Unreached Within 48 Hours %** | `(unreached_48h / total_leads_older_than_48h) * 100` where unreached = `first_touch_at <= NOW() - 48h AND (first_response_at IS NULL OR first_response_at > first_touch_at + 48h)` | `< 5.0%` | Returns `"-"` if 0 eligible leads |
+| **Visit Show-up Rate** | `completed_visits / (completed_visits + no_show_visits)` | `> 70.0%` | Returns `"-"` if completed + no-show = 0 |
+| **Lead-to-Visit Conversion Rate** | `completed_visits / total_leads` | `8.0%` (Baseline `6.0%`) | Returns `"-"` if total leads = 0 |
+| **Cost Per Completed Visit** | `prorated_spend_inr / completed_visits` | Based on channel CAC | Returns `"-"` if completed visits = 0 |
+| **Conversion Funnel** | 4 Stages: `Total Ingested Leads -> Engaged Leads -> Site Visits Booked -> Visits Completed` | Tracks drop-off at each stage | Safely clamps to 0% |
+
+### 3. Ad Spend Proration & Cost Attribution
+- **Ad Spend Storage (`ad_spend`)**: Stores monthly allocations per marketing channel (`property_portal`, `social_ad`, `hoarding_call`, `website`), defaulting to ₹30 Lakh / month (Assumption A7 & A33).
+- **Prorated Daily Allocation**: For custom date ranges or partial months, spend is calculated dynamically:
+  $$\text{Prorated Spend} = \sum_{\text{months}} \left( \frac{\text{Monthly Spend}}{\text{Days in Month}} \times \text{Days Overlapping Filter Window} \right)$$
+- **Sample Significance Guard**: Any source breakdown or aggregate cohort with fewer than 5 observations (`totalLeads < 5` or `visitsBooked < 5`) is flagged with `isSmallSample: true` and annotated with a "Small Sample" badge to prevent misleading statistical conclusions.
+
+### 4. API Endpoints (`/api/dashboard`)
+- `GET /api/dashboard/metrics`:
+  - Validated by `DashboardFilterQuerySchema` (`period`: `'7d' | '30d' | '90d' | 'custom'`, `from`: `YYYY-MM-DD`, `to`: `YYYY-MM-DD`, `projectId`: `UUID`).
+  - Returns `SalesDashboardData` containing summary KPIs, by-source breakdowns, funnel metrics, and chart series.
+- `GET /api/dashboard/export-csv`:
+  - Generates RFC 4180 compliant CSV export containing Summary Metrics and By-Source Breakdowns.
+  - Streams with `Content-Type: text/csv` and `Content-Disposition: attachment; filename="sales-analytics-<timestamp>.csv"`.
+
+### 5. Frontend Visualizations & Accessibility (`apps/web`)
+- **Route Mounting**: Accessible via `/analytics` and `/dashboard` in `App.tsx` and navigation sidebar in `StaffLayout.tsx`.
+- **Three Explicit States**:
+  1. **Loading State**: Pulse skeleton tiles mimicking the layout during fetch.
+  2. **Empty State**: Tailored empty screen when 0 leads are recorded in the selected window with a 1-click "Reset to Last 30 Days" action.
+  3. **Error State**: Actionable error card displaying root cause with a "Retry Request" action.
+- **Charts & Visualizations**:
+  - Accessible Recharts BarChart comparing median response times by source with a reference line at the 5-minute target. Includes an aria-hidden visual chart accompanied by a screen-reader data table alternative.
+  - Conversion Funnel volume bars with step-by-step conversion percentages.
+- **"How We Calculate" Modal**: Accessible popover dialog explaining the 6 core metric formulas, SLA conditions, and attribution methodology.
+- **Mobile Responsive Design**: Grid transforms to stacked vertical cards on small screens; tables utilize horizontal scrolling (`overflow-x-auto`) with minimum cell widths.
+
 
 
 
