@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "prepare": "tsc -b",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

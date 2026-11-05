@@ -5,7 +5,9 @@
   "type": "module",
   "main": "./dist/server.js",
   "scripts": {
+    "prebuild": "npm run build --workspace=@housy/shared",
     "build": "tsc",
+    "pretypecheck": "npm run build --workspace=@housy/shared",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
