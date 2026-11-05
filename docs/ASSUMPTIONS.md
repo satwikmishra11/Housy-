@@ -27,5 +27,6 @@ This document records all architectural and product assumptions made during the 
 - **A23**: Ingestion authentication for webhook and server-to-server partners (`property_portal`, `social_ad`, `website`, `hoarding_call`) authenticates via a hashed SHA-256 API key in the `X-Source-Key` header against the `source_api_keys` table and is exempt from browser-specific CSRF header checks.
 - **A24**: Idempotent ingest evaluates `(source, external_id)` against existing `lead_touchpoints`. If an exact `(source, external_id)` match exists, the system returns `{ outcome: 'idempotent', leadId }` without creating duplicate touchpoints or duplicate leads.
 - **A25**: Leads with `consent === false` or `consent_status === 'withdrawn'` are marked with the "Cannot Contact" badge and omitted from outbound messaging pipelines in compliance with the Digital Personal Data Protection (DPDP) Act 2023.
+- **A26**: Client API calls via `apiFetch` safely consume the response stream as text before parsing JSON to gracefully handle empty bodies (e.g. 204 No Content, proxy disconnects, or gateway timeouts) without throwing unhandled `Unexpected end of JSON input` SyntaxErrors, reporting actionable backend-unreachable errors instead.
 
 
