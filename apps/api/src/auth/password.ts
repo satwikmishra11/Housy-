@@ -22,3 +22,4 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
     return false;
   }
 }
+

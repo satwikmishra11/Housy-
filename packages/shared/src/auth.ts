@@ -48,3 +48,4 @@ export const MagicLinkTokenPayloadSchema = z.object({
   exp: z.number(),
 });
 export type MagicLinkTokenPayload = z.infer<typeof MagicLinkTokenPayloadSchema>;
+

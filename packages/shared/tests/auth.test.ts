@@ -68,3 +68,4 @@ describe('Shared Auth Schemas', () => {
     expect(MagicLinkTokenPayloadSchema.safeParse(magicLink).success).toBe(true);
   });
 });
+

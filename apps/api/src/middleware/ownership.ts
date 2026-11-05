@@ -31,3 +31,4 @@ export async function assertLeadOwnership(leadId: string, user: AuthUser): Promi
     );
   }
 }
+

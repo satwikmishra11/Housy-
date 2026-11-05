@@ -39,3 +39,4 @@ describe('Login Rate Limiting', () => {
     expect(rateLimitedRes.body.error.message).toContain('rate limited');
   });
 });
+

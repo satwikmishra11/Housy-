@@ -47,3 +47,4 @@ adminRouter.post(
     });
   },
 );
+

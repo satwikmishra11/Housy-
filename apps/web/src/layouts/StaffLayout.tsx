@@ -101,11 +101,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  isActive
-                    ? 'bg-accent-soft text-accent font-semibold'
-                    : 'text-muted hover:text-ink hover:bg-background'
-                }`}
+                      ? 'bg-accent-soft text-accent font-semibold'
+                      : 'text-muted hover:text-ink hover:bg-background'
+                    }`}
               >
                 <div className="flex items-center gap-3">
                   <span className={isActive ? 'text-accent' : 'text-muted'}>{item.icon}</span>
@@ -204,59 +202,59 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`min-h-[44px] px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
-                    isActive ? 'bg-accent-soft text-accent font-semibold' : 'text-ink'
-                  }`}
+            className = {`min-h-[44px] px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${isActive ? 'bg-accent-soft text-accent font-semibold' : 'text-ink'
+              }`}
                 >
-                  <div className="flex items-center gap-3">
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </div>
-                  {item.adminOnly && effectiveUserRole === 'executive' && (
-                    <Badge variant="neutral" className="text-[10px] px-1.5 py-0">
-                      Admin
-                    </Badge>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          <div className="mt-auto pt-6 border-t border-hairline flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-ink block">{effectiveUserName}</span>
-                <span className="text-xs text-muted">{roleLabel}</span>
-              </div>
-              {authContext && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="min-h-[44px] px-3 py-1.5 border border-hairline rounded-xl text-xs text-danger flex items-center gap-1.5"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
-                </button>
-              )}
-            </div>
-            <LanguageSwitcher />
+          <div className="flex items-center gap-3">
+            {item.icon}
+            <span>{item.label}</span>
           </div>
+          {item.adminOnly && effectiveUserRole === 'executive' && (
+            <Badge variant="neutral" className="text-[10px] px-1.5 py-0">
+              Admin
+            </Badge>
+          )}
+        </NavLink>
+        );
+            })}
+      </nav>
+
+      <div className="mt-auto pt-6 border-t border-hairline flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium text-ink block">{effectiveUserName}</span>
+            <span className="text-xs text-muted">{roleLabel}</span>
+          </div>
+          {authContext && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="min-h-[44px] px-3 py-1.5 border border-hairline rounded-xl text-xs text-danger flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
-
-        <footer className="border-t border-hairline bg-surface py-4 px-6 text-xs text-muted flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Company A Ahmedabad · Internal Sales Management Platform</span>
-          <span className="flex items-center gap-1.5">
-            <ShieldAlert className="w-3.5 h-3.5 text-accent" />
-            RERA & DPDP Compliant Data Handling
-          </span>
-        </footer>
+        <LanguageSwitcher />
       </div>
     </div>
+  )
+}
+
+{/* Main Content Area */ }
+<div className="flex-1 flex flex-col min-w-0">
+  <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
+
+  <footer className="border-t border-hairline bg-surface py-4 px-6 text-xs text-muted flex flex-col sm:flex-row items-center justify-between gap-2">
+    <span>Company A Ahmedabad · Internal Sales Management Platform</span>
+    <span className="flex items-center gap-1.5">
+      <ShieldAlert className="w-3.5 h-3.5 text-accent" />
+      RERA & DPDP Compliant Data Handling
+    </span>
+  </footer>
+</div>
+    </div >
   );
 };
 

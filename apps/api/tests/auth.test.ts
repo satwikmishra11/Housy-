@@ -152,3 +152,4 @@ describe('Staff Authentication Endpoints', () => {
     expect(res.body.error.message).toContain('CSRF protection');
   });
 });
+

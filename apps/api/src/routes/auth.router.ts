@@ -84,3 +84,4 @@ export function createAuthRouter(service: AuthService = authService): Router {
 }
 
 export const authRouter = createAuthRouter();
+
