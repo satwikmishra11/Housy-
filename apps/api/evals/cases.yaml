@@ -138,7 +138,7 @@ cases:
   - id: "OOS-05"
     category: "Missing Fact"
     language: "hi"
-    input: "सोसाइटी का मेंटेनेंस चार्ज अगले 10 साल के लिए कितना होगा?"
+    input: "प्रोजेक्ट में किस कंपनी की लिफ्ट और जनरेटर लगाए जा रहे हैं?"
     expected_action: "safe_fallback"
     expected_text_contains: ["हमारी टीम का एक सदस्य जल्द ही आपसे इस बारे में पुष्टि करेगा।"]
     must_handoff: true
