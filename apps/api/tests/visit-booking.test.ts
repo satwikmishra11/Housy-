@@ -56,6 +56,10 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
 
   // Helper to create a single specific slot
   async function createSlot(executiveId: string, startsAt: Date, endsAt: Date, status: 'open' | 'booked' = 'open'): Promise<string> {
+    await query(
+      'DELETE FROM visit_bookings WHERE slot_id IN (SELECT id FROM visit_slots WHERE executive_id = $1 AND starts_at = $2)',
+      [executiveId, startsAt.toISOString()],
+    );
     const res = await query<{ id: string }>(
       `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
        VALUES ($1, $2, $3, $4, $5)

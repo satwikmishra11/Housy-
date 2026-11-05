@@ -137,12 +137,16 @@ export class SlotRepository {
   ): Promise<SlotAlternative[]> {
     const q = client ? client.query.bind(client) : query;
     const sql = `
-      SELECT DISTINCT starts_at, ends_at
-      FROM visit_slots
-      WHERE project_id = $1
-        AND status = 'open'
-        AND starts_at >= NOW() + ($2 || ' hours')::INTERVAL
-        AND starts_at != $3
+      WITH open_slots AS (
+        SELECT DISTINCT starts_at, ends_at
+        FROM visit_slots
+        WHERE project_id = $1
+          AND status = 'open'
+          AND starts_at >= NOW() + ($2 || ' hours')::INTERVAL
+          AND starts_at != $3
+      )
+      SELECT starts_at, ends_at
+      FROM open_slots
       ORDER BY ABS(EXTRACT(EPOCH FROM (starts_at - $3::TIMESTAMPTZ))) ASC
       LIMIT $4
     `;
