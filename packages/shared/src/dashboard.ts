@@ -171,3 +171,4 @@ export const SalesDashboardDataSchema = z.object({
   calculatedAt: z.string().datetime(),
 });
 export type SalesDashboardData = z.infer<typeof SalesDashboardDataSchema>;
+

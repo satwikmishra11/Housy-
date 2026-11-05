@@ -220,7 +220,7 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
   describe('State 1: Loading State', () => {
     it('renders skeleton loaders during data fetch', () => {
       vi.spyOn(api, 'fetchDashboardMetrics').mockImplementation(
-        () => new Promise(() => {}), // Never resolves
+        () => new Promise(() => { }), // Never resolves
       );
       vi.spyOn(api, 'fetchProjects').mockResolvedValue([]);
 
