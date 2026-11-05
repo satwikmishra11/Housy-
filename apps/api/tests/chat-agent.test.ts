@@ -4,7 +4,6 @@ import { app } from '../src/app.js';
 import { query } from '../src/db/index.js';
 import { llmService, mockProvider } from '../src/llm/index.js';
 import { factService } from '../src/services/fact.service.js';
-import { signBuyerSession } from '../src/auth/tokens.js';
 import type { Fact } from '@housy/shared';
 
 describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
@@ -461,21 +460,31 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
     it('books slot atomically with phone and DPDP consent and generates template confirmation', async () => {
       const chat = await startChat();
 
-      // Create a test open slot 2 days in the future
-      const startsAt = new Date(Date.now() + 50 * 3600 * 1000);
-      startsAt.setMinutes(0, 0, 0);
-      const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
-
-      // Clean conflicting slots and create one
-      await query('DELETE FROM visit_slots WHERE executive_id = $1 AND starts_at = $2', [
-        execId,
-        startsAt.toISOString(),
-      ]);
-      await query(
-        `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
-         VALUES ($1, $2, $3, $4, 'open')`,
-        [projectId, execId, startsAt.toISOString(), endsAt.toISOString()],
+      // Find a real open slot for this project at least 4 hours in the future
+      let openSlotRes = await query<{ starts_at: string }>(
+        `SELECT starts_at FROM visit_slots
+         WHERE project_id = $1 AND status = 'open' AND starts_at > NOW() + INTERVAL '4 hours'
+         ORDER BY starts_at ASC LIMIT 1`,
+        [projectId],
       );
+
+      // If no open slot exists, create one 5 days out
+      let targetStartsAt: string;
+      if (openSlotRes.rows.length > 0) {
+        targetStartsAt = new Date(openSlotRes.rows[0]!.starts_at).toISOString();
+      } else {
+        const futureDate = new Date(Date.now() + 120 * 3600 * 1000);
+        futureDate.setMinutes(0, 0, 0);
+        const endsAt = new Date(futureDate.getTime() + 60 * 60 * 1000);
+        targetStartsAt = futureDate.toISOString();
+        await query(
+          `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+           VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING`,
+          [projectId, execId, targetStartsAt, endsAt.toISOString()],
+        );
+      }
+
+      const randomPhone = `+9198${Date.now().toString().slice(-8)}`;
 
       const res = await request(app)
         .post('/api/chat/book')
@@ -483,9 +492,9 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
         .send({
           conversationId: chat.conversationId,
           projectId,
-          startsAt: startsAt.toISOString(),
-          idempotencyKey: `idem_book_${Date.now()}`,
-          phone: '+919876543210',
+          startsAt: targetStartsAt,
+          idempotencyKey: `idem_book_${Date.now()}_${Math.random()}`,
+          phone: randomPhone,
           name: 'Vikram Patel',
           consent: true,
         });

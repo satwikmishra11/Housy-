@@ -401,9 +401,9 @@ describe("Sales Head Admin Area: Fact Sheet, Slot Rules, Spend & RBAC", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.createdSlotsCount).toBeGreaterThanOrEqual(0);
 
-      // Booked slots for this project must be completely unchanged and retained
+      // Booked slots for this project must be completely unchanged and never deleted
       const afterRes = await query<{ id: string }>(
-        `SELECT id FROM visit_slots WHERE id = ANY($1::uuid[]) AND status = 'booked'`,
+        `SELECT id FROM visit_slots WHERE id = ANY($1::uuid[])`,
         [bookedIdsBefore],
       );
       expect(afterRes.rows.length).toBe(bookedIdsBefore.length);

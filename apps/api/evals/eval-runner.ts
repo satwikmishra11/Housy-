@@ -35,7 +35,7 @@ interface EvalResult {
 }
 
 export async function runEvals(): Promise<void> {
-  console.log('--- Commencing AI Chat Assistant Evaluation Suite ---');
+  console.info('--- Commencing AI Chat Assistant Evaluation Suite ---');
 
   const yamlCandidates = [
     path.resolve(process.cwd(), 'evals/cases.yaml'),
@@ -50,7 +50,7 @@ export async function runEvals(): Promise<void> {
   const parsed = load(fileContent) as EvalCaseYaml;
   const cases = parsed.cases;
 
-  console.log(`Loaded ${cases.length} evaluation cases from ${yamlPath}`);
+  console.info(`Loaded ${cases.length} evaluation cases from ${yamlPath}`);
 
   // Fetch project ID for test chats
   const projRes = await query<{ id: string }>('SELECT id FROM projects LIMIT 1');
@@ -292,10 +292,10 @@ ${tableRowsMd}
     docCandidates.find((p) => fs.existsSync(path.dirname(p))) || docCandidates[0]!;
   fs.writeFileSync(docPath, markdownContent, 'utf8');
 
-  console.log(`\n======================================================`);
-  console.log(`EVALS COMPLETE: ${passedCount}/${totalCount} (${passRate}%) passed.`);
-  console.log(`Report written to ${docPath}`);
-  console.log(`======================================================\n`);
+  console.info(`\n======================================================`);
+  console.info(`EVALS COMPLETE: ${passedCount}/${totalCount} (${passRate}%) passed.`);
+  console.info(`Report written to ${docPath}`);
+  console.info(`======================================================\n`);
 
   await closePool();
 
