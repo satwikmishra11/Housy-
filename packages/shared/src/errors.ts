@@ -16,6 +16,7 @@ export const ApiErrorResponseSchema = z.object({
     statusCode: z.number(),
     details: z.array(ErrorDetailSchema).optional(),
     timestamp: z.string().datetime(),
+    requestId: z.string().optional(),
   }),
 });
 
