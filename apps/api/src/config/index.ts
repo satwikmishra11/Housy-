@@ -18,7 +18,19 @@ const EnvSchema = z.object({
   RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60 * 1000),
   RATE_LIMIT_CHAT_MAX: z.coerce.number().default(30),
   RATE_LIMIT_CHAT_WINDOW_MS: z.coerce.number().default(60 * 1000),
-});
+  LLM_PROVIDER: z.enum(['anthropic', 'gemini', 'mock']).default('mock'),
+  LLM_MODEL: z.string().default('gemini-1.5-flash'),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  LLM_TIMEOUT_MS: z.coerce.number().default(20000),
+  LLM_DAILY_MESSAGE_CAP: z.coerce.number().default(1000),
+}).refine(
+  (data) => !(data.NODE_ENV === 'production' && data.LLM_PROVIDER === 'mock'),
+  {
+    message: 'Refusing to start in production with LLM_PROVIDER=mock. Must be configured with real provider (anthropic or gemini).',
+    path: ['LLM_PROVIDER'],
+  },
+);
 
 export type Config = z.infer<typeof EnvSchema>;
 

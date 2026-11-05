@@ -61,3 +61,4 @@ export class AdSpendRepository {
 }
 
 export const adSpendRepository = new AdSpendRepository();
+

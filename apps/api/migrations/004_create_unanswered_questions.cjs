@@ -37,3 +37,4 @@ exports.down = (pgm) => {
     DROP TABLE IF EXISTS unanswered_questions CASCADE;
   `);
 };
+
