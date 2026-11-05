@@ -1,4 +1,4 @@
-import type { ErrorDetail } from '@housy/shared';
+import type { ErrorDetail, SlotAlternative } from '@housy/shared';
 
 export abstract class AppError extends Error {
   public abstract readonly statusCode: number;
@@ -95,4 +95,19 @@ export class TooManyRequestsError extends AppError {
     super(message);
   }
 }
+
+export class SlotUnavailableError extends AppError {
+  public readonly statusCode = 409;
+  public readonly code = 'SLOT_UNAVAILABLE';
+  public readonly alternatives: SlotAlternative[];
+
+  constructor(
+    message = 'The requested slot is no longer available',
+    alternatives: SlotAlternative[] = [],
+  ) {
+    super(message, true);
+    this.alternatives = alternatives;
+  }
+}
+
 

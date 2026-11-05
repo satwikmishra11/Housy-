@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { AppError } from './AppError.js';
+import { AppError, SlotUnavailableError } from './AppError.js';
 import type { ApiErrorResponse, ErrorDetail } from '@housy/shared';
 import { logger } from '../utils/logger.js';
 
@@ -30,6 +30,7 @@ export function errorHandler(
         message: err.message,
         statusCode: err.statusCode,
         details: err.details,
+        alternatives: err instanceof SlotUnavailableError ? err.alternatives : undefined,
         timestamp,
         requestId,
       },
