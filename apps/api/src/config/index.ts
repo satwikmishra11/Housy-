@@ -9,6 +9,15 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().default('postgres://housy_user:housy_password@localhost:5432/housy_db'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  JWT_SECRET: z.string().min(16).default('housy-dev-jwt-secret-min-32-chars-long!'),
+  SESSION_SECRET: z.string().min(16).default('housy-dev-session-secret-min-32-chars-long!'),
+  COOKIE_SECURE: z.coerce.boolean().default(false),
+  RATE_LIMIT_LOGIN_MAX: z.coerce.number().default(5),
+  RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),
+  RATE_LIMIT_GENERAL_MAX: z.coerce.number().default(100),
+  RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60 * 1000),
+  RATE_LIMIT_CHAT_MAX: z.coerce.number().default(30),
+  RATE_LIMIT_CHAT_WINDOW_MS: z.coerce.number().default(60 * 1000),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
