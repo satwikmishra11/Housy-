@@ -216,6 +216,41 @@ export const BuyerChatPage: React.FC = () => {
     };
   }, [currentLang, mappedSource, selectedProjectId]);
 
+  // When handed off to a human sales executive, poll conversation history every 5s for executive responses
+  useEffect(() => {
+    if (!isHandoff || !conversationId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const history = await fetchChatHistory(conversationId);
+        if (history && history.length > 0) {
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newItems: UiChatMessage[] = [];
+            for (const h of history) {
+              if (!existingIds.has(h.id)) {
+                newItems.push({
+                  id: h.id,
+                  role: h.role === 'buyer' ? 'user' : 'assistant',
+                  content: h.content,
+                  createdAt: h.createdAt,
+                });
+              }
+            }
+            if (newItems.length > 0) {
+              return [...prev, ...newItems];
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Silent error during background poll
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isHandoff, conversationId]);
+
   // Language switch handler
   const handleLanguageChange = async (code: SupportedLanguageCode) => {
     await changeAppLanguage(code);

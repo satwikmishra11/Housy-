@@ -18,6 +18,7 @@ import {
   fetchProjectSlots,
   rescheduleVisitSlot,
   cancelVisitBooking,
+  optOutVisitBooking,
   type ApiError,
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
@@ -39,6 +40,8 @@ export const VisitManagePage: React.FC = () => {
 
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isOptOutOpen, setIsOptOutOpen] = useState(false);
+  const [hasOptedOut, setHasOptedOut] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<SlotItem | null>(null);
   const [rescheduleAlternatives, setRescheduleAlternatives] = useState<SlotAlternative[] | null>(null);
@@ -126,6 +129,27 @@ export const VisitManagePage: React.FC = () => {
         type: 'error',
         title: 'Cancellation Failed',
         message: err.message || 'Unable to cancel your appointment. Please contact our support team.',
+      });
+    },
+  });
+
+  // Opt-out mutation
+  const optOutMutation = useMutation({
+    mutationFn: () => optOutVisitBooking(token!),
+    onSuccess: () => {
+      setIsOptOutOpen(false);
+      setHasOptedOut(true);
+      showToast({
+        type: 'info',
+        title: 'Opt-Out Confirmed',
+        message: 'You have been unsubscribed from automated updates and reminders.',
+      });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Opt-Out Failed',
+        message: err.message || 'Unable to process opt-out request.',
       });
     },
   });
@@ -475,6 +499,56 @@ export const VisitManagePage: React.FC = () => {
               rows={3}
               maxLength={500}
             />
+          </div>
+        </Modal>
+        {/* DPDP 2023 Opt-Out Section */}
+        <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row items-center justify-between text-xs text-muted gap-2">
+          <span>DPDP Act 2023: You can revoke messaging consent at any time.</span>
+          {hasOptedOut ? (
+            <span className="text-accent font-medium">Unsubscribed from automated updates</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsOptOutOpen(true)}
+              className="text-muted hover:text-ink underline transition-colors"
+            >
+              Opt out of updates
+            </button>
+          )}
+        </div>
+
+        {/* Opt-Out Confirmation Modal */}
+        <Modal
+          isOpen={isOptOutOpen}
+          onClose={() => setIsOptOutOpen(false)}
+          title="Opt Out of Automated Updates"
+          description="Are you sure you want to unsubscribe from automated notifications? All pending visit reminders will be immediately cancelled."
+          maxWidth="md"
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <Button
+                variant="outline"
+                onClick={() => setIsOptOutOpen(false)}
+                disabled={optOutMutation.isPending}
+              >
+                Keep Updates
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => optOutMutation.mutate()}
+                isLoading={optOutMutation.isPending}
+              >
+                Confirm Opt-Out
+              </Button>
+            </div>
+          }
+        >
+          <div className="py-2 text-sm text-ink/80 space-y-2">
+            <p>
+              In accordance with the Digital Personal Data Protection (DPDP) Act 2023, opting out
+              will permanently stop automated WhatsApp, SMS, and reminder messages for this booking.
+            </p>
+            <p>Your confirmed site visit appointment will remain valid.</p>
           </div>
         </Modal>
       </div>

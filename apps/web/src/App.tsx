@@ -11,6 +11,10 @@ import { FactSheetPage } from './pages/FactSheetPage.js';
 import { SlotEditorPage } from './pages/SlotEditorPage.js';
 import { AdSpendPage } from './pages/AdSpendPage.js';
 import { BuyerChatPage } from './pages/BuyerChatPage.js';
+import { HandoffsPage } from './pages/HandoffsPage.js';
+import { FlaggedChatsPage } from './pages/FlaggedChatsPage.js';
+import { OutboxPage } from './pages/OutboxPage.js';
+import { DemoPage } from './pages/DemoPage.js';
 import { ToastProvider } from './components/Toast.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
@@ -106,6 +110,38 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute allowedRoles={['sales_head']}>
                     <AdSpendPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/handoffs"
+                element={
+                  <ProtectedRoute>
+                    <HandoffsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/flagged-chats"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <FlaggedChatsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/outbox"
+                element={
+                  <ProtectedRoute>
+                    <OutboxPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/demo"
+                element={
+                  <ProtectedRoute allowedRoles={['sales_head']}>
+                    <DemoPage />
                   </ProtectedRoute>
                 }
               />

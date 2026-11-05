@@ -40,6 +40,11 @@ import {
   type ChatReply,
   type ChatBookPayload,
   type ChatHistoryItem,
+  type HandoffItem,
+  type HandoffStatus,
+  type FlaggedConversationItem,
+  type OutboundMessageItem,
+  type DemoSimulateLeadPayload,
 } from '@housy/shared';
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
@@ -635,5 +640,185 @@ export async function fetchChatHistory(conversationId: string): Promise<ChatHist
     `/api/chat/history?conversationId=${encodeURIComponent(conversationId)}`,
   );
   return res.data;
+}
+
+// ==========================================
+// HUMAN HANDOFF & EXECUTIVE INBOX API CLIENT
+// ==========================================
+
+export interface FetchHandoffsParams {
+  status?: HandoffStatus;
+  page?: number;
+  limit?: number;
+}
+
+export async function fetchHandoffs(params: FetchHandoffsParams = {}): Promise<{
+  data: HandoffItem[];
+  totalCount: number;
+}> {
+  const query = new URLSearchParams();
+  if (params.status) query.set('status', params.status);
+  if (params.page) query.set('page', String(params.page));
+  if (params.limit) query.set('limit', String(params.limit));
+
+  const url = `/api/handoffs${query.toString() ? `?${query.toString()}` : ''}`;
+  return apiFetch<{ success: boolean; data: HandoffItem[]; totalCount: number }>(url);
+}
+
+export async function fetchHandoffTranscript(handoffId: string): Promise<ChatHistoryItem[]> {
+  const res = await apiFetch<{ success: boolean; data: ChatHistoryItem[] }>(
+    `/api/handoffs/${encodeURIComponent(handoffId)}/transcript`,
+  );
+  return res.data;
+}
+
+export async function acceptHandoff(handoffId: string): Promise<HandoffItem> {
+  const res = await apiFetch<{ success: boolean; handoff: HandoffItem }>(
+    `/api/handoffs/${encodeURIComponent(handoffId)}/accept`,
+    { method: 'POST' },
+  );
+  return res.handoff;
+}
+
+export async function postHandoffMessage(
+  handoffId: string,
+  message: string,
+): Promise<{ success: boolean; messageId: string }> {
+  return apiFetch<{ success: boolean; messageId: string }>(
+    `/api/handoffs/${encodeURIComponent(handoffId)}/message`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    },
+  );
+}
+
+// ==========================================
+// FLAGGED CHATS REVIEW QUEUE API CLIENT
+// ==========================================
+
+export async function fetchFlaggedChats(unreviewedOnly = false): Promise<{
+  data: FlaggedConversationItem[];
+  unreviewedCount: number;
+}> {
+  const query = unreviewedOnly ? '?unreviewedOnly=true' : '';
+  return apiFetch<{ success: boolean; data: FlaggedConversationItem[]; unreviewedCount: number }>(
+    `/api/admin/flagged-chats${query}`,
+  );
+}
+
+export async function reviewFlaggedChat(
+  conversationId: string,
+  note: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/admin/flagged-chats/${encodeURIComponent(conversationId)}/review`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    },
+  );
+}
+
+// ==========================================
+// OUTBOX API CLIENT
+// ==========================================
+
+export interface FetchOutboxParams {
+  channel?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function fetchOutbox(params: FetchOutboxParams = {}): Promise<{
+  data: OutboundMessageItem[];
+  totalCount: number;
+}> {
+  const query = new URLSearchParams();
+  if (params.channel) query.set('channel', params.channel);
+  if (params.status) query.set('status', params.status);
+  if (params.page) query.set('page', String(params.page));
+  if (params.limit) query.set('limit', String(params.limit));
+
+  const url = `/api/outbox${query.toString() ? `?${query.toString()}` : ''}`;
+  return apiFetch<{ success: boolean; data: OutboundMessageItem[]; totalCount: number }>(url);
+}
+
+// ==========================================
+// DEMO CONTROLS API CLIENT
+// ==========================================
+
+export async function simulateDemoLead(payload: DemoSimulateLeadPayload): Promise<{
+  success: boolean;
+  message: string;
+  simulatedLead: { id: string; source: string; name: string };
+}> {
+  return apiFetch<{
+    success: boolean;
+    message: string;
+    simulatedLead: { id: string; source: string; name: string };
+  }>('/api/demo/simulate-lead', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function runDemoReminders(): Promise<{
+  success: boolean;
+  message: string;
+  outcome: { processedCount: number; sentCount: number; failedCount: number };
+}> {
+  return apiFetch<{
+    success: boolean;
+    message: string;
+    outcome: { processedCount: number; sentCount: number; failedCount: number };
+  }>('/api/demo/run-reminders', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function fastForwardDemoReminders(bookingId?: string): Promise<{
+  success: boolean;
+  message: string;
+  fastForwardedCount: number;
+}> {
+  return apiFetch<{
+    success: boolean;
+    message: string;
+    fastForwardedCount: number;
+  }>('/api/demo/fast-forward-reminders', {
+    method: 'POST',
+    body: JSON.stringify({ bookingId }),
+  });
+}
+
+// ==========================================
+// OPT-OUT API CLIENT
+// ==========================================
+
+export async function optOutVisitBooking(token: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/visits/manage/${encodeURIComponent(token)}/opt-out`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function optOutLead(leadId: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/leads/${encodeURIComponent(leadId)}/opt-out`,
+    {
+      method: 'POST',
+    },
+  );
 }
 

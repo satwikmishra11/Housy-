@@ -14,6 +14,10 @@ import {
   Building2,
   ShieldAlert,
   LogOut,
+  UserCheck,
+  Flag,
+  Send,
+  Sparkles,
 } from 'lucide-react';
 import { Badge } from '../components/Badge.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -54,7 +58,14 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
   const navItems = [
     { label: 'System Health', path: '/', icon: <Activity className="w-4 h-4" /> },
     { label: 'Unified Leads', path: '/leads', icon: <Users className="w-4 h-4" /> },
+    { label: 'Handoffs', path: '/handoffs', icon: <UserCheck className="w-4 h-4" /> },
     { label: 'Site Visits', path: '/visits', icon: <Calendar className="w-4 h-4" /> },
+    {
+      label: 'Flagged Chats',
+      path: '/flagged-chats',
+      icon: <Flag className="w-4 h-4" />,
+      adminOnly: true,
+    },
     {
       label: 'Fact Sheet',
       path: '/fact-sheet',
@@ -71,6 +82,17 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       label: 'Source Analytics',
       path: '/analytics',
       icon: <BarChart3 className="w-4 h-4" />,
+      adminOnly: true,
+    },
+    {
+      label: 'Message Outbox',
+      path: '/outbox',
+      icon: <Send className="w-4 h-4" />,
+    },
+    {
+      label: 'Demo Controls',
+      path: '/demo',
+      icon: <Sparkles className="w-4 h-4" />,
       adminOnly: true,
     },
     { label: 'Design System', path: '/styleguide', icon: <Palette className="w-4 h-4" /> },
