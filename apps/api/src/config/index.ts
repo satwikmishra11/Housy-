@@ -24,6 +24,8 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   LLM_TIMEOUT_MS: z.coerce.number().default(20000),
   LLM_DAILY_MESSAGE_CAP: z.coerce.number().default(1000),
+  DEMO_MODE: z.coerce.boolean().default(true),
+  INTERNAL_API_KEY: z.string().default('housy-internal-cron-key-12345'),
 }).refine(
   (data) => !(data.NODE_ENV === 'production' && data.LLM_PROVIDER === 'mock'),
   {

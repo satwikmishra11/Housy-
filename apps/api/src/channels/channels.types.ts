@@ -8,13 +8,15 @@ export type MessageStatus = z.infer<typeof MessageStatusSchema>;
 
 export const OutboxMessageSchema = z.object({
   id: z.string().uuid().optional(),
+  leadId: z.string().uuid(),
   recipient: z.string().min(1),
   channel: ChannelTypeSchema,
   templateName: z.string().optional(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.unknown()).default({}),
+  body: z.string().optional(),
   status: MessageStatusSchema.default('pending'),
   attempts: z.number().int().nonnegative().default(0),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime().optional(),
   sentAt: z.string().datetime().nullable().optional(),
 });
 
@@ -22,6 +24,5 @@ export type OutboxMessage = z.infer<typeof OutboxMessageSchema>;
 
 export interface ChannelSender {
   channel: ChannelType;
-  send(message: OutboxMessage): Promise<{ success: boolean; externalId?: string; error?: string }>;
+  send(message: OutboxMessage): Promise<{ success: boolean; externalId?: string; error?: string; body?: string }>;
 }
-
