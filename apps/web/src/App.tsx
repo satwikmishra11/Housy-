@@ -5,6 +5,8 @@ import { HealthPage } from './pages/HealthPage.js';
 import { StyleguidePage } from './pages/StyleguidePage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { LeadsPage } from './pages/LeadsPage.js';
+import { VisitsPage } from './pages/VisitsPage.js';
+import { VisitManagePage } from './pages/VisitManagePage.js';
 import { ToastProvider } from './components/Toast.js';
 import { AuthProvider } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
@@ -50,6 +52,15 @@ export const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/visits"
+                element={
+                  <ProtectedRoute>
+                    <VisitsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/visit/:token" element={<VisitManagePage />} />
               <Route path="/styleguide" element={<StyleguidePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
