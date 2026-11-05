@@ -15,6 +15,15 @@ export const ApiErrorResponseSchema = z.object({
     message: z.string(),
     statusCode: z.number(),
     details: z.array(ErrorDetailSchema).optional(),
+    alternatives: z
+      .array(
+        z.object({
+          startsAt: z.string(),
+          endsAt: z.string(),
+          displayTime: z.string().optional(),
+        }),
+      )
+      .optional(),
     timestamp: z.string().datetime(),
     requestId: z.string().optional(),
   }),
