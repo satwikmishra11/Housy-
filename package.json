@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run build --workspace=@housy/shared && npm run typecheck --workspaces --if-present",
+    "eval:ai": "npm run eval:ai --workspace=@housy/api",
     "dev": "node scripts/dev.mjs",
     "dev:api": "npm run dev --workspace=@housy/api",
     "dev:web": "npm run dev --workspace=@housy/web",
