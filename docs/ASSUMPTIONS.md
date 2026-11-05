@@ -29,5 +29,9 @@ This document records all architectural and product assumptions made during the 
 - **A25**: Leads with `consent === false` or `consent_status === 'withdrawn'` are marked with the "Cannot Contact" badge and omitted from outbound messaging pipelines in compliance with the Digital Personal Data Protection (DPDP) Act 2023.
 - **A26**: Client API calls via `apiFetch` safely consume the response stream as text before parsing JSON to gracefully handle empty bodies (e.g. 204 No Content, proxy disconnects, or gateway timeouts) without throwing unhandled `Unexpected end of JSON input` SyntaxErrors, reporting actionable backend-unreachable errors instead.
 - **A27**: In cloud serverless demo environments (e.g. Vercel preview) where an external PostgreSQL database is not connected, `AuthService` falls back to verified credentials for seeded demo accounts (`harshil.mehta@example.com` and `amit.shah@example.com` with `DemoPass123!`), allowing UI evaluation while maintaining full database authentication in local and configured production environments.
+- **A28**: Site visit bookings enforce a minimum 3-hour lead time from the current timestamp (`NOW() + INTERVAL '3 hours'`) to prevent last-minute uncoordinated arrivals at the project site.
+- **A29**: Site visit reminders are scheduled for T-24h and T-2h before the visit start time. If an appointment is booked less than 24 hours in advance, the 24-hour reminder is marked `skipped` and only the 2-hour reminder is scheduled.
+- **A30**: Recording a site-visit outcome (`visited` or `no_show`) is strictly prohibited prior to the visit start time (`starts_at > NOW()`), rejecting premature updates with HTTP 400 Bad Request to guarantee authentic show-up tracking.
+
 
 

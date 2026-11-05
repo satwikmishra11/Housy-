@@ -307,3 +307,75 @@ The lead intake pipeline unifies inbound leads across property portals (`MagicBr
 - **Review Duplicates Tab**: Dedicated tab filtered to pending possible duplicates with one-click "Merge" or "Keep Separate" operations.
 - **CSV Import Modal (`apps/web/src/components/CsvImportModal.tsx`)**: Two-step upload / text paste with full row-level preview classifying rows into `New Lead`, `Matches Existing`, `Possible Duplicate`, and `Invalid` with actionable reason pills.
 - **Lead Detail Drawer (`apps/web/src/components/LeadDetailDrawer.tsx`)**: Modal drawer presenting buyer profile, touchpoint timeline with raw metadata, conversation history, site visits, and handoffs.
+
+---
+
+## 17. Site-Visit Booking, Concurrency Control & Reminders
+
+### Overview
+The site-visit booking subsystem guarantees that the platform only ever books real free slots and strictly prevents double-booking across concurrent buyers and executives. It implements strict PostgreSQL row-level locks, partial unique constraints, idempotent slot generation, automated reminder scheduling, and responsive buyer and executive interfaces.
+
+### 1. Pure Slot Generation (`apps/api/src/services/slot-generator.ts`)
+- **Timezone Precision**: All recurring executive availability rules (`start_time`, `end_time`, `weekday`) and blackout dates are defined in `Asia/Kolkata` (IST, UTC+05:30) and deterministically projected into UTC `Date` timestamps.
+- **Pure Function `generateSlots(rules, blackoutDates, fromDate, days = 21)`**:
+  - Iterates over each day in the 21-day projection window.
+  - Skips global blackout dates and executive-specific blackout dates.
+  - Slices executive working shifts into discrete 60-minute visit intervals.
+  - Never mutates existing slots or alters booked appointments.
+- **Idempotent Batch Insertion**: `slotRepository.insertSlotsBatch` executes batched `INSERT INTO visit_slots (...) ON CONFLICT (executive_id, starts_at) DO NOTHING`.
+- **Slot Generator Job (`apps/api/src/jobs/slot-generator.job.ts`)**: Runs on application startup, nightly via scheduled cron, and immediately upon availability rule or blackout updates by an admin.
+
+### 2. Real-Time Availability (`GET /api/projects/:id/slots`)
+- Queries all slots for the requested project where `status = 'open'` and `starts_at >= NOW() + INTERVAL '3 hours'` (enforcing the minimum 3-hour advance booking rule).
+- Groups matching slots by local calendar day in `Asia/Kolkata`.
+- Collapses multiple executives available at the exact same hour into a single slot chip with an `availableCount` badge.
+- If no slots are open in the current window, returns the `nextAvailableDate`.
+
+### 3. Concurrency Control & Zero Double-Booking (`apps/api/src/services/visit.service.ts`)
+- **Single Transaction Guarantee**: `bookVisit` runs inside a single database transaction (`BEGIN ... COMMIT`).
+- **Pessimistic Row-Level Locking (`SELECT ... FOR UPDATE OF s SKIP LOCKED`)**:
+  - Queries open slots matching the requested `startsAt` and `projectId`.
+  - Orders candidates by the executive's current active booking load (`COUNT(b.id) ASC`), ensuring equitable round-robin load balancing among sales staff.
+  - Locks exactly one slot row using `FOR UPDATE OF s SKIP LOCKED`. If two concurrent requests arrive simultaneously for the last remaining slot, exactly one thread secures the lock; the other immediately skips locked rows and observes zero available slots.
+- **Slot Unavailable & Alternatives**:
+  - When no slot is available, the transaction immediately rolls back and throws `SlotUnavailableError` (HTTP 409 Conflict).
+  - Automatically queries the nearest 3 open alternative slots relative to the requested time (`ORDER BY ABS(EXTRACT(EPOCH FROM (starts_at - $target))) ASC LIMIT 3`) and serializes them in the response.
+- **Partial Unique Indexes (PostgreSQL Integrity)**:
+  - `idx_visit_bookings_unique_active_slot`: `UNIQUE (slot_id) WHERE status = 'confirmed'` ensures a physical slot can never hold more than one active booking.
+  - `idx_visit_bookings_unique_active_lead`: `UNIQUE (lead_id) WHERE status = 'confirmed'` prevents a single lead from holding multiple overlapping active visits.
+- **Idempotency**:
+  - `bookVisit` checks `visit_bookings.idempotency_key`. If the same key is retransmitted (e.g. buyer network retry or double-click), it returns the existing confirmed booking payload without creating a duplicate booking.
+
+### 4. Atomic Rescheduling & Cancellation
+- **`rescheduleVisit`**: Executes within an atomic transaction. Locks the newly chosen open slot with `FOR UPDATE OF s SKIP LOCKED`, marks the old slot `open`, marks the new slot `booked`, updates `visit_bookings.slot_id`, and reschedules pending reminders to match the new visit time.
+- **`cancelVisit`**: Runs within an atomic transaction. Updates `visit_bookings.status = 'cancelled'`, sets `visit_slots.status = 'open'`, updates `leads.status = 'engaged'`, and cancels all pending reminders.
+
+### 5. Automated Reminder Engine
+- **T-24h and T-2h Reminders**:
+  - Every confirmed booking inserts reminders into `visit_reminders`:
+    - `24h`: Scheduled for `starts_at - INTERVAL '24 hours'`.
+    - `2h`: Scheduled for `starts_at - INTERVAL '2 hours'`.
+  - **Graceful Skip**: If an appointment is scheduled less than 24 hours in advance (`startsAt < NOW() + 24 hours`), the 24-hour reminder is recorded with status `'skipped'` while the 2-hour reminder is scheduled normally.
+
+### 6. Visit Outcome Verification (`POST /api/visits/:id/outcome`)
+- Executives record customer attendance (`visited` or `no_show`).
+- **Strict Time Gate**: Outcome recording is strictly forbidden prior to the scheduled start time (`starts_at > NOW()`). Premature requests are rejected with `BadRequestError` (HTTP 400).
+- Recording an outcome updates `visit_bookings.status` (`completed` or `no_show`), updates `leads.status` (`visited` or `no_show`), and appends a verified visit record to `lead_touchpoints`.
+
+### 7. Frontend User Experience
+- **`SlotPicker` Component (`apps/web/src/components/SlotPicker.tsx`)**:
+  - Horizontal scrollable date strip with day name, date number, month, and open slot count.
+  - 44px touch target time chips with collapsed multi-executive count badges.
+  - "Slot just taken" warning banner rendering selectable alternative slot chips.
+  - Fully compliant three-state handling: Loading skeletons, Empty states with next-available-date action, and Error state with retry trigger.
+- **Buyer Visit Management Page (`apps/web/src/pages/VisitManagePage.tsx`)**:
+  - Public route `/visit/:token` authenticated via signed magic link token.
+  - Displays project information, formatted date and time in `Asia/Kolkata`, and assigned host representative.
+  - Direct "Open in Google Maps" pin link using project latitude and longitude coordinates.
+  - "Add to Calendar" button generating RFC 5545 compliant `.ics` iCalendar download.
+  - Reschedule modal with embedded `SlotPicker` and cancel modal with confirmation.
+- **Executive "My Visits" Page (`apps/web/src/pages/VisitsPage.tsx`)**:
+  - Protected staff route `/visits` integrated into `StaffLayout`.
+  - **Awaiting Outcome**: Highlights past visits requiring attendance verification with quick "Mark Visited" and "Mark No-Show" actions.
+  - **Upcoming Visits**: Chronological listing of confirmed future visits with project address and representative assignment.
+
