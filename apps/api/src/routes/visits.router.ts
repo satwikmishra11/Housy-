@@ -11,8 +11,31 @@ import { validateRequest } from '../middleware/validate.js';
 import { visitService } from '../services/visit.service.js';
 import { verifyMagicLinkToken } from '../auth/tokens.js';
 import { UnauthorizedError } from '../errors/index.js';
+import { query } from '../db/index.js';
 
 export const visitsRouter = Router();
+
+/**
+ * GET /api/projects
+ * List all active projects.
+ */
+visitsRouter.get(
+  '/projects',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const resDb = await query<{
+        id: string;
+        name: string;
+        rera_number: string;
+        address: string;
+        bhk_types: string[];
+      }>(`SELECT id, name, rera_number, address, bhk_types FROM projects ORDER BY name ASC`);
+      res.status(200).json({ success: true, data: resDb.rows });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 const ProjectParamSchema = z.object({
   id: z.string().uuid({ message: 'Project ID must be a valid UUID' }),

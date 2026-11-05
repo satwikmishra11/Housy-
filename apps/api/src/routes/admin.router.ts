@@ -5,6 +5,7 @@ import { validateRequest } from '../middleware/validate.js';
 import { factService } from '../services/fact.service.js';
 import { adminSlotService } from '../services/admin-slot.service.js';
 import { adSpendService } from '../services/ad-spend.service.js';
+import { query } from '../db/index.js';
 import {
   CreateFactPayloadSchema,
   UpdateFactPayloadSchema,
@@ -27,6 +28,7 @@ adminRouter.use('/unanswered-questions', ...requireSalesHead);
 adminRouter.use('/availability-rules', ...requireSalesHead);
 adminRouter.use('/blackout-dates', ...requireSalesHead);
 adminRouter.use('/admin/slots', ...requireSalesHead);
+adminRouter.use('/admin/executives', ...requireSalesHead);
 adminRouter.use('/ad-spend', ...requireSalesHead);
 
 const UuidParamSchema = z.object({
@@ -428,6 +430,24 @@ adminRouter.post(
     try {
       const result = await adminSlotService.triggerSlotGeneration(21);
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /api/admin/executives
+ * List active sales executives for availability rule assignment.
+ */
+adminRouter.get(
+  '/admin/executives',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const execs = await query<{ id: string; name: string; email: string; phone: string | null }>(
+        `SELECT id, name, email, phone FROM users WHERE role = 'executive' AND active = true ORDER BY name ASC`,
+      );
+      res.status(200).json({ success: true, data: execs.rows });
     } catch (err) {
       next(err);
     }
