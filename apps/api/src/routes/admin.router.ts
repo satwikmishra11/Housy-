@@ -21,7 +21,13 @@ import {
 export const adminRouter = Router();
 
 // Enforce sales_head role on all admin routes
-adminRouter.use(requireAuth, requireRole('sales_head'));
+const requireSalesHead = [requireAuth, requireRole('sales_head')];
+adminRouter.use('/fact-sheet', ...requireSalesHead);
+adminRouter.use('/unanswered-questions', ...requireSalesHead);
+adminRouter.use('/availability-rules', ...requireSalesHead);
+adminRouter.use('/blackout-dates', ...requireSalesHead);
+adminRouter.use('/admin/slots', ...requireSalesHead);
+adminRouter.use('/ad-spend', ...requireSalesHead);
 
 const UuidParamSchema = z.object({
   id: z.string().uuid({ message: 'Must be a valid UUID' }),
