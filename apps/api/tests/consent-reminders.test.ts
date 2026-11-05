@@ -14,7 +14,6 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
   let projectId: string;
   let executiveId: string;
   let salesHeadAuthHeader: string;
-  let salesHeadCookie: string[];
 
   beforeEach(async () => {
     // 1. Fetch project
@@ -38,7 +37,6 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       phone: salesHead.phone ?? '+919825000000',
     });
     salesHeadAuthHeader = `Bearer ${token}`;
-    salesHeadCookie = [`staff_token=${token}`];
   });
 
   describe('DPDP 2023 Consent & canContact Matrix', () => {

@@ -134,9 +134,9 @@ export class HandoffService {
     // 8. Generate buyer notification in the buyer's language
     const lang: ChatLanguage = (lead.language as ChatLanguage) || 'en';
     const localizedBuyerMessages: Record<ChatLanguage, string> = {
-      en: `${executive.name} from our sales team will contact you.`,
-      hi: `${executive.name} हमारी सेल्स टीम से जल्द ही आपसे संपर्क करेंगे।`,
-      gu: `${executive.name} અમારી સેલ્સ ટીમમાંથી ટૂંક સમયમાં તમારો સંપર્ક કરશે.`,
+      en: `${executive.name} from our sales team will contact you. I have connected you with our sales team.`,
+      hi: `${executive.name} हमारी सेल्स टीम से जल्द ही आपसे संपर्क करेंगे। मैंने आपकी बात हमारी सेल्स टीम से जोड़ दी है।`,
+      gu: `${executive.name} અમારી સેલ્સ ટીમમાંથી ટૂંક સમયમાં તમારો સંપર્ક કરશે. મેં તમને અમારી સેલ્સ ટીમ સાથે જોડી દીધા છે.`,
     };
     const buyerMessage = localizedBuyerMessages[lang] || localizedBuyerMessages.en;
 

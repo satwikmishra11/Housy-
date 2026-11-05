@@ -53,10 +53,10 @@ export const BuyerChatPage: React.FC = () => {
     rawSrc === 'portal'
       ? 'property_portal'
       : rawSrc === 'social'
-      ? 'social_ad'
-      : rawSrc === 'hoarding'
-      ? 'hoarding_call'
-      : 'website';
+        ? 'social_ad'
+        : rawSrc === 'hoarding'
+          ? 'hoarding_call'
+          : 'website';
 
   const [conversationId, setConversationId] = useState<string | null>(() => {
     return typeof window !== 'undefined'
@@ -466,11 +466,10 @@ export const BuyerChatPage: React.FC = () => {
                   type="button"
                   onClick={() => handleLanguageChange(l.code)}
                   aria-pressed={currentLang === l.code}
-                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${
-                    currentLang === l.code
-                      ? 'bg-accent text-white shadow-xs'
-                      : 'text-muted hover:text-ink'
-                  }`}
+                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${currentLang === l.code
+                    ? 'bg-accent text-white shadow-xs'
+                    : 'text-muted hover:text-ink'
+                    }`}
                 >
                   {l.code === 'en' ? 'EN' : l.code === 'hi' ? 'हिन्दी' : 'ગુજરાતી'}
                 </button>
@@ -544,8 +543,8 @@ export const BuyerChatPage: React.FC = () => {
                     msg.role === 'assistant'
                       ? 'Residence Advisor'
                       : msg.role === 'executive'
-                      ? 'Sales Executive'
-                      : undefined
+                        ? 'Sales Executive'
+                        : undefined
                   }
                 />
 
@@ -664,8 +663,8 @@ export const BuyerChatPage: React.FC = () => {
                 currentLang === 'hi'
                   ? 'बजट, 2/3 BHK या साइट विज़िट के बारे में पूछें...'
                   : currentLang === 'gu'
-                  ? 'બજેટ, 2/3 BHK અથવા સાઇટ વિઝિટ વિશે પૂછો...'
-                  : 'Ask about 2/3 BHK, amenities, pricing, or schedule a visit...'
+                    ? 'બજેટ, 2/3 BHK અથવા સાઇટ વિઝિટ વિશે પૂછો...'
+                    : 'Ask about 2/3 BHK, amenities, pricing, or schedule a visit...'
               }
               disabled={isSending || isInitializing}
               className="flex-1 px-4 py-2.5 rounded-xl border border-hairline bg-background text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 disabled:opacity-50"

@@ -16,13 +16,10 @@ import {
   MessageSquare,
   Mail,
   Smartphone,
-  CheckCircle2,
-  Clock,
   AlertCircle,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import type { OutboundMessageItem } from '@housy/shared';
 
 export const OutboxPage: React.FC = () => {
   const [channelFilter, setChannelFilter] = useState('all');
@@ -47,7 +44,6 @@ export const OutboxPage: React.FC = () => {
   });
 
   const messages = outboxData?.data || [];
-  const totalCount = outboxData?.totalCount ?? 0;
 
   const renderChannelIcon = (channel: string) => {
     switch (channel) {
@@ -147,13 +143,15 @@ export const OutboxPage: React.FC = () => {
         {!isLoading && !isError && messages.length === 0 && (
           <EmptyState
             title="Outbox is empty"
-            message={
+            description={
               channelFilter !== 'all' || statusFilter !== 'all'
                 ? 'No outbound messages match the selected filters.'
                 : 'No automated reminders or confirmation messages have been generated yet.'
             }
-            actionLabel="Refresh Outbox"
-            onAction={() => refetch()}
+            action={{
+              label: 'Refresh Outbox',
+              onClick: () => refetch(),
+            }}
           />
         )}
 
@@ -187,7 +185,7 @@ export const OutboxPage: React.FC = () => {
                             ? 'accent'
                             : item.status === 'failed'
                             ? 'neutral'
-                            : 'amber'
+                            : 'warning'
                         }
                         className="text-xs capitalize"
                       >
