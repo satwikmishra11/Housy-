@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { pool, query } from './index.js';
 import { logger } from '../utils/logger.js';
 import { hashPassword } from '../auth/password.js';
@@ -32,6 +33,7 @@ export async function runSeed(): Promise<void> {
   // 1. Truncate all tables and restart sequence
   await query(`
     TRUNCATE TABLE
+      source_api_keys,
       llm_calls,
       audit_log,
       ad_spend,
@@ -483,6 +485,24 @@ export async function runSeed(): Promise<void> {
        VALUES ('gemini', 'gemini-1.5-pro', 320, 480, 95, 'success')`,
     );
   }
+
+  // 12. Source API Keys for webhook / ingest authentication
+  const demoSources = [
+    { source: 'property_portal', key: 'portal_demo_key_123', name: 'MagicBricks & 99acres Webhook' },
+    { source: 'social_ad', key: 'social_demo_key_123', name: 'Meta Ads Lead Sync' },
+    { source: 'website', key: 'website_demo_key_123', name: 'Website Lead Form & Chat' },
+    { source: 'hoarding_call', key: 'hoarding_demo_key_123', name: 'IVR & Hoarding Call Sync' },
+  ];
+  for (const s of demoSources) {
+    const hash = crypto.createHash('sha256').update(s.key).digest('hex');
+    await query(
+      `INSERT INTO source_api_keys (source, key_hash, name, active)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (source) DO UPDATE SET key_hash = EXCLUDED.key_hash, active = true`,
+      [s.source, hash, s.name],
+    );
+  }
+  logger.info('Inserted 4 source API keys for webhook authentication.');
 
   logger.info('Deterministic database reset and seeding completed successfully!');
 }
