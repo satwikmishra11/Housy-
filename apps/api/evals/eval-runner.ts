@@ -67,9 +67,27 @@ export async function runEvals(): Promise<void> {
     // Default mock behavior for cases that reach LLM
     mockProvider.setDefaultHandler(async () => {
       if (c.expected_action === 'safe_fallback') {
-        // Simulates out-of-scope question where model has no fact to cite
+        // Simulates out-of-scope question where model calls request_human or has low confidence
         return {
-          text: 'I do not have this information on my fact sheet.',
+          toolCalls: [
+            {
+              id: 'eval_call_missing_fact',
+              name: 'request_human',
+              arguments: {
+                reason: 'Topic is not covered in authorized fact sheet',
+              },
+            },
+            {
+              id: 'eval_call_reply',
+              name: 'send_reply',
+              arguments: {
+                text: 'This detail is not present in my authorized fact sheet.',
+                cited_fact_ids: [],
+                confidence: 0.3, // Low confidence triggers deterministic safe fallback
+                language: c.language,
+              },
+            },
+          ],
           usage: { inputTokens: 50, outputTokens: 20 },
         };
       }

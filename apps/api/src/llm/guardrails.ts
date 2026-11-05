@@ -96,7 +96,7 @@ export function runPreFilter(message: string, currentLang: ChatLanguage = 'en'):
 
   // 3. PRICE / DISCOUNT / NEGOTIATION FILTER
   const pricePattern =
-    /\b(price|pricing|cost|rate|discount|negotiat|bargain|deal|offer|final price|last price|bhav|discount milega|kuch kam)\b|कीमत|भाव|दाम|छूट|डिस्काउंट|कितने का|कितना|कम करो|\b(kitna|kitne|bhav|daam|kimat|keemat|chhoot|kam|discount)\b|કિંમત|ભાવ|ડિસ્કાઉન્ટ|કેટલા|ઓછું કરો|છૂટ|\b(kimat|bhav|ketla|ochhu)\b/i;
+    /\b(price|pricing|cost|rate|discount\w*|negotiat\w*|bargain\w*|deal|deals|offer|offers|final price|last price|bhav|discount milega|kuch kam)\b|कीमत|भाव|दाम|छूट|डिस्काउंट|कितने का|कितना|कम करो|\b(kitna|kitne|bhav|daam|kimat|keemat|chhoot|kam|discount)\b|કિંમત|ભાવ|ડિસ્કાઉન્ટ|કેટલા|ઓછું કરો|છૂટ|\b(kimat|bhav|ketla|ochhu)\b/i;
 
   if (pricePattern.test(lower)) {
     const responses: Record<ChatLanguage, string> = {
