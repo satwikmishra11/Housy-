@@ -91,3 +91,4 @@ describe('Error Handling Middleware', () => {
     expect((await request(testApp).get('/503')).status).toBe(503);
   });
 });
+

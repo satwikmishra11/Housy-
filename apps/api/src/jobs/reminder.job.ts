@@ -22,3 +22,4 @@ export class ReminderJob implements ScheduledJob {
 }
 
 export const reminderJob = new ReminderJob();
+

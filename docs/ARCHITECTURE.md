@@ -79,3 +79,4 @@ Housy-/
 ## 5. Time Zone Standard
 - All database timestamps are persisted as UTC `TIMESTAMPTZ`.
 - All user-facing displays format timestamps into `Asia/Kolkata` (IST) using ISO 8601 strings and Intl/date-fns formatters.
+

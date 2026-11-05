@@ -4,3 +4,4 @@ import { healthRouter } from './health.router.js';
 export const apiRouter = Router();
 
 apiRouter.use(healthRouter);
+

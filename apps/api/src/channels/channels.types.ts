@@ -24,3 +24,4 @@ export interface ChannelSender {
   channel: ChannelType;
   send(message: OutboxMessage): Promise<{ success: boolean; externalId?: string; error?: string }>;
 }
+

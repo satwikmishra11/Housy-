@@ -11,3 +11,4 @@ This document records all architectural and product assumptions made during the 
 - **A7**: Monthly spend of Rs 30 lakh is split across sources by an admin-editable table.
 - **A8**: The health check endpoint `GET /api/health` queries PostgreSQL with `SELECT 1` to verify database connectivity and returns HTTP 200 with status `ok` or HTTP 503 with status `degraded`/`error` if the database is unreachable.
 - **A9**: API server defaults to port 3001 in development, and the web Vite dev server runs on port 5173 with proxy configured to route `/api/*` requests to the API server.
+

@@ -14,3 +14,4 @@ export async function fetchHealth(): Promise<HealthCheckResponse> {
 
   return parsed.data;
 }
+

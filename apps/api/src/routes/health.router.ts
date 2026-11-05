@@ -18,3 +18,4 @@ export function createHealthRouter(service: HealthService = healthService): Rout
 }
 
 export const healthRouter = createHealthRouter();
+

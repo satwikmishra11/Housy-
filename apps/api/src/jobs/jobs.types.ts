@@ -15,3 +15,4 @@ export interface ScheduledJob {
   readonly scheduleCron?: string;
   execute(): Promise<JobExecutionResult>;
 }
+

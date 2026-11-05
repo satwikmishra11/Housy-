@@ -38,3 +38,4 @@ async function handleShutdown(signal: string): Promise<void> {
 
 process.on('SIGINT', () => handleShutdown('SIGINT'));
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+

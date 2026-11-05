@@ -49,3 +49,4 @@ The client values good, minimal design: clean layouts, white space, a restrained
 | LD-58210 | Hardik Patel | Property portal | Project 1 | 3 BHK | Booked 2026-11-01 11:00 |
 | LD-58211 | Nidhi Shah | Social media ad | Project 2 | 2 BHK | Not booked |
 | LD-58224 | Kavita Joshi | Hoarding call | Project 2 | 2 BHK | Visited |
+

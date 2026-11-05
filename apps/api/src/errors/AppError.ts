@@ -86,3 +86,4 @@ export class ServiceUnavailableError extends AppError {
     super(message);
   }
 }
+

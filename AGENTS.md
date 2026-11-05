@@ -79,3 +79,4 @@ Before completing any task:
 3. Run `npm test` — all unit and integration tests must pass.
 4. Update `docs/ARCHITECTURE.md` with any additions or modifications.
 5. Provide an explicit acceptance checklist marking each requirement PASS/FAIL with evidence.
+

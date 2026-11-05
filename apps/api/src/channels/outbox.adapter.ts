@@ -27,3 +27,4 @@ export class OutboxChannelAdapter implements ChannelSender {
 export const whatsappAdapter = new OutboxChannelAdapter('whatsapp');
 export const smsAdapter = new OutboxChannelAdapter('sms');
 export const emailAdapter = new OutboxChannelAdapter('email');
+

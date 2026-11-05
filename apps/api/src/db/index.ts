@@ -24,3 +24,4 @@ export async function query<R extends QueryResultRow = QueryResultRow>(
 export async function closePool(): Promise<void> {
   await pool.end();
 }
+

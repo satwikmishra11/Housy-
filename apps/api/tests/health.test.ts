@@ -65,3 +65,4 @@ describe('Health API', () => {
     expect(parseResult.success).toBe(true);
   });
 });
+

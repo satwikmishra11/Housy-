@@ -36,3 +36,4 @@ export function formatTimeInKolkata(utcIsoString: string | Date): string {
     hour12: true,
   });
 }
+

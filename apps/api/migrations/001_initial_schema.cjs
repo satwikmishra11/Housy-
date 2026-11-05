@@ -21,3 +21,4 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.dropExtension('uuid-ossp', { ifExists: true });
 };
+

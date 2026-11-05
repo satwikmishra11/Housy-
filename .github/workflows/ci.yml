@@ -49,3 +49,4 @@ jobs:
           DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
           NODE_ENV: test
         run: npm test
+

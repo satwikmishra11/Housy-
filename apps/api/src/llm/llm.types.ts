@@ -35,3 +35,4 @@ export interface LlmCompletionResponse {
 export interface LlmProvider {
   generateResponse(request: LlmCompletionRequest): Promise<LlmCompletionResponse>;
 }
+
