@@ -37,3 +37,12 @@ export function formatTimeInKolkata(utcIsoString: string | Date): string {
   });
 }
 
+export function formatDateInKolkata(utcIsoString: string | Date): string {
+  return formatInKolkataTime(utcIsoString, {
+    timeZone: IST_TIMEZONE,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+

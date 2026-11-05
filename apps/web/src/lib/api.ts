@@ -8,6 +8,11 @@ import {
   type LoginResponse,
   type LogoutResponse,
   type MeResponse,
+  type LeadListItem,
+  type LeadDetail,
+  type CsvPreviewRow,
+  type CsvCommitPayload,
+  type LeadSource,
 } from '@housy/shared';
 
   const CSRF_HEADER_VALUE = 'XMLHttpRequest';
@@ -83,4 +88,93 @@ import {
   export async function fetchMe(): Promise<MeResponse> {
     const data = await apiFetch<unknown>('/api/auth/me');
     return MeResponseSchema.parse(data);
+  }
+
+  export interface FetchLeadsParams {
+    source?: string;
+    projectId?: string;
+    status?: string;
+    duplicatesOnly?: boolean;
+    unassignedOnly?: boolean;
+    search?: string;
+    sortBy?: string;
+    order?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
+  }
+
+  export interface FetchLeadsResult {
+    data: LeadListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }
+
+  export async function fetchLeads(params: FetchLeadsParams = {}): Promise<FetchLeadsResult> {
+    const query = new URLSearchParams();
+    if (params.source) query.set('source', params.source);
+    if (params.projectId) query.set('projectId', params.projectId);
+    if (params.status) query.set('status', params.status);
+    if (params.duplicatesOnly) query.set('duplicatesOnly', 'true');
+    if (params.unassignedOnly) query.set('unassignedOnly', 'true');
+    if (params.search) query.set('search', params.search);
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.order) query.set('order', params.order);
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+
+    const url = `/api/leads${query.toString() ? `?${query.toString()}` : ''}`;
+    return apiFetch<FetchLeadsResult>(url);
+  }
+
+  export async function fetchLeadDetails(id: string): Promise<LeadDetail> {
+    const res = await apiFetch<{ data: LeadDetail }>(`/api/leads/${id}`);
+    return res.data;
+  }
+
+  export async function mergeLeads(primaryLeadId: string, secondaryLeadId: string): Promise<void> {
+    await apiFetch('/api/leads/merge', {
+      method: 'POST',
+      body: JSON.stringify({ primaryLeadId, secondaryLeadId }),
+    });
+  }
+
+  export async function keepSeparateLead(leadId: string): Promise<void> {
+    await apiFetch(`/api/leads/${leadId}/keep-separate`, {
+      method: 'POST',
+    });
+  }
+
+  export interface PreviewCsvResult {
+    total: number;
+    validCount: number;
+    invalidCount: number;
+    rows: CsvPreviewRow[];
+  }
+
+  export async function previewCsv(
+    rows: Record<string, string>[],
+    source: LeadSource = 'property_portal',
+  ): Promise<PreviewCsvResult> {
+    return apiFetch<PreviewCsvResult>('/api/leads/csv-preview', {
+      method: 'POST',
+      body: JSON.stringify({ rows, source }),
+    });
+  }
+
+  export interface CommitCsvResult {
+    imported: number;
+    merged: number;
+    possibleDuplicates: number;
+  }
+
+  export async function commitCsv(
+    source: LeadSource,
+    rows: CsvCommitPayload['rows'],
+  ): Promise<CommitCsvResult> {
+    return apiFetch<CommitCsvResult>('/api/leads/csv-commit', {
+      method: 'POST',
+      body: JSON.stringify({ source, rows }),
+    });
   }
