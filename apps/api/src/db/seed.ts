@@ -1,5 +1,6 @@
 import { pool, query } from './index.js';
 import { logger } from '../utils/logger.js';
+import { hashPassword } from '../auth/password.js';
 
 // Deterministic PRNG using Linear Congruential Generator (LCG)
 class LcgPrng {
@@ -57,7 +58,9 @@ export async function runSeed(): Promise<void> {
   logger.info('Database truncated and sequences reset successfully.');
 
   // 2. Users (1 Sales Head + 5 Executives)
-  const passwordHash = '$2b$10$demoHousyPasswordHashForDevEnvironmentOnlyXXXXXX';
+  // Seed demo accounts with documented demo password, hashed with Argon2id
+  const DEMO_PASSWORD = process.env['DEMO_SEED_PASSWORD'] || 'DemoPass123!';
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   const userRows = [
     { name: 'Harshil Mehta', email: 'harshil.mehta@example.com', role: 'sales_head', phone: '+919000000001' },

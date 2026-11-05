@@ -1,39 +1,71 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { apiRouter } from './routes/index.js';
-import { errorHandler, NotFoundError } from './errors/index.js';
+import { errorHandler, NotFoundError, ForbiddenError } from './errors/index.js';
+import {
+  requestIdMiddleware,
+  authenticateStaff,
+  csrfProtection,
+  generalRateLimiter,
+} from './middleware/index.js';
 
 export function createApp(): Express {
   const app = express();
 
-  // Security and cross-origin handling
+  // 1. Request correlation ID
+  app.use(requestIdMiddleware);
+
+  // 2. Security headers via Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Let Vite/frontend control CSP
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+
+  // 3. Strict CORS allowlist from configuration
+  const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
   app.use(
     cors({
-      origin: config.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new ForbiddenError(`Origin '${origin}' not allowed by CORS`));
+        }
+      },
       credentials: true,
     }),
   );
 
-  // Request parsing
-  app.use(express.json());
+  // 4. Request size limits and body parsing
+  app.use(express.json({ limit: '100kb' }));
+  app.use(cookieParser());
 
-  // Logging middleware (skip during unit tests if needed, or keep at level)
+  // 5. Logging middleware
   if (config.NODE_ENV !== 'test') {
     app.use(pinoHttp({ logger }));
+    app.use(generalRateLimiter);
   }
 
-  // Mount API router at both /api and root level for flexibility
+  // 6. Authentication and CSRF protection
+  app.use(authenticateStaff);
+  app.use(csrfProtection);
+
+  // 7. Mount API router
   app.use('/api', apiRouter);
 
-  // Fallback 404 handler for unknown routes
+  // 8. Fallback 404 handler for unknown routes
   app.use((_req, _res, next) => {
     next(new NotFoundError('The requested endpoint was not found on this server'));
   });
 
-  // Centralized error handler
+  // 9. Centralized error handler
   app.use(errorHandler);
 
   return app;
