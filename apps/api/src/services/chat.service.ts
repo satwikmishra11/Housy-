@@ -13,6 +13,7 @@ import { leadRepository } from '../repositories/lead.repository.js';
 import { chatRepository } from '../repositories/chat.repository.js';
 import { factService } from './fact.service.js';
 import { visitService } from './visit.service.js';
+import { handoffService } from './handoff.service.js';
 import { signBuyerSession } from '../auth/tokens.js';
 import {
   detectLanguage,
@@ -154,14 +155,13 @@ export class ChatService {
 
       if (preFilter.type === 'human_requested') {
         await chatRepository.flagConversation(conversation.id, ['human_requested']);
-        await chatRepository.createHandoff(
+        const handoff = await handoffService.createHandoff(
           lead.id,
-          conversation.id,
           'Buyer requested human sales executive',
-          { userMessage: payload.message },
+          { conversationId: conversation.id },
         );
         const reply: ChatReply = {
-          text: preFilter.responseText!,
+          text: handoff.buyerMessage,
           language: preFilter.language ?? targetLang,
           confidence: 1.0,
           citedFactIds: [],
@@ -169,23 +169,15 @@ export class ChatService {
           isHandoff: true,
           flagReasons: ['human_requested'],
         };
-        await chatRepository.insertMessage(
-          conversation.id,
-          'assistant',
-          reply.text,
-          [],
-          { isHandoff: true, flagReasons: ['human_requested'] },
-        );
         return reply;
       }
 
       if (preFilter.type === 'price_ask') {
         await chatRepository.flagConversation(conversation.id, ['price_ask']);
-        await chatRepository.createHandoff(
+        await handoffService.createHandoff(
           lead.id,
-          conversation.id,
           'Price inquiry / negotiation request',
-          { userMessage: payload.message },
+          { conversationId: conversation.id },
         );
         const reply: ChatReply = {
           text: preFilter.responseText!,
@@ -248,11 +240,10 @@ export class ChatService {
         'missing_fact',
         loopResult.reason,
       ]);
-      await chatRepository.createHandoff(
+      await handoffService.createHandoff(
         lead.id,
-        conversation.id,
         `AI assistant fallback: ${loopResult.reason}`,
-        { userMessage: payload.message },
+        { conversationId: conversation.id },
       );
 
       await chatRepository.insertMessage(
@@ -294,11 +285,10 @@ export class ChatService {
         targetLang,
       );
       await chatRepository.flagConversation(conversation.id, [flagReason, 'missing_fact']);
-      await chatRepository.createHandoff(
+      await handoffService.createHandoff(
         lead.id,
-        conversation.id,
         `Guardrail check failed: ${flagReason}`,
-        { details: postCheck.details, originalReply: reply.text },
+        { conversationId: conversation.id },
       );
 
       await chatRepository.insertMessage(
@@ -334,6 +324,29 @@ export class ChatService {
     );
 
     await chatRepository.setFirstResponseAt(lead.id);
+
+    // Trigger handoff if agent loop requested handoff
+    if (isHandoff) {
+      await handoffService.createHandoff(
+        lead.id,
+        'Agent loop requested handoff',
+        { conversationId: conversation.id },
+      );
+    } else {
+      // Trigger handoff on serious intent (budget and BHK known plus interest)
+      const hasSeriousIntent =
+        Boolean(lead.budget_min) &&
+        Boolean(lead.wants) &&
+        /(visit|site|tour|book|when can i|આવી શકું|विज़िट)/i.test(payload.message);
+
+      if (hasSeriousIntent && lead.status !== 'visit_booked') {
+        await handoffService.createHandoff(
+          lead.id,
+          'Serious intent (budget and BHK known plus interest)',
+          { conversationId: conversation.id },
+        );
+      }
+    }
 
     return {
       text: reply.text,
@@ -445,6 +458,13 @@ export class ChatService {
       templateMessage,
       [],
       { bookingId: booking.id, startsAt: payload.startsAt },
+    );
+
+    // Trigger handoff for site visit booking
+    await handoffService.createHandoff(
+      lead.id,
+      'Site visit scheduled',
+      { conversationId: conversation.id },
     );
 
     return {

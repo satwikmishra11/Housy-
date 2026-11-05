@@ -257,15 +257,34 @@ export class ChatRepository {
   }
 
   /**
-   * Mark lead as opted out and set consent status to withdrawn.
+   * Mark lead as opted out, set consent status to withdrawn, record in consents,
+   * and cancel all pending reminders for this lead's bookings.
    */
   async optOutLead(leadId: string): Promise<void> {
+    // 1. Update lead record
     await query(
       `UPDATE leads
        SET opted_out_at = NOW(),
            consent_status = 'withdrawn',
            last_activity_at = NOW()
        WHERE id = $1`,
+      [leadId],
+    );
+
+    // 2. Record explicit opt-out in consents
+    await query(
+      `INSERT INTO consents (lead_id, purpose, granted, notice_version, channel)
+       VALUES ($1, 'communication', false, 'dpdp_v1', 'opt_out')`,
+      [leadId],
+    );
+
+    // 3. Cancel all pending visit reminders for this lead
+    await query(
+      `UPDATE reminders
+       SET status = 'cancelled'
+       WHERE booking_id IN (
+         SELECT id FROM visit_bookings WHERE lead_id = $1
+       ) AND status = 'pending'`,
       [leadId],
     );
   }

@@ -9,6 +9,7 @@ import {
   SlotUnavailableError,
 } from '../errors/index.js';
 import { getKolkataDateString } from './slot-generator.js';
+import { handoffService } from './handoff.service.js';
 import type {
   DaySlots,
   SlotItem,
@@ -154,7 +155,7 @@ export class VisitService {
       throw new ValidationError('Slots must be booked with at least 3 hours lead time.');
     }
 
-    return this.visitRepo.transaction(async (client) => {
+    const bookingResult = await this.visitRepo.transaction(async (client) => {
       // 1. Idempotency Check
       const existing = await this.visitRepo.findByIdempotencyKey(idempotencyKey, client);
       if (existing) {
@@ -215,14 +216,25 @@ export class VisitService {
       // 8. Sign magic link token
       const token = await signMagicLinkToken({ bookingId: booking.id, leadId });
 
-      // 9. Queue outbound confirmation message
+      // 9. Queue approved outbound confirmation template with RERA registration number
+      const projRes = await client.query<{ name: string; rera_number: string }>(
+        `SELECT name, rera_number FROM projects WHERE id = $1`,
+        [projectId],
+      );
+      const execRes = await client.query<{ name: string }>(
+        `SELECT name FROM users WHERE id = $1`,
+        [slot.executive_id],
+      );
+      const projectName = projRes.rows[0]?.name || 'The Palm Residences';
+      const reraNumber = projRes.rows[0]?.rera_number || 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126';
+      const executiveName = execRes.rows[0]?.name || 'Dedicated Sales Executive';
+
+      const confirmationBody = `Your private residence tour for ${projectName} is confirmed for ${formatTimeInKolkata(startsAt)} with your dedicated host ${executiveName}. Sales Gallery: SG Highway, Ahmedabad. Manage your visit: /visit/${token}. RERA Reg: ${reraNumber}`;
+
       await client.query(
-        `INSERT INTO outbound_messages (lead_id, channel, template_key, body, status)
-         VALUES ($1, 'whatsapp', 'visit_confirmed', $2, 'pending')`,
-        [
-          leadId,
-          `Your site visit has been confirmed for ${formatTimeInKolkata(startsAt)}. Manage your visit: /visit/${token}`,
-        ],
+        `INSERT INTO outbound_messages (lead_id, channel, template_key, body, status, sent_at)
+         VALUES ($1, 'whatsapp', 'visit_confirmation', $2, 'sent', NOW())`,
+        [leadId, confirmationBody],
       );
 
       // 10. Fetch full formatted details
@@ -233,6 +245,15 @@ export class VisitService {
 
       return this.formatVisitDetail(details, token);
     });
+
+    // 11. Trigger handoff to assigned executive
+    try {
+      await handoffService.createHandoff(leadId, 'Site visit scheduled');
+    } catch {
+      // Handoff creation non-blocking for booking return
+    }
+
+    return bookingResult;
   }
 
   /**

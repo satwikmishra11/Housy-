@@ -20,6 +20,7 @@ export interface DbVisitDetailsRow extends QueryResultRow {
   lead_public_id: string | null;
   project_id: string;
   project_name: string;
+  rera_number?: string;
   project_address: string;
   project_lat: number;
   project_lng: number;
@@ -198,6 +199,7 @@ export class VisitRepository {
         l.public_id as lead_public_id,
         p.id as project_id,
         p.name as project_name,
+        p.rera_number,
         p.address as project_address,
         p.lat as project_lat,
         p.lng as project_lng,
@@ -235,6 +237,7 @@ export class VisitRepository {
         l.public_id as lead_public_id,
         p.id as project_id,
         p.name as project_name,
+        p.rera_number,
         p.address as project_address,
         p.lat as project_lat,
         p.lng as project_lng,

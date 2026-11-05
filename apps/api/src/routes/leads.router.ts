@@ -8,6 +8,7 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { assertLeadOwnership } from '../middleware/ownership.js';
 import { leadRepository } from '../repositories/lead.repository.js';
+import { chatRepository } from '../repositories/chat.repository.js';
 import { leadIngestService } from '../services/lead-ingest.service.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../errors/index.js';
 
@@ -333,3 +334,26 @@ leadsRouter.patch(
     }
   },
 );
+
+/**
+ * POST /api/leads/:id/opt-out
+ * Staff action to opt-out a lead and cancel all pending reminders.
+ */
+leadsRouter.post(
+  '/leads/:id/opt-out',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const leadId = req.params['id'] as string;
+      await assertLeadOwnership(leadId, req.user!);
+      await chatRepository.optOutLead(leadId);
+      res.status(200).json({
+        success: true,
+        message: 'Lead has been opted out and pending visit reminders have been cancelled.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+

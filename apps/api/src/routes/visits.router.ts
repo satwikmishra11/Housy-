@@ -12,6 +12,7 @@ import { visitService } from '../services/visit.service.js';
 import { verifyMagicLinkToken } from '../auth/tokens.js';
 import { UnauthorizedError } from '../errors/index.js';
 import { query } from '../db/index.js';
+import { chatRepository } from '../repositories/chat.repository.js';
 
 export const visitsRouter = Router();
 
@@ -159,6 +160,32 @@ visitsRouter.post(
 
       const data = await visitService.cancelVisit(payload.bookingId, req.body.reason);
       res.status(200).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /api/visits/manage/:token/opt-out
+ * Public buyer endpoint to opt-out of communications and cancel pending reminders.
+ */
+visitsRouter.post(
+  '/visits/manage/:token/opt-out',
+  validateRequest({ params: TokenParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params['token'] as string;
+      const payload = await verifyMagicLinkToken(token);
+      if (!payload || payload.purpose !== 'manage_visit') {
+        throw new UnauthorizedError('Invalid or expired magic link token');
+      }
+
+      await chatRepository.optOutLead(payload.leadId);
+      res.status(200).json({
+        success: true,
+        message: 'You have been unsubscribed and all appointment reminders are cancelled.',
+      });
     } catch (err) {
       next(err);
     }
