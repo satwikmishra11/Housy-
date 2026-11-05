@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { config } from '../config/index.js';
 import { reminderService } from '../services/reminder.service.js';
 import { UnauthorizedError } from '../errors/AppError.js';
-import { verifyJwtToken } from '../auth/tokens.js';
+import { verifyStaffToken } from '../auth/tokens.js';
 
 export const internalRouter = Router();
 
@@ -28,7 +28,7 @@ internalRouter.post(
 
       // 2. Or check staff token
       if (!isAuthorized && token) {
-        const payload = await verifyJwtToken(token);
+        const payload = await verifyStaffToken(token);
         if (payload) {
           isAuthorized = true;
         }

@@ -268,7 +268,7 @@ Output ONLY valid JSON.`;
       );
 
       // Clean JSON formatting
-      let rawJson = response.text.trim();
+      let rawJson = (response.text || '').trim();
       if (rawJson.startsWith('```')) {
         rawJson = rawJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
       }

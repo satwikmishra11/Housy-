@@ -1,4 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
+import type { QueryResultRow } from 'pg';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
@@ -15,7 +16,7 @@ const OutboxQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
 });
 
-interface DbOutboxRow {
+interface DbOutboxRow extends QueryResultRow {
   id: string;
   lead_id: string;
   lead_public_id: string;

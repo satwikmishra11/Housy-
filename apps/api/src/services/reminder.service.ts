@@ -1,9 +1,10 @@
+import type { QueryResultRow } from 'pg';
 import { canContact } from '@housy/shared';
 import { query } from '../db/index.js';
 import { whatsappAdapter } from '../channels/outbox.adapter.js';
 import { logger } from '../utils/logger.js';
 
-export interface DueReminderRow {
+export interface DueReminderRow extends QueryResultRow {
   reminder_id: string;
   booking_id: string;
   kind: '24h' | '2h';

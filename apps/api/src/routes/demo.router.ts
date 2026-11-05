@@ -23,7 +23,7 @@ demoRouter.use((_req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Require sales_head role for all demo control mutations
-demoRouter.use(requireAuth, requireRole(['sales_head']));
+demoRouter.use(requireAuth, requireRole('sales_head'));
 
 /**
  * POST /api/demo/simulate-lead
@@ -66,15 +66,16 @@ demoRouter.post(
         targetProjectId = projRes.rows[0]?.id;
       }
 
-      const outcome = await leadIngestService.ingest({
+      const outcome = await leadIngestService.ingest(
+        {
+          name: selectedName,
+          phone: selectedPhone,
+          wants: selectedWants,
+          projectId: targetProjectId,
+          consent: true,
+        },
         source,
-        name: selectedName,
-        phone: selectedPhone,
-        wants: selectedWants,
-        projectId: targetProjectId,
-        consent: true,
-        channel: source === 'hoarding_call' ? 'phone' : 'web',
-      });
+      );
 
       res.status(201).json({
         success: true,

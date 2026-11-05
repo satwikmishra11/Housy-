@@ -21,11 +21,11 @@ export class OutboxChannelAdapter implements ChannelSender {
         );
       }
 
-      const rendered = renderTemplate(message.templateName, message.payload);
+      const rendered = renderTemplate(message.templateName, message.payload || {});
       finalBody = rendered.body;
       templateKey = rendered.templateKey;
     } else if (message.templateName && TEMPLATES[message.templateName]) {
-      const rendered = renderTemplate(message.templateName, message.payload);
+      const rendered = renderTemplate(message.templateName, message.payload || {});
       finalBody = rendered.body;
       templateKey = rendered.templateKey;
     }
