@@ -21,8 +21,13 @@ export function csrfProtection(req: Request, _res: Response, next: NextFunction)
     return next();
   }
 
-  // Exempt public conversation endpoints
-  if (req.path.startsWith('/api/conversations') || req.path.startsWith('/conversations')) {
+  // Exempt public buyer endpoints (chat, booking, magic-link visit management)
+  if (
+    req.path.startsWith('/api/conversations') ||
+    req.path.startsWith('/conversations') ||
+    req.path.includes('/visits/manage') ||
+    req.path.includes('/book')
+  ) {
     return next();
   }
 
