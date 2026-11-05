@@ -158,7 +158,7 @@ export class ChatService {
         const handoff = await handoffService.createHandoff(
           lead.id,
           'Buyer requested human sales executive',
-          { conversationId: conversation.id },
+          { conversationId: conversation.id, skipLlm: true },
         );
         const reply: ChatReply = {
           text: handoff.buyerMessage,
@@ -174,11 +174,6 @@ export class ChatService {
 
       if (preFilter.type === 'price_ask') {
         await chatRepository.flagConversation(conversation.id, ['price_ask']);
-        await handoffService.createHandoff(
-          lead.id,
-          'Price inquiry / negotiation request',
-          { conversationId: conversation.id },
-        );
         const reply: ChatReply = {
           text: preFilter.responseText!,
           language: preFilter.language ?? targetLang,
@@ -464,7 +459,7 @@ export class ChatService {
     await handoffService.createHandoff(
       lead.id,
       'Site visit scheduled',
-      { conversationId: conversation.id },
+      { conversationId: conversation.id, notifyBuyer: false, skipLlm: true },
     );
 
     return {

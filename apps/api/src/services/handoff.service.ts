@@ -39,7 +39,7 @@ export class HandoffService {
   async createHandoff(
     leadId: string,
     reason: string,
-    options?: { conversationId?: string },
+    options?: { conversationId?: string; notifyBuyer?: boolean; skipLlm?: boolean },
   ): Promise<CreateHandoffResult> {
     const lead = await leadRepository.findById(leadId);
     if (!lead) {
@@ -119,6 +119,7 @@ export class HandoffService {
       visitTimeFormatted,
       openQuestions,
       messages,
+      skipLlm: options?.skipLlm,
     });
 
     // 7. Persist handoff row
@@ -139,19 +140,21 @@ export class HandoffService {
     };
     const buyerMessage = localizedBuyerMessages[lang] || localizedBuyerMessages.en;
 
-    // Insert notification message in conversation thread
-    await chatRepository.insertMessage(
-      conversationId,
-      'assistant',
-      buyerMessage,
-      [],
-      {
-        isHandoff: true,
-        handoffId,
-        executiveId: executive.id,
-        executiveName: executive.name,
-      },
-    );
+    // Insert notification message in conversation thread unless suppressed
+    if (options?.notifyBuyer !== false) {
+      await chatRepository.insertMessage(
+        conversationId,
+        'assistant',
+        buyerMessage,
+        [],
+        {
+          isHandoff: true,
+          handoffId,
+          executiveId: executive.id,
+          executiveName: executive.name,
+        },
+      );
+    }
 
     logger.info(
       {
@@ -192,8 +195,9 @@ export class HandoffService {
     visitTimeFormatted: string | null;
     openQuestions: string[];
     messages: Array<{ role: string; content: string }>;
+    skipLlm?: boolean;
   }): Promise<HandoffSummary> {
-    const { lead, conversationId, projectName, visitTimeFormatted, openQuestions, messages } = ctx;
+    const { lead, conversationId, projectName, visitTimeFormatted, openQuestions, messages, skipLlm } = ctx;
 
     const budgetStr =
       lead.budget_min && lead.budget_max
@@ -218,6 +222,10 @@ export class HandoffService {
       visitTime: visitTimeFormatted,
       sentiment: visitTimeFormatted ? 'positive' : 'neutral',
     };
+
+    if (skipLlm) {
+      return fallbackSummary;
+    }
 
     // Attempt LLM generation
     try {

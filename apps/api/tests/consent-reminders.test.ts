@@ -5,12 +5,15 @@ import { query } from '../src/db/index.js';
 import { canContact } from '@housy/shared';
 import { reminderService } from '../src/services/reminder.service.js';
 import { whatsappAdapter } from '../src/channels/outbox.adapter.js';
-import { signMagicLinkToken } from '../src/auth/tokens.js';
+import { signMagicLinkToken, signStaffToken } from '../src/auth/tokens.js';
 import { config } from '../src/config/index.js';
+
+const randomPhone = () => `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
 
 describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
   let projectId: string;
   let executiveId: string;
+  let salesHeadAuthHeader: string;
   let salesHeadCookie: string[];
 
   beforeEach(async () => {
@@ -22,16 +25,20 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
     const execRes = await query<{ id: string }>(`SELECT id FROM users WHERE role = 'executive' AND active = true LIMIT 1`);
     executiveId = execRes.rows[0]!.id;
 
-    // 3. Login as Sales Head
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .set('X-Requested-With', 'XMLHttpRequest')
-      .send({
-        email: 'harshil.mehta@example.com',
-        password: 'DemoPass123!',
-      });
-    expect(loginRes.status).toBe(200);
-    salesHeadCookie = loginRes.headers['set-cookie'];
+    // 3. Obtain Sales Head token
+    const userRes = await query<{ id: string; email: string; role: 'sales_head'; name: string; phone: string | null }>(
+      `SELECT id, email, role, name, phone FROM users WHERE role = 'sales_head' AND active = true LIMIT 1`,
+    );
+    const salesHead = userRes.rows[0]!;
+    const token = await signStaffToken({
+      id: salesHead.id,
+      email: salesHead.email,
+      role: 'sales_head',
+      name: salesHead.name,
+      phone: salesHead.phone ?? '+919825000000',
+    });
+    salesHeadAuthHeader = `Bearer ${token}`;
+    salesHeadCookie = [`staff_token=${token}`];
   });
 
   describe('DPDP 2023 Consent & canContact Matrix', () => {
@@ -53,9 +60,9 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // Create lead
       const leadRes = await query<{ id: string }>(
         `INSERT INTO leads (name, phone_e164, source, project_id, wants, status, consent_status)
-         VALUES ('OptOut Buyer', '+919825200001', 'website', $1, '3 BHK', 'visit_booked', 'granted')
+         VALUES ('OptOut Buyer', $1, 'website', $2, '3 BHK', 'visit_booked', 'granted')
          RETURNING id`,
-        [projectId],
+        [randomPhone(), projectId],
       );
       const leadId = leadRes.rows[0]!.id;
 
@@ -122,14 +129,15 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
     it('cancels reminders on staff opt-out action', async () => {
       const leadRes = await query<{ id: string }>(
         `INSERT INTO leads (name, phone_e164, source, wants, status, consent_status)
-         VALUES ('Staff OptOut', '+919825200002', 'social_ad', '2 BHK', 'engaged', 'granted')
+         VALUES ('Staff OptOut', $1, 'social_ad', '2 BHK', 'engaged', 'granted')
          RETURNING id`,
+        [randomPhone()],
       );
       const leadId = leadRes.rows[0]!.id;
 
       const optOutRes = await request(app)
         .post(`/api/leads/${leadId}/opt-out`)
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest');
 
       expect(optOutRes.status).toBe(200);
@@ -193,9 +201,9 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // 1. Create consented lead with due reminder
       const leadRes = await query<{ id: string }>(
         `INSERT INTO leads (name, phone_e164, source, project_id, wants, status, consent_status)
-         VALUES ('Due Reminder Lead', '+919825200003', 'website', $1, '3 BHK', 'visit_booked', 'granted')
+         VALUES ('Due Reminder Lead', $1, 'website', $2, '3 BHK', 'visit_booked', 'granted')
          RETURNING id`,
-        [projectId],
+        [randomPhone(), projectId],
       );
       const leadId = leadRes.rows[0]!.id;
 
@@ -269,7 +277,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // 1. Simulate social_ad lead
       const simRes = await request(app)
         .post('/api/demo/simulate-lead')
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest')
         .send({
           source: 'social_ad',
@@ -282,7 +290,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // 2. Fast-forward reminders
       const ffRes = await request(app)
         .post('/api/demo/fast-forward-reminders')
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest')
         .send({});
 
@@ -292,7 +300,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // 3. Run reminders now
       const runRes = await request(app)
         .post('/api/demo/run-reminders')
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest')
         .send({});
 
@@ -322,7 +330,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // GET /api/admin/flagged-chats
       const listRes = await request(app)
         .get('/api/admin/flagged-chats')
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest');
 
       expect(listRes.status).toBe(200);
@@ -332,7 +340,7 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       // POST /api/admin/flagged-chats/:id/review
       const revRes = await request(app)
         .post(`/api/admin/flagged-chats/${convId}/review`)
-        .set('Cookie', salesHeadCookie)
+        .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest')
         .send({ note: 'Reviewed buyer query; pricing policy explained.' });
 
