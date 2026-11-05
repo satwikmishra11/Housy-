@@ -40,8 +40,9 @@ visitsRouter.get(
   validateRequest({ params: ProjectParamSchema, query: SlotsQuerySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const projectId = req.params['id'] as string;
       const data = await visitService.getSlotsForProject(
-        req.params['id']!,
+        projectId,
         req.query['from'] as string | undefined,
         req.query['to'] as string | undefined,
       );
@@ -63,9 +64,10 @@ visitsRouter.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = req.body;
+      const projectId = req.params['id'] as string;
       const data = await visitService.bookVisit(
         body.leadId,
-        req.params['id']!,
+        projectId,
         body.startsAt,
         body.idempotencyKey,
       );
@@ -85,7 +87,8 @@ visitsRouter.get(
   validateRequest({ params: TokenParamSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = await visitService.getManageDetailsByToken(req.params['token']!);
+      const token = req.params['token'] as string;
+      const data = await visitService.getManageDetailsByToken(token);
       res.status(200).json({ success: true, data });
     } catch (err) {
       next(err);
@@ -102,7 +105,7 @@ visitsRouter.post(
   validateRequest({ params: TokenParamSchema, body: RescheduleVisitPayloadSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const token = req.params['token']!;
+      const token = req.params['token'] as string;
       const payload = await verifyMagicLinkToken(token);
       if (!payload || payload.purpose !== 'manage_visit') {
         throw new UnauthorizedError('Invalid or expired magic link token');
@@ -125,7 +128,7 @@ visitsRouter.post(
   validateRequest({ params: TokenParamSchema, body: CancelVisitPayloadSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const token = req.params['token']!;
+      const token = req.params['token'] as string;
       const payload = await verifyMagicLinkToken(token);
       if (!payload || payload.purpose !== 'manage_visit') {
         throw new UnauthorizedError('Invalid or expired magic link token');
@@ -166,8 +169,9 @@ visitsRouter.post(
   validateRequest({ params: VisitIdParamSchema, body: VisitOutcomePayloadSchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const visitId = req.params['id'] as string;
       const data = await visitService.recordOutcome(
-        req.params['id']!,
+        visitId,
         req.body,
         req.user!.id,
         req.user!.role,
