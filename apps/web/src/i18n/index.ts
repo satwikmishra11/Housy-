@@ -35,3 +35,4 @@ export async function changeAppLanguage(lang: SupportedLanguageCode): Promise<vo
 }
 
 export default i18n;
+

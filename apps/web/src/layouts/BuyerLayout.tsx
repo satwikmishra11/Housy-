@@ -80,3 +80,4 @@ export const BuyerLayout: React.FC<BuyerLayoutProps> = ({
     </div>
   );
 };
+

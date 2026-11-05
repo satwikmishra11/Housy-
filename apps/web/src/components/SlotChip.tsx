@@ -66,3 +66,4 @@ export const SlotChip: React.FC<SlotChipProps> = ({
     </button>
   );
 };
+

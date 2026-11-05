@@ -17,37 +17,43 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    color: #16181D;
-    background-color: #FBFAF8;
-    -webkit-tap-highlight-color: transparent;
+
+  @layer base {
+    html {
+      color: #16181D;
+      background-color: #FBFAF8;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: Inter, 'Noto Sans Devanagari', 'Noto Sans Gujarati', system-ui, -apple-system, sans-serif;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    .font-serif {
+      font-family: 'Cormorant Garamond', 'Noto Sans Devanagari', 'Noto Sans Gujarati', Georgia, serif;
+      letter-spacing: -0.015em;
+    }
+
+    /* Accessible focus-visible styles */
+    :focus-visible {
+      outline: 2px solid #1F4D45;
+      outline-offset: 2px;
+    }
   }
 
-  body {
-    font-family: Inter, 'Noto Sans Devanagari', 'Noto Sans Gujarati', system-ui, -apple-system, sans-serif;
-  }
+  /* Prefers-reduced-motion compliance */
+  @media (prefers-reduced-motion: reduce) {
 
-  h1, h2, h3, h4, .font-serif {
-    font-family: 'Cormorant Garamond', 'Noto Sans Devanagari', 'Noto Sans Gujarati', Georgia, serif;
-    letter-spacing: -0.015em;
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
-
-  /* Accessible focus-visible styles */
-  :focus-visible {
-    outline: 2px solid #1F4D45;
-    outline-offset: 2px;
-  }
-}
-
-/* Prefers-reduced-motion compliance */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}

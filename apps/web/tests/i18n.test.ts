@@ -24,3 +24,4 @@ describe('i18n Configuration', () => {
     expect(i18n.t('buyer.bookVisit')).toBe('સાઇટ મુલાકાત બુક કરો');
   });
 });
+
