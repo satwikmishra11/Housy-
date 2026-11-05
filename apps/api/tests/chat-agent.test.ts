@@ -461,7 +461,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
       const chat = await startChat();
 
       // Find a real open slot for this project at least 4 hours in the future
-      let openSlotRes = await query<{ starts_at: string }>(
+      const openSlotRes = await query<{ starts_at: string }>(
         `SELECT starts_at FROM visit_slots
          WHERE project_id = $1 AND status = 'open' AND starts_at > NOW() + INTERVAL '4 hours'
          ORDER BY starts_at ASC LIMIT 1`,

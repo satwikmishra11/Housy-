@@ -34,6 +34,12 @@ import {
   type AdminSlotItem,
   type MonthSpendRecord,
   type UpdateMonthlySpendPayload,
+  type ChatStartPayload,
+  type ChatStartResponse,
+  type ChatMessagePayload,
+  type ChatReply,
+  type ChatBookPayload,
+  type ChatHistoryItem,
 } from '@housy/shared';
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
@@ -588,3 +594,46 @@ export async function fetchSpendMonths(): Promise<string[]> {
   const res = await apiFetch<{ success: boolean; data: string[] }>('/api/ad-spend/months');
   return res.data;
 }
+
+// ==========================================
+// BUYER CHAT ASSISTANT API CLIENT
+// ==========================================
+
+export async function startChat(payload: Partial<ChatStartPayload> = {}): Promise<ChatStartResponse> {
+  return apiFetch<ChatStartResponse>('/api/chat/start', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendChatMessage(payload: ChatMessagePayload): Promise<ChatReply> {
+  return apiFetch<ChatReply>('/api/chat/message', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function bookChatVisit(payload: ChatBookPayload): Promise<{
+  success: boolean;
+  bookingId?: string;
+  message: string;
+  uiAction?: 'collect_contact';
+}> {
+  return apiFetch<{
+    success: boolean;
+    bookingId?: string;
+    message: string;
+    uiAction?: 'collect_contact';
+  }>('/api/chat/book', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchChatHistory(conversationId: string): Promise<ChatHistoryItem[]> {
+  const res = await apiFetch<{ data: ChatHistoryItem[] }>(
+    `/api/chat/history?conversationId=${encodeURIComponent(conversationId)}`,
+  );
+  return res.data;
+}
+

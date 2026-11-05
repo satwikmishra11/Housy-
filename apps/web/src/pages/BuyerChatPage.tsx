@@ -1,0 +1,663 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  Send,
+  Building2,
+  ShieldCheck,
+  Headphones,
+  AlertCircle,
+  Sparkles,
+} from 'lucide-react';
+import type { LeadSource, ChatLanguage } from '@housy/shared';
+import {
+  startChat,
+  sendChatMessage,
+  bookChatVisit,
+  fetchChatHistory,
+  fetchProjects,
+  type ProjectItem,
+  type ApiError,
+} from '../lib/api.js';
+import { ChatBubble } from '../components/ChatBubble.js';
+import { Button } from '../components/Button.js';
+import { Skeleton } from '../components/Skeleton.js';
+import { ErrorState } from '../components/ErrorState.js';
+import { CollectContactCard, type CollectContactData } from '../components/CollectContactCard.js';
+import { InlineSlotPickerCard } from '../components/InlineSlotPickerCard.js';
+import { BookingConfirmationCard } from '../components/BookingConfirmationCard.js';
+import { supportedLanguages, changeAppLanguage, type SupportedLanguageCode } from '../i18n/index.js';
+
+interface UiChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'executive' | 'system';
+  content: string;
+  createdAt?: string;
+  quickReplies?: string[];
+  uiAction?: 'show_slots' | 'collect_contact';
+  bookingId?: string;
+  startsAt?: string;
+  isHandoff?: boolean;
+  flagReasons?: string[];
+}
+
+export const BuyerChatPage: React.FC = () => {
+  const { i18n } = useTranslation();
+  const [searchParams] = useSearchParams();
+
+  const currentLang = (i18n.language?.slice(0, 2) as ChatLanguage) || 'en';
+
+  // Map URL source parameter ?src=portal|social|website|hoarding
+  const rawSrc = searchParams.get('src') || '';
+  const mappedSource: LeadSource =
+    rawSrc === 'portal'
+      ? 'property_portal'
+      : rawSrc === 'social'
+      ? 'social_ad'
+      : rawSrc === 'hoarding'
+      ? 'hoarding_call'
+      : 'website';
+
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    return typeof window !== 'undefined'
+      ? sessionStorage.getItem('housy_chat_conversation_id')
+      : null;
+  });
+
+  const [_leadId, setLeadId] = useState<string | null>(() => {
+    return typeof window !== 'undefined'
+      ? sessionStorage.getItem('housy_chat_lead_id')
+      : null;
+  });
+
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<UiChatMessage[]>([]);
+  const [activeQuickReplies, setActiveQuickReplies] = useState<string[]>([]);
+  const [activeUiAction, setActiveUiAction] = useState<'show_slots' | 'collect_contact' | null>(null);
+  const [activeBooking, setActiveBooking] = useState<{ bookingId: string; startsAt: string } | null>(null);
+
+  const [contactData, setContactData] = useState<CollectContactData | null>(null);
+  const [isHandoff, setIsHandoff] = useState(false);
+
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  const [inputMessage, setInputMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isBookingVisit, setIsBookingVisit] = useState(false);
+
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
+  const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto scroll to bottom smoothly
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping, activeUiAction, activeBooking]);
+
+  // Load project roster
+  useEffect(() => {
+    fetchProjects()
+      .then((data) => {
+        setProjects(data);
+        if (data.length > 0) {
+          const requestedProj = searchParams.get('project');
+          const matched = data.find((p) => p.id === requestedProj || p.name.includes(requestedProj || ''));
+          setSelectedProjectId(matched ? matched.id : data[0]!.id);
+        }
+      })
+      .catch(() => {
+        // Fallback default
+      });
+  }, [searchParams]);
+
+  // Session resume or initialize fresh chat
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function initializeSession() {
+      setIsInitializing(true);
+      setInitError(null);
+
+      try {
+        const storedConvId = sessionStorage.getItem('housy_chat_conversation_id');
+
+        // Attempt resume if stored conversation ID exists
+        if (storedConvId) {
+          try {
+            const history = await fetchChatHistory(storedConvId);
+            if (!isCancelled && history && history.length > 0) {
+              setConversationId(storedConvId);
+              const mapped: UiChatMessage[] = history.map((item) => ({
+                id: item.id,
+                role: item.role === 'buyer' ? 'user' : (item.role as UiChatMessage['role']),
+                content: item.content,
+                createdAt: item.createdAt,
+                quickReplies: (item.meta?.['quickReplies'] as string[]) || undefined,
+                uiAction: (item.meta?.['uiAction'] as 'show_slots' | 'collect_contact') || undefined,
+                bookingId: (item.meta?.['bookingId'] as string) || undefined,
+                startsAt: (item.meta?.['startsAt'] as string) || undefined,
+                isHandoff: Boolean(item.meta?.['isHandoff']),
+              }));
+
+              setMessages(mapped);
+
+              // Set active quick replies from latest assistant turn
+              const lastAssistant = [...mapped].reverse().find((m) => m.role === 'assistant');
+              if (lastAssistant?.quickReplies) {
+                setActiveQuickReplies(lastAssistant.quickReplies);
+              }
+              if (lastAssistant?.uiAction) {
+                setActiveUiAction(lastAssistant.uiAction);
+              }
+              if (lastAssistant?.bookingId && lastAssistant?.startsAt) {
+                setActiveBooking({
+                  bookingId: lastAssistant.bookingId,
+                  startsAt: lastAssistant.startsAt,
+                });
+              }
+
+              setIsInitializing(false);
+              return;
+            }
+          } catch {
+            // History fetch failed, start fresh session
+            sessionStorage.removeItem('housy_chat_conversation_id');
+            sessionStorage.removeItem('housy_chat_lead_id');
+          }
+        }
+
+        // Initialize new chat session
+        const startRes = await startChat({
+          language: currentLang,
+          projectId: selectedProjectId || undefined,
+          source: mappedSource,
+        });
+
+        if (!isCancelled) {
+          setConversationId(startRes.conversationId);
+          setLeadId(startRes.leadId);
+          sessionStorage.setItem('housy_chat_conversation_id', startRes.conversationId);
+          sessionStorage.setItem('housy_chat_lead_id', startRes.leadId);
+
+          const greetingMsg: UiChatMessage = {
+            id: `msg_init_${Date.now()}`,
+            role: 'assistant',
+            content: startRes.greeting,
+            createdAt: new Date().toISOString(),
+            quickReplies: startRes.quickReplies,
+          };
+
+          setMessages([greetingMsg]);
+          setActiveQuickReplies(startRes.quickReplies || []);
+          setIsInitializing(false);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setInitError(err instanceof Error ? err.message : 'Unable to connect to assistant');
+          setIsInitializing(false);
+        }
+      }
+    }
+
+    void initializeSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentLang, mappedSource, selectedProjectId]);
+
+  // Language switch handler
+  const handleLanguageChange = async (code: SupportedLanguageCode) => {
+    await changeAppLanguage(code);
+  };
+
+  // Send message handler
+  const handleSendMessage = async (textToSend: string) => {
+    const text = textToSend.trim();
+    if (!text || !conversationId || isSending) return;
+
+    setRateLimitMessage(null);
+    setFallbackWarning(null);
+    setInputMessage('');
+    setActiveQuickReplies([]);
+
+    const userMsg: UiChatMessage = {
+      id: `usr_${Date.now()}`,
+      role: 'user',
+      content: text,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsSending(true);
+    setIsTyping(true);
+
+    try {
+      const reply = await sendChatMessage({
+        conversationId,
+        message: text,
+        language: currentLang,
+      });
+
+      setIsTyping(false);
+      setIsSending(false);
+
+      const assistantMsg: UiChatMessage = {
+        id: `asst_${Date.now()}`,
+        role: 'assistant',
+        content: reply.text,
+        createdAt: new Date().toISOString(),
+        quickReplies: reply.quickReplies,
+        uiAction: reply.uiAction,
+        isHandoff: reply.isHandoff,
+        flagReasons: reply.flagReasons,
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      if (reply.quickReplies && reply.quickReplies.length > 0) {
+        setActiveQuickReplies(reply.quickReplies);
+      } else {
+        setActiveQuickReplies([]);
+      }
+
+      if (reply.uiAction) {
+        setActiveUiAction(reply.uiAction);
+      }
+
+      if (reply.isHandoff) {
+        setIsHandoff(true);
+        setFallbackWarning(
+          'Your inquiry has been escalated. A dedicated executive from our sales team has been assigned and will follow up shortly.',
+        );
+      }
+    } catch (err: unknown) {
+      setIsTyping(false);
+      setIsSending(false);
+
+      const apiErr = err as ApiError;
+      if (apiErr.statusCode === 429) {
+        setRateLimitMessage('You have sent several messages recently. Please wait a moment before sending another message.');
+      } else {
+        // Fallback message
+        const fallbackMsg: UiChatMessage = {
+          id: `asst_err_${Date.now()}`,
+          role: 'assistant',
+          content: 'A member of our team will confirm this with you shortly.',
+          createdAt: new Date().toISOString(),
+          isHandoff: true,
+        };
+        setMessages((prev) => [...prev, fallbackMsg]);
+        setIsHandoff(true);
+        setFallbackWarning('Our sales team has been notified and will assist you directly.');
+      }
+    } finally {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  // "Talk to a Person" Header Button Handler
+  const handleTalkToPerson = async () => {
+    await handleSendMessage('I would like to speak directly with a sales executive.');
+  };
+
+  // Submit Collect Contact Form
+  const handleContactSubmit = (data: CollectContactData) => {
+    setContactData(data);
+    setActiveUiAction('show_slots');
+
+    // Add confirmation bubble
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `sys_contact_${Date.now()}`,
+        role: 'system',
+        content: `Contact confirmed for ${data.name} (${data.phone}) under DPDP Act 2023 consent.`,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: `asst_select_slot_${Date.now()}`,
+        role: 'assistant',
+        content: 'Thank you. Please choose your preferred date and time slot for the private tour.',
+        createdAt: new Date().toISOString(),
+        uiAction: 'show_slots',
+      },
+    ]);
+  };
+
+  // Submit Slot Booking
+  const handleBookSlot = async (startsAt: string) => {
+    if (!conversationId) return;
+
+    if (!contactData?.phone) {
+      setActiveUiAction('collect_contact');
+      return;
+    }
+
+    setIsBookingVisit(true);
+
+    try {
+      const res = await bookChatVisit({
+        conversationId,
+        projectId: selectedProjectId || projects[0]?.id || '',
+        startsAt,
+        idempotencyKey: `chat_book_${Date.now()}_${Math.random()}`,
+        name: contactData.name,
+        phone: contactData.phone,
+        consent: contactData.consent,
+      });
+
+      setIsBookingVisit(false);
+
+      if (res.success && res.bookingId) {
+        setActiveUiAction(null);
+        setActiveBooking({
+          bookingId: res.bookingId,
+          startsAt,
+        });
+
+        // Add assistant confirmation message
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst_confirm_${Date.now()}`,
+            role: 'assistant',
+            content: res.message,
+            createdAt: new Date().toISOString(),
+            bookingId: res.bookingId,
+            startsAt,
+          },
+        ]);
+      } else if (res.uiAction === 'collect_contact') {
+        setActiveUiAction('collect_contact');
+      }
+    } catch (err) {
+      setIsBookingVisit(false);
+      setFallbackWarning(err instanceof Error ? err.message : 'Unable to confirm slot. Please try another time.');
+    }
+  };
+
+  const activeProject =
+    projects.find((p) => p.id === selectedProjectId) ||
+    projects[0] || {
+      name: 'The Palm Residences',
+      rera_number: 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126',
+    };
+
+  return (
+    <div className="flex flex-col h-screen max-h-screen bg-background text-ink antialiased">
+      {/* 1. TOP HEADER */}
+      <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-hairline px-4 py-3 flex-shrink-0 shadow-subtle">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+          {/* Brand & Project Info */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-base shadow-sm select-none flex-shrink-0">
+              H
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-ink text-sm sm:text-base leading-none truncate">
+                  {activeProject.name}
+                </span>
+                <span className="text-muted text-xs hidden sm:inline">·</span>
+                <span className="text-[11px] text-accent font-medium bg-accent-soft px-1.5 py-0.5 rounded-md hidden sm:inline-block">
+                  Verified Fact Sheet
+                </span>
+              </div>
+              <span className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
+                <Building2 className="w-3 h-3 text-accent flex-shrink-0" />
+                Company A, Ahmedabad
+              </span>
+            </div>
+          </div>
+
+          {/* Controls: Language Switcher & Persistent "Talk to a Person" Button */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Language Selector */}
+            <div className="inline-flex rounded-lg border border-hairline bg-surface p-0.5">
+              {supportedLanguages.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => handleLanguageChange(l.code)}
+                  aria-pressed={currentLang === l.code}
+                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${
+                    currentLang === l.code
+                      ? 'bg-accent text-white shadow-xs'
+                      : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  {l.code === 'en' ? 'EN' : l.code === 'hi' ? 'हिन्दी' : 'ગુજરાતી'}
+                </button>
+              ))}
+            </div>
+
+            {/* Always Visible "Talk to a person" Button */}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleTalkToPerson}
+              disabled={isSending}
+              className="text-xs font-semibold px-2.5 py-1.5 text-accent border-accent/25 hover:bg-accent-soft"
+              aria-label="Talk to a human sales executive"
+            >
+              <Headphones className="w-3.5 h-3.5 sm:mr-1.5 text-accent" />
+              <span className="hidden sm:inline">Talk to a person</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. CHAT MESSAGE STREAM AREA */}
+      <main
+        className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto"
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages with AI residence advisor"
+      >
+        {/* Loading Initial State */}
+        {isInitializing && (
+          <div className="space-y-4 my-6" aria-busy="true" aria-label="Connecting to residence assistant">
+            <div className="flex gap-3">
+              <Skeleton variant="circular" width="32px" height="32px" />
+              <div className="space-y-2 flex-1 max-w-md">
+                <Skeleton variant="rectangular" width="80%" height="56px" className="rounded-xl" />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Skeleton variant="rectangular" width="60%" height="42px" className="rounded-xl" />
+            </div>
+          </div>
+        )}
+
+        {/* Init Error State */}
+        {initError && (
+          <ErrorState
+            title="Connection Issue"
+            message={initError}
+            onRetry={() => window.location.reload()}
+            className="my-8"
+          />
+        )}
+
+        {/* Message Stream */}
+        {!isInitializing && (
+          <div className="space-y-3">
+            {messages.map((msg) => (
+              <div key={msg.id} className="space-y-2">
+                <ChatBubble
+                  role={msg.role}
+                  content={msg.content}
+                  timestamp={msg.createdAt}
+                  avatar={
+                    msg.role === 'assistant' ? (
+                      <Sparkles className="w-4 h-4 text-accent" />
+                    ) : undefined
+                  }
+                  senderName={
+                    msg.role === 'assistant'
+                      ? 'Residence Advisor'
+                      : msg.role === 'executive'
+                      ? 'Sales Executive'
+                      : undefined
+                  }
+                />
+
+                {/* Inline Confirmation Card attached to specific message */}
+                {msg.bookingId && msg.startsAt && (
+                  <div className="pl-9 pr-2 my-2">
+                    <BookingConfirmationCard
+                      bookingId={msg.bookingId}
+                      startsAt={msg.startsAt}
+                      projectName={activeProject.name}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Active Inline Cards */}
+            {activeUiAction === 'collect_contact' && (
+              <div className="pl-0 sm:pl-9 my-3">
+                <CollectContactCard
+                  initialName={contactData?.name}
+                  initialPhone={contactData?.phone}
+                  onSubmit={handleContactSubmit}
+                />
+              </div>
+            )}
+
+            {activeUiAction === 'show_slots' && (
+              <div className="pl-0 sm:pl-9 my-3">
+                <InlineSlotPickerCard
+                  projectId={selectedProjectId || projects[0]?.id || ''}
+                  onBookSlot={handleBookSlot}
+                  isBooking={isBookingVisit}
+                />
+              </div>
+            )}
+
+            {activeBooking && activeUiAction === null && (
+              <div className="pl-0 sm:pl-9 my-3">
+                <BookingConfirmationCard
+                  bookingId={activeBooking.bookingId}
+                  startsAt={activeBooking.startsAt}
+                  projectName={activeProject.name}
+                />
+              </div>
+            )}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <div className="flex items-center gap-2 text-muted text-xs pl-2 py-2" aria-label="Advisor is typing">
+                <div className="w-6 h-6 rounded-full bg-accent-soft text-accent flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex gap-1 items-center px-3 py-2 rounded-xl bg-surface border border-hairline shadow-subtle">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </main>
+
+      {/* 3. QUICK REPLIES BAR (Assistant Suggestions) */}
+      {activeQuickReplies.length > 0 && !isSending && !isTyping && (
+        <div className="px-4 py-2 bg-surface/80 border-t border-hairline flex-shrink-0">
+          <div className="max-w-3xl mx-auto flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider select-none flex-shrink-0">
+              Suggestions:
+            </span>
+            {activeQuickReplies.map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSendMessage(chip)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full border border-accent/25 bg-surface hover:bg-accent-soft text-accent text-xs font-medium transition-colors shadow-subtle hover:border-accent"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. WARNING & STATUS NOTICES */}
+      {(fallbackWarning || rateLimitMessage || isHandoff) && (
+        <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 flex-shrink-0">
+          <div className="max-w-3xl mx-auto flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span className="flex-1 leading-relaxed">
+              {rateLimitMessage || fallbackWarning}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 5. COMPOSER INPUT BAR */}
+      <div className="p-3 sm:p-4 bg-surface border-t border-hairline flex-shrink-0 shadow-lg">
+        <div className="max-w-3xl mx-auto">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage(inputMessage);
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder={
+                currentLang === 'hi'
+                  ? 'बजट, 2/3 BHK या साइट विज़िट के बारे में पूछें...'
+                  : currentLang === 'gu'
+                  ? 'બજેટ, 2/3 BHK અથવા સાઇટ વિઝિટ વિશે પૂછો...'
+                  : 'Ask about 2/3 BHK, amenities, pricing, or schedule a visit...'
+              }
+              disabled={isSending || isInitializing}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-hairline bg-background text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 disabled:opacity-50"
+              aria-label="Your message to the AI residence advisor"
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!inputMessage.trim() || isSending || isInitializing}
+              className="px-4 py-2.5 rounded-xl justify-center flex-shrink-0"
+              aria-label="Send message"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+
+          {/* Regulatory Footer */}
+          <div className="mt-2 text-center flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px] text-muted">
+            <span className="flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+              RERA Reg: {activeProject.rera_number || 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126'}
+            </span>
+            <span>Protected under Digital Personal Data Protection (DPDP) Act 2023</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
