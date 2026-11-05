@@ -42,6 +42,14 @@ export const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute>
+                    <LeadsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/styleguide" element={<StyleguidePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

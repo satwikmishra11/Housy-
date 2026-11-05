@@ -14,18 +14,15 @@ import {
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
 import {
-  User,
   Phone,
   Mail,
   Home,
-  Clock,
   AlertTriangle,
   GitMerge,
   MessageSquare,
   Calendar,
   UserCheck,
   ShieldAlert,
-  ArrowRight,
   XCircle,
 } from 'lucide-react';
 import type { LeadDetail } from '@housy/shared';
@@ -109,7 +106,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" title={lead ? `${lead.name} (${lead.publicId})` : 'Lead Details'}>
+      <Modal isOpen={isOpen} onClose={onClose} maxWidth="xl" title={lead ? `${lead.name} (${lead.publicId})` : 'Lead Details'}>
         {isLoading && (
           <div className="space-y-4 py-4">
             <Skeleton height="60px" />
@@ -178,11 +175,11 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-ink-muted">{lead.publicId}</span>
-                  <Badge variant={lead.status === 'visit_booked' ? 'success' : 'neutral'} size="sm">
+                  <Badge variant={lead.status === 'visit_booked' ? 'success' : 'neutral'}>
                     {lead.status.replace('_', ' ')}
                   </Badge>
                   {lead.consentStatus === 'withdrawn' && (
-                    <Badge variant="danger" size="sm">
+                    <Badge variant="danger">
                       <ShieldAlert className="w-3 h-3 mr-1 inline" /> Cannot Contact
                     </Badge>
                   )}
@@ -222,148 +219,140 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               activeTab={activeTab}
               onChange={setActiveTab}
               tabs={[
-                {
-                  id: 'timeline',
-                  label: `Touchpoints (${lead.touchpoints.length})`,
-                  content: (
-                    <div className="space-y-3 pt-3">
-                      {lead.touchpoints.length === 0 ? (
-                        <p className="text-xs text-ink-muted">No touchpoints recorded.</p>
-                      ) : (
-                        <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-hairline">
-                          {lead.touchpoints.map((tp) => (
-                            <div key={tp.id} className="relative text-xs space-y-1">
-                              <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-accent ring-4 ring-surface" />
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-ink-base capitalize">
-                                  {tp.source.replace('_', ' ')}
-                                </span>
-                                <Badge variant="neutral" size="sm">
-                                  {tp.channel}
-                                </Badge>
-                                <span className="text-ink-muted font-mono text-[11px]">
-                                  {formatInKolkataTime(tp.occurredAt)}
-                                </span>
-                              </div>
-                              {tp.externalId && (
-                                <p className="text-ink-muted font-mono text-[11px]">
-                                  External ID: {tp.externalId}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  id: 'conversations',
-                  label: `Conversations (${lead.conversations.length})`,
-                  content: (
-                    <div className="space-y-3 pt-3">
-                      {lead.conversations.length === 0 ? (
-                        <p className="text-xs text-ink-muted">No chat conversations recorded.</p>
-                      ) : (
-                        lead.conversations.map((c) => (
-                          <div
-                            key={c.id}
-                            className="p-3 bg-surface-alt border border-hairline rounded-token space-y-2 text-xs"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-accent" />
-                                <span className="font-medium text-ink-base">
-                                  {c.status === 'ai' ? 'AI Sales Assistant' : 'Human Sales Exec'}
-                                </span>
-                                <Badge variant={c.flagged ? 'warning' : 'neutral'} size="sm">
-                                  {c.language.toUpperCase()}
-                                </Badge>
-                              </div>
-                              <span className="text-ink-muted">
-                                {formatInKolkataTime(c.createdAt)}
-                              </span>
-                            </div>
-                            <div className="text-ink-muted">
-                              {c.messagesCount} messages exchanged.
-                              {c.flagged && (
-                                <span className="text-warning ml-2 font-medium">
-                                  Flagged for Sales Head review ({c.flagReasons.join(', ')})
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  id: 'visits',
-                  label: `Site Visits (${lead.bookings.length})`,
-                  content: (
-                    <div className="space-y-3 pt-3">
-                      {lead.bookings.length === 0 ? (
-                        <p className="text-xs text-ink-muted">No site visit booked yet.</p>
-                      ) : (
-                        lead.bookings.map((b) => (
-                          <div
-                            key={b.id}
-                            className="p-3 bg-surface-alt border border-hairline rounded-token flex items-center justify-between text-xs"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Calendar className="w-4 h-4 text-accent" />
-                              <div>
-                                <span className="font-semibold text-ink-base block">
-                                  {b.projectName}
-                                </span>
-                                <span className="text-ink-muted">
-                                  {formatInKolkataTime(b.startsAt)} ({b.executiveName})
-                                </span>
-                              </div>
-                            </div>
-                            <Badge variant={b.status === 'confirmed' ? 'success' : 'neutral'}>
-                              {b.status}
-                            </Badge>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  id: 'handoffs',
-                  label: `Handoffs (${lead.handoffs.length})`,
-                  content: (
-                    <div className="space-y-3 pt-3">
-                      {lead.handoffs.length === 0 ? (
-                        <p className="text-xs text-ink-muted">No executive handoffs recorded.</p>
-                      ) : (
-                        lead.handoffs.map((h) => (
-                          <div
-                            key={h.id}
-                            className="p-3 bg-surface-alt border border-hairline rounded-token space-y-1 text-xs"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-ink-base">
-                                Handed off to {h.executiveName}
-                              </span>
-                              <Badge variant="warning" size="sm">
-                                {h.status}
-                              </Badge>
-                            </div>
-                            <p className="text-ink-muted">Reason: {h.reason}</p>
-                            <span className="text-ink-muted text-[11px] block">
-                              {formatInKolkataTime(h.createdAt)}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ),
-                },
+                { id: 'timeline', label: `Touchpoints (${lead.touchpoints.length})` },
+                { id: 'conversations', label: `Conversations (${lead.conversations.length})` },
+                { id: 'visits', label: `Site Visits (${lead.bookings.length})` },
+                { id: 'handoffs', label: `Handoffs (${lead.handoffs.length})` },
               ]}
             />
+
+            {activeTab === 'timeline' && (
+              <div className="space-y-3 pt-3">
+                {lead.touchpoints.length === 0 ? (
+                  <p className="text-xs text-ink-muted">No touchpoints recorded.</p>
+                ) : (
+                  <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-hairline">
+                    {lead.touchpoints.map((tp) => (
+                      <div key={tp.id} className="relative text-xs space-y-1">
+                        <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-accent ring-4 ring-surface" />
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-ink-base capitalize">
+                            {tp.source.replace('_', ' ')}
+                          </span>
+                          <Badge variant="neutral">
+                            {tp.channel}
+                          </Badge>
+                          <span className="text-ink-muted font-mono text-[11px]">
+                            {formatInKolkataTime(tp.occurredAt)}
+                          </span>
+                        </div>
+                        {tp.externalId && (
+                          <p className="text-ink-muted font-mono text-[11px]">
+                            External ID: {tp.externalId}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'conversations' && (
+              <div className="space-y-3 pt-3">
+                {lead.conversations.length === 0 ? (
+                  <p className="text-xs text-ink-muted">No chat conversations recorded.</p>
+                ) : (
+                  lead.conversations.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-3 bg-surface-alt border border-hairline rounded-token space-y-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-accent" />
+                          <span className="font-medium text-ink-base">
+                            {c.status === 'ai' ? 'AI Sales Assistant' : 'Human Sales Exec'}
+                          </span>
+                          <Badge variant={c.flagged ? 'warning' : 'neutral'}>
+                            {c.language.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <span className="text-ink-muted">
+                          {formatInKolkataTime(c.createdAt)}
+                        </span>
+                      </div>
+                      <div className="text-ink-muted">
+                        {c.messagesCount} messages exchanged.
+                        {c.flagged && (
+                          <span className="text-warning ml-2 font-medium">
+                            Flagged for Sales Head review ({c.flagReasons.join(', ')})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'visits' && (
+              <div className="space-y-3 pt-3">
+                {lead.bookings.length === 0 ? (
+                  <p className="text-xs text-ink-muted">No site visit booked yet.</p>
+                ) : (
+                  lead.bookings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="p-3 bg-surface-alt border border-hairline rounded-token flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-4 h-4 text-accent" />
+                        <div>
+                          <span className="font-semibold text-ink-base block">
+                            {b.projectName}
+                          </span>
+                          <span className="text-ink-muted">
+                            {formatInKolkataTime(b.startsAt)} ({b.executiveName})
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant={b.status === 'confirmed' ? 'success' : 'neutral'}>
+                        {b.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'handoffs' && (
+              <div className="space-y-3 pt-3">
+                {lead.handoffs.length === 0 ? (
+                  <p className="text-xs text-ink-muted">No executive handoffs recorded.</p>
+                ) : (
+                  lead.handoffs.map((h) => (
+                    <div
+                      key={h.id}
+                      className="p-3 bg-surface-alt border border-hairline rounded-token space-y-1 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-ink-base">
+                          Handed off to {h.executiveName}
+                        </span>
+                        <Badge variant="warning">
+                          {h.status}
+                        </Badge>
+                      </div>
+                      <p className="text-ink-muted">Reason: {h.reason}</p>
+                      <span className="text-ink-muted text-[11px] block">
+                        {formatInKolkataTime(h.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             {/* 4. Action bar */}
             <div className="flex justify-between items-center pt-4 border-t border-hairline">
@@ -388,7 +377,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         isOpen={isMergeModalOpen}
         onClose={() => setIsMergeModalOpen(false)}
         title="Merge Lead Record"
-        size="md"
+        maxWidth="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-ink-muted">

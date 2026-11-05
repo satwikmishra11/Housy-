@@ -24,7 +24,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  CheckCircle2,
   Users,
 } from 'lucide-react';
 import type { LeadListItem, LeadSource, LeadStatus } from '@housy/shared';
@@ -151,7 +150,7 @@ export const LeadsPage: React.FC = () => {
         {/* Page Header */}
         <PageHeader
           title="Unified Leads"
-          subtitle="Real-time multi-channel lead intake, duplicate detection, and source attribution."
+          description="Real-time multi-channel lead intake, duplicate detection, and source attribution."
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -207,7 +206,7 @@ export const LeadsPage: React.FC = () => {
             <AlertTriangle className="w-4 h-4 text-warning" />
             <span>Review Duplicates</span>
             {duplicateCount > 0 && (
-              <Badge variant="warning" size="sm">
+              <Badge variant="warning">
                 {duplicateCount}
               </Badge>
             )}
@@ -262,6 +261,19 @@ export const LeadsPage: React.FC = () => {
                 ]}
               />
 
+              <Select
+                value={projectFilter}
+                onChange={(e) => {
+                  setProjectFilter(e.target.value);
+                  setPage(1);
+                }}
+                options={[
+                  { value: 'all', label: 'All Projects' },
+                  { value: 'Project 1', label: 'Project 1' },
+                  { value: 'Project 2', label: 'Project 2' },
+                ]}
+              />
+
               <Button
                 variant={unassignedOnly ? 'secondary' : 'outline'}
                 size="sm"
@@ -300,25 +312,20 @@ export const LeadsPage: React.FC = () => {
         {!isLoading && !isError && data?.data.length === 0 && (
           <EmptyState
             title="No leads found"
-            message={
+            description={
               activeTab === 'duplicates'
                 ? 'All possible duplicates have been reviewed! No duplicate conflicts exist.'
                 : 'No buyer enquiries matched your current search filters.'
             }
-            action={
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch('');
-                  setSourceFilter('all');
-                  setStatusFilter('all');
-                  setUnassignedOnly(false);
-                }}
-              >
-                Clear Filters
-              </Button>
-            }
+            action={{
+              label: 'Clear Filters',
+              onClick: () => {
+                setSearch('');
+                setSourceFilter('all');
+                setStatusFilter('all');
+                setUnassignedOnly(false);
+              },
+            }}
           />
         )}
 
@@ -359,7 +366,7 @@ export const LeadsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <Badge variant={getSourceBadgeVariant(lead.source)} size="sm">
+                        <Badge variant={getSourceBadgeVariant(lead.source)}>
                           {lead.source.replace('_', ' ')}
                         </Badge>
                       </td>
@@ -372,7 +379,7 @@ export const LeadsPage: React.FC = () => {
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1.5 items-center">
                           {lead.touchpointsCount > 1 ? (
-                            <Badge variant="accent" size="sm">
+                            <Badge variant="accent">
                               {lead.touchpointsCount} touches
                             </Badge>
                           ) : (
@@ -380,20 +387,20 @@ export const LeadsPage: React.FC = () => {
                           )}
 
                           {lead.possibleDuplicateOf && (
-                            <Badge variant="warning" size="sm">
+                            <Badge variant="warning">
                               <AlertTriangle className="w-3 h-3 mr-1 inline" /> Possible Duplicate
                             </Badge>
                           )}
 
                           {lead.consentStatus === 'withdrawn' && (
-                            <Badge variant="danger" size="sm">
+                            <Badge variant="danger">
                               <ShieldAlert className="w-3 h-3 mr-1 inline" /> Cannot Contact
                             </Badge>
                           )}
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <Badge variant={getStatusBadgeVariant(lead.status)} size="sm">
+                        <Badge variant={getStatusBadgeVariant(lead.status)}>
                           {lead.status.replace('_', ' ')}
                         </Badge>
                       </td>
@@ -461,13 +468,13 @@ export const LeadsPage: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-ink-muted">{lead.publicId}</span>
-                        <Badge variant={getSourceBadgeVariant(lead.source)} size="sm">
+                        <Badge variant={getSourceBadgeVariant(lead.source)}>
                           {lead.source.replace('_', ' ')}
                         </Badge>
                       </div>
                       <h4 className="font-semibold text-ink-base mt-1 text-base">{lead.name}</h4>
                     </div>
-                    <Badge variant={getStatusBadgeVariant(lead.status)} size="sm">
+                    <Badge variant={getStatusBadgeVariant(lead.status)}>
                       {lead.status.replace('_', ' ')}
                     </Badge>
                   </div>
@@ -481,17 +488,17 @@ export const LeadsPage: React.FC = () => {
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-hairline text-xs">
                     {lead.touchpointsCount > 1 && (
-                      <Badge variant="accent" size="sm">
+                      <Badge variant="accent">
                         {lead.touchpointsCount} touches
                       </Badge>
                     )}
                     {lead.possibleDuplicateOf && (
-                      <Badge variant="warning" size="sm">
+                      <Badge variant="warning">
                         Possible Duplicate
                       </Badge>
                     )}
                     {lead.consentStatus === 'withdrawn' && (
-                      <Badge variant="danger" size="sm">
+                      <Badge variant="danger">
                         Cannot Contact
                       </Badge>
                     )}

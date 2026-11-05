@@ -143,7 +143,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={step === 'input' ? 'Import Leads from CSV / Excel' : 'Review & Confirm Import'}
-      size="xl"
+      maxWidth="xl"
     >
       {step === 'input' ? (
         <div className="space-y-4">
@@ -266,23 +266,23 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     <td className="py-2.5 px-3 text-ink-muted">{row.normalized.email || '—'}</td>
                     <td className="py-2.5 px-3">
                       {row.classification === 'new' && (
-                        <Badge variant="success" size="sm">
+                        <Badge variant="success">
                           <CheckCircle2 className="w-3 h-3 mr-1 inline" /> New Lead
                         </Badge>
                       )}
                       {row.classification === 'duplicate' && (
-                        <Badge variant="neutral" size="sm">
+                        <Badge variant="neutral">
                           <RefreshCw className="w-3 h-3 mr-1 inline" /> Matches Existing
                         </Badge>
                       )}
                       {row.classification === 'possible_duplicate' && (
-                        <Badge variant="warning" size="sm">
+                        <Badge variant="warning">
                           <AlertTriangle className="w-3 h-3 mr-1 inline" /> Possible Duplicate
                         </Badge>
                       )}
                       {row.classification === 'invalid' && (
                         <div className="space-y-0.5">
-                          <Badge variant="danger" size="sm">
+                          <Badge variant="danger">
                             <AlertCircle className="w-3 h-3 mr-1 inline" /> Invalid
                           </Badge>
                           <div className="text-[11px] text-danger">{row.errors.join(', ')}</div>
