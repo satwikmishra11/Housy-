@@ -166,8 +166,8 @@ export class ChatRepository {
     language: string,
   ): Promise<void> {
     await query(
-      `INSERT INTO unanswered_questions (conversation_id, question, detected_language, resolved)
-       VALUES ($1, $2, $3, false)`,
+      `INSERT INTO unanswered_questions (conversation_id, question, buyer_language, status)
+       VALUES ($1, $2, $3, 'unresolved')`,
       [conversationId, question, language],
     );
   }
@@ -257,13 +257,13 @@ export class ChatRepository {
   }
 
   /**
-   * Mark lead as opted out and clear active consents.
+   * Mark lead as opted out and set consent status to withdrawn.
    */
   async optOutLead(leadId: string): Promise<void> {
     await query(
       `UPDATE leads
        SET opted_out_at = NOW(),
-           consent_status = 'opted_out',
+           consent_status = 'withdrawn',
            last_activity_at = NOW()
        WHERE id = $1`,
       [leadId],

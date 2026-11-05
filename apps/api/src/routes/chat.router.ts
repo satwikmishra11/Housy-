@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import {
   ChatStartPayloadSchema,
   ChatMessagePayloadSchema,
@@ -47,26 +47,30 @@ chatRouter.post(
   '/start',
   chatRateLimiter,
   validateBody(ChatStartPayloadSchema),
-  async (req: Request, res: Response) => {
-    const payload = req.body as ChatStartPayload;
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body as ChatStartPayload;
 
-    // Support query param ?src= for attribution (e.g. ?src=fb, ?src=google)
-    const srcQuery = req.query['src'] as string | undefined;
-    if (srcQuery && !payload.source) {
-      payload.source = srcQuery as ChatStartPayload['source'];
+      // Support query param ?src= for attribution (e.g. ?src=fb, ?src=google)
+      const srcQuery = req.query['src'] as string | undefined;
+      if (srcQuery && !payload.source) {
+        payload.source = srcQuery as ChatStartPayload['source'];
+      }
+
+      const result = await chatService.startChat(payload);
+
+      res.cookie('buyer_session', result.sessionToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/',
+      });
+
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
     }
-
-    const result = await chatService.startChat(payload);
-
-    res.cookie('buyer_session', result.sessionToken, {
-      httpOnly: true,
-      secure: config.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      path: '/',
-    });
-
-    res.status(201).json(result);
   },
 );
 
@@ -78,13 +82,17 @@ chatRouter.post(
   '/message',
   chatRateLimiter,
   validateBody(ChatMessagePayloadSchema),
-  async (req: Request, res: Response) => {
-    const payload = req.body as ChatMessagePayload;
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body as ChatMessagePayload;
 
-    await assertBuyerConversationAccess(req, payload.conversationId);
+      await assertBuyerConversationAccess(req, payload.conversationId);
 
-    const reply = await chatService.sendMessage(payload);
-    res.status(200).json(reply);
+      const reply = await chatService.sendMessage(payload);
+      res.status(200).json(reply);
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
@@ -96,13 +104,17 @@ chatRouter.post(
   '/book',
   chatRateLimiter,
   validateBody(ChatBookPayloadSchema),
-  async (req: Request, res: Response) => {
-    const payload = req.body as ChatBookPayload;
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body as ChatBookPayload;
 
-    await assertBuyerConversationAccess(req, payload.conversationId);
+      await assertBuyerConversationAccess(req, payload.conversationId);
 
-    const bookingResult = await chatService.bookVisit(payload);
-    res.status(200).json(bookingResult);
+      const bookingResult = await chatService.bookVisit(payload);
+      res.status(200).json(bookingResult);
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
@@ -113,12 +125,16 @@ chatRouter.post(
 chatRouter.get(
   '/history',
   validateQuery(ChatHistoryQuerySchema),
-  async (req: Request, res: Response) => {
-    const { conversationId } = req.query as unknown as ChatHistoryQuery;
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { conversationId } = req.query as unknown as ChatHistoryQuery;
 
-    await assertBuyerConversationAccess(req, conversationId);
+      await assertBuyerConversationAccess(req, conversationId);
 
-    const history = await chatService.getHistory(conversationId);
-    res.status(200).json({ data: history });
+      const history = await chatService.getHistory(conversationId);
+      res.status(200).json({ data: history });
+    } catch (err) {
+      next(err);
+    }
   },
 );

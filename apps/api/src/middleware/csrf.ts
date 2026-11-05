@@ -25,6 +25,8 @@ export function csrfProtection(req: Request, _res: Response, next: NextFunction)
     if (
       req.path.startsWith('/api/conversations') ||
       req.path.startsWith('/conversations') ||
+      req.path.startsWith('/api/chat') ||
+      req.path.startsWith('/chat') ||
       req.path.includes('/visits/manage') ||
       req.path.includes('/book')
     ) {
