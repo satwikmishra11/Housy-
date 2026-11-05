@@ -331,20 +331,18 @@ export class LeadRepository {
       query<{
         id: string;
         status: string;
-        date: string;
-        start_time: string;
-        end_time: string;
+        starts_at: Date;
+        ends_at: Date;
         project_name: string;
         executive_name: string;
       }>(
-        `SELECT b.id, b.status, s.date::text as date, s.start_time::text as start_time,
-                s.end_time::text as end_time, p.name as project_name, u.name as executive_name
+        `SELECT b.id, b.status, s.starts_at, s.ends_at, p.name as project_name, u.name as executive_name
          FROM visit_bookings b
          JOIN visit_slots s ON b.slot_id = s.id
          JOIN projects p ON s.project_id = p.id
          JOIN users u ON s.executive_id = u.id
          WHERE b.lead_id = $1
-         ORDER BY s.date DESC, s.start_time DESC`,
+         ORDER BY s.starts_at DESC`,
         [id],
       ),
       query<{

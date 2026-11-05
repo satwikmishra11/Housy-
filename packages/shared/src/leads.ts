@@ -203,9 +203,8 @@ export const LeadDetailSchema = LeadListItemSchema.extend({
     z.object({
       id: z.string().uuid(),
       status: z.string(),
-      date: z.string(),
-      startTime: z.string(),
-      endTime: z.string(),
+      startsAt: z.string(),
+      endsAt: z.string(),
       projectName: z.string(),
       executiveName: z.string(),
     }),

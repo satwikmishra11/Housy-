@@ -12,6 +12,20 @@ export function csrfProtection(req: Request, _res: Response, next: NextFunction)
     return next();
   }
 
+  // Exempt server-to-server ingest endpoints authenticated via API key
+  if (
+    req.path.startsWith('/api/ingest') ||
+    req.path.startsWith('/ingest') ||
+    Boolean(req.headers['x-source-key'])
+  ) {
+    return next();
+  }
+
+  // Exempt public conversation endpoints
+  if (req.path.startsWith('/api/conversations') || req.path.startsWith('/conversations')) {
+    return next();
+  }
+
   const hasCustomHeader = Boolean(
     req.headers['x-requested-with'] ||
     req.headers['x-csrf-token'] ||
