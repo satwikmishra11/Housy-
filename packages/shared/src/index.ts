@@ -6,4 +6,5 @@ export * from './visits.js';
 export * from './admin.js';
 export * from './chat.js';
 export * from './messaging.js';
+export * from './dashboard.js';
 
