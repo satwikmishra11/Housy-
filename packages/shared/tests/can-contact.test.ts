@@ -34,3 +34,4 @@ describe('DPDP 2023 Consent & canContact Matrix', () => {
     expect(canContact({ consentStatus: 'unknown' })).toBe(false);
   });
 });
+
