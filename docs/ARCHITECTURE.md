@@ -531,5 +531,44 @@ The AI Chat Assistant provides an intelligent, luxury-grade conversational advis
 - `POST /api/chat/book`: Enforces phone and consent verification, runs atomic booking transaction via `visitService.bookVisit`, and records template confirmation.
 - `GET /api/chat/history`: Returns full conversation history for the verified buyer session.
 
+---
+
+## Phase 7b: Buyer Chat UI & Interactive In-Stream Flow
+
+### 1. Architectural Overview & Design System Adherence
+The Buyer Chat interface (`apps/web/src/pages/BuyerChatPage.tsx`) provides a mobile-first, calm, and premium digital residence advisory experience built in accordance with Phase 1 design tokens:
+- **Routes**: Exposed at `/chat` and at `/` for incoming ad and QR-code traffic carrying attribution parameters (`/?src=portal|social|website|hoarding`) or unauthenticated visitors. Authenticated staff members navigating to `/` are directed to `/leads`.
+- **Aesthetic**: Restrained luxury palette (warm background `#FBFAF8`, crisp white cards `#FFFFFF`, deep forest accent `#1F4D45`, hair-thin borders `#E7E4DE`), Cormorant Garamond display headings, and Inter body text with full native font support for Noto Sans Devanagari and Noto Sans Gujarati.
+- **Accessibility**: Strict 4.5:1 text contrast ratios, minimum 44px interactive touch targets, keyboard navigation with focus management, and `aria-live="polite"` conversational region announcements.
+
+### 2. Header & Conversation Controls
+- **Project Identity**: Displays active project name, verified fact sheet badge, and Ahmedabad location details.
+- **Multilingual Switcher**: Persistent header controls for immediate switching between English (`EN`), Hindi (`हिन्दी`), and Gujarati (`ગુજરાતી`).
+- **Persistent Escalation**: Always-visible "Talk to a person" action button allowing immediate human escalation.
+
+### 3. Interactive In-Stream Components
+- **`CollectContactCard`**:
+  - Validates 10-digit Indian mobile numbers (+91 prefix, digits starting with 6–9).
+  - Enforces explicit DPDP Act 2023 consent checkbox before proceeding to slot selection.
+  - Interactive Privacy & Data Protection modal detailing purpose limitation, opt-out mechanisms, and GujRERA registration.
+- **`InlineSlotPickerCard`**:
+  - Embedded slot picker querying real-time open slots via `fetchProjectSlots()`.
+  - Day selector tabs and collapsed time chips. Selecting a time chip displays IST appointment summary and a "Confirm Site Visit" action.
+- **`BookingConfirmationCard`**:
+  - Displays confirmed appointment formatted in `Asia/Kolkata` time zone (IST, UTC+05:30).
+  - Renders assigned host executive, project location, and Sales Gallery address.
+  - Interactive actions: direct Google Maps navigation link and Add to Calendar (`.ics` calendar download).
+  - Direct appointment management link (`/visit/:token`) for rescheduling.
+
+### 4. Message Streaming & Resilience
+- **Typing Indicator**: Gentle 3-dot pulsating animation during active LLM generation.
+- **Quick-Reply Suggestions**: Dynamic suggestion chips streamed from assistant replies for 1-tap inquiries.
+- **Session Resume**: Stored conversation and lead identifiers in `sessionStorage` allow seamless page reloads, retrieving full chat history from `/api/chat/history`.
+- **Fallback & Rate Limit Handling**:
+  - 429 rate limit errors surface an alert advising a brief pause before sending further messages.
+  - Network interruptions or upstream failures trigger in-stream fallback messaging reassuring the buyer of human executive follow-up, keeping response SLA under 2 minutes.
+- **Regulatory Footing**: Persistent footer displaying project GujRERA registration number (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP compliance notice.
+
+
 
 
