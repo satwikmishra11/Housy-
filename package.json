@@ -20,7 +20,9 @@
     "dev:web": "npm run dev --workspace=@housy/web",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
-    "db:migrate": "npm run migrate:up --workspace=@housy/api"
+    "db:migrate": "npm run migrate:up --workspace=@housy/api",
+    "db:seed": "npm run db:seed --workspace=@housy/api",
+    "db:reset": "npm run db:reset --workspace=@housy/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
