@@ -32,6 +32,10 @@ This document records all architectural and product assumptions made during the 
 - **A28**: Site visit bookings enforce a minimum 3-hour lead time from the current timestamp (`NOW() + INTERVAL '3 hours'`) to prevent last-minute uncoordinated arrivals at the project site.
 - **A29**: Site visit reminders are scheduled for T-24h and T-2h before the visit start time. If an appointment is booked less than 24 hours in advance, the 24-hour reminder is marked `skipped` and only the 2-hour reminder is scheduled.
 - **A30**: Recording a site-visit outcome (`visited` or `no_show`) is strictly prohibited prior to the visit start time (`starts_at > NOW()`), rejecting premature updates with HTTP 400 Bad Request to guarantee authentic show-up tracking.
+- **A31**: In the Fact Sheet Editor, any addition, modification, or archiving of a fact entry atomically increments `fact_entry_versions` and writes an entry to `audit_log` detailing the acting staff member (`user_id`), target entity, timestamp in UTC, and state changes. Unanswered questions originating from conversational AI fallbacks are ingested into `unanswered_questions` and transitioned to `resolved` or `dismissed` upon review.
+- **A32**: In the Slot Editor, availability rule modifications re-trigger idempotent slot generation for the rolling 21-day window. Open slots can be blocked or unblocked; however, slots with an active booked appointment (`visit_slots.status = 'booked'`) are strictly protected from deletion or blocking, throwing HTTP 409 Conflict if a block is attempted and requiring visit rescheduling or cancellation from the Site Visits dashboard first.
+- **A33**: The Ad Spend editor maintains monthly spend allocations per marketing channel (`property_portal`, `social_ad`, `hoarding_call`, `website`), defaulting to ₹30 Lakh / month (₹12L, ₹10L, ₹5L, ₹3L respectively per A7) when no custom allocation has been configured for a given accounting period.
+
 
 
 

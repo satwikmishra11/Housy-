@@ -379,3 +379,63 @@ The site-visit booking subsystem guarantees that the platform only ever books re
   - **Awaiting Outcome**: Highlights past visits requiring attendance verification with quick "Mark Visited" and "Mark No-Show" actions.
   - **Upcoming Visits**: Chronological listing of confirmed future visits with project address and representative assignment.
 
+---
+
+## 18. Sales Head Admin Area (Fact Sheet, Slot Rules & Ad Spend)
+
+### Overview
+The Sales Head Admin Area provides executive-level operational control over the AI conversational assistant's knowledge base, executive site-visit working schedules, and marketing acquisition budgets. All administration endpoints strictly enforce the `sales_head` role, returning HTTP 403 Forbidden for standard sales executives and HTTP 401 Unauthorized for unauthenticated requests.
+
+### 1. Fact Sheet Editor (`/fact-sheet`)
+- **Authoritative Fact Management**:
+  - Full CRUD operations supporting project-scoped or global (all projects) factual knowledge entries.
+  - Strict validation: Title (2–200 chars), Value (2–2000 chars), Category (2–50 chars), and unique alphanumeric Key per project (`^[a-z0-9_-]+$`).
+- **Immutable Versioning & Audit Trail**:
+  - Every create, update, or archive mutation writes an incremental record to `fact_entry_versions` tracking version number, diff, and acting user.
+  - Appends an immutable audit log entry to `audit_log` detailing `action`, `entity_type`, `entity_id`, `actor_id`, and payload changes.
+- **"Preview as Assistant Sees It" Panel**:
+  - Real-time preview drawer displaying the exact serialized prompt text and fact IDs injected into the AI model:
+    `[FACT ID: <uuid>] [<CATEGORY>] <title>: <value>`
+  - Includes full text copy-to-clipboard functionality and project scope filtering.
+- **Unanswered Questions Inbox (`unanswered_questions`)**:
+  - Captures buyer questions when the conversational assistant cannot find factual answers in the active fact sheet.
+  - Displays pending questions with language tags, project scope, and timestamps.
+  - "Add as fact" button immediately opens the Add Fact editor prefilled with the buyer's query, atomically resolving the question upon fact publication.
+  - Grounding banner explicitly warns that the assistant is strictly restricted to active fact sheet entries.
+
+### 2. Slot Availability & Rules Editor (`/slot-rules`)
+- **Weekly Working Rules**:
+  - Configures weekly availability rules per executive and project: `weekday` (0–6), `start_time` (HH:MM), `end_time` (HH:MM), and `slot_minutes` (default 60).
+  - Creating or removing a rule automatically triggers the slot generation job for the next 21 days and reports the count of newly generated slots.
+- **Blackout Dates Management**:
+  - Defines full-day closures (public holidays, office offsites, or executive leaves) for global or project/executive scopes.
+  - Blocked slots on blackout dates are prevented from generation or booking.
+- **Calendar Slot Preview & Single-Slot Blocking**:
+  - Displays all visit slots for the rolling 21-day window grouped by local day in `Asia/Kolkata`.
+  - Open slots can be individually blocked (`status = 'blocked'`) or unblocked by the sales head.
+- **Booked Slot Conflict Guard**:
+  - Slots with an active booking (`status = 'booked'`) are strictly protected against modification or deletion.
+  - Attempting to block a booked slot returns HTTP 409 Conflict with the visitor name and lead ID, directing the staff member to reschedule or cancel the visit first.
+
+### 3. Marketing Ad Spend Editor (`/analytics` / `/ad-spend`)
+- **Channel Budget Allocation**:
+  - Configures monthly acquisition budgets across the 4 primary channels: Property Portals (`property_portal`), Social Media Ads (`social_ad`), Hoarding & Outdoor (`hoarding_call`), and Website (`website`).
+- **Default ₹30 Lakh Baseline (Assumption A7)**:
+  - If no custom allocation exists for a month, the system seamlessly falls back to the ₹30 Lakh / month benchmark:
+    - Property Portals: ₹12,00,000 (40.0%)
+    - Social Media Ads: ₹10,00,000 (33.3%)
+    - Hoarding Calls: ₹5,00,000 (16.7%)
+    - Website: ₹3,00,000 (10.0%)
+- **Visual Budget Analytics**:
+  - Multi-channel stacked proportion bar and delta comparison against the ₹30 Lakh benchmark.
+  - Persisted in the `ad_spend` table via idempotent upserts per `(month, source)`.
+
+### 4. Frontend Compliance (`apps/web`)
+- **Three-State Rule Compliance**: Every view explicitly implements:
+  1. **Loading State**: Pulse skeletons during data fetching.
+  2. **Empty State**: Tailored messages with action buttons (e.g. "Add First Fact", "Generate Slots").
+  3. **Error State**: Friendly error messages with retry callbacks.
+- **Strict Role-Based Routing**: Protected by `ProtectedRoute allowedRoles={['sales_head']}` with access-denied fallback for sales executives.
+- **Timezone Integrity**: All presentation timestamps formatted in `Asia/Kolkata` (IST) via `formatInKolkataTime`.
+
+

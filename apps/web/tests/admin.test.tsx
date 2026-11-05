@@ -11,6 +11,7 @@ import { SlotEditorPage } from '../src/pages/SlotEditorPage.js';
 import { AdSpendPage } from '../src/pages/AdSpendPage.js';
 import { ToastProvider } from '../src/components/Toast.js';
 import * as api from '../src/lib/api.js';
+import type { MonthlySpendData } from '../src/lib/api.js';
 import type {
   FactEntry,
   FactAssistantPreviewItem,
@@ -18,8 +19,7 @@ import type {
   AdminSlotItem,
   AdminAvailabilityRule,
   AdminBlackoutDate,
-  MonthlySpendData,
-} from '../src/lib/api.js';
+} from '@housy/shared';
 
 describe('Sales Head Admin Area Frontend Views', () => {
   let queryClient: QueryClient;
@@ -358,6 +358,39 @@ describe('Sales Head Admin Area Frontend Views', () => {
 
       await waitFor(() => {
         expect(genSpy).toHaveBeenCalledWith(21);
+      });
+    });
+
+    it('switches to rules tab and lists availability rules', async () => {
+      vi.spyOn(api, 'fetchProjects').mockResolvedValue([]);
+      vi.spyOn(api, 'fetchAdminExecutives').mockResolvedValue([]);
+      vi.spyOn(api, 'fetchAvailabilityRules').mockResolvedValue(sampleRules);
+
+      renderWithProviders(<SlotEditorPage />);
+
+      const rulesTab = screen.getByRole('button', { name: /Weekly Availability Rules/i });
+      fireEvent.click(rulesTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Tuesday')).toBeInTheDocument();
+        expect(screen.getByText(/10:00 - 18:00 IST/i)).toBeInTheDocument();
+        expect(screen.getByText('60 mins')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to blackouts tab and lists blackout dates', async () => {
+      vi.spyOn(api, 'fetchProjects').mockResolvedValue([]);
+      vi.spyOn(api, 'fetchAdminExecutives').mockResolvedValue([]);
+      vi.spyOn(api, 'fetchBlackoutDates').mockResolvedValue(sampleBlackouts);
+
+      renderWithProviders(<SlotEditorPage />);
+
+      const blackoutsTab = screen.getByRole('button', { name: /Blackout Dates/i });
+      fireEvent.click(blackoutsTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('2026-11-12')).toBeInTheDocument();
+        expect(screen.getByText('Diwali Public Holiday')).toBeInTheDocument();
       });
     });
   });
