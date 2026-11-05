@@ -40,3 +40,7 @@ export function validateRequest(schemas: RequestValidationSchemas) {
   };
 }
 
+export const validateBody = (body: ZodSchema) => validateRequest({ body });
+export const validateQuery = (query: ZodSchema) => validateRequest({ query });
+
+

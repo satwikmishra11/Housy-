@@ -5,6 +5,7 @@ import { leadsRouter } from './leads.router.js';
 import { adminRouter } from './admin.router.js';
 import { ingestRouter } from './ingest.router.js';
 import { visitsRouter } from './visits.router.js';
+import { chatRouter } from './chat.router.js';
 
 export const apiRouter = Router();
 
@@ -14,4 +15,6 @@ apiRouter.use(ingestRouter);
 apiRouter.use(leadsRouter);
 apiRouter.use(adminRouter);
 apiRouter.use(visitsRouter);
+apiRouter.use('/chat', chatRouter);
+
 

@@ -26,6 +26,7 @@ export const FactEntrySchema = z.object({
   createdAt: z.string().datetime(),
 });
 export type FactEntry = z.infer<typeof FactEntrySchema>;
+export type Fact = FactEntry;
 
 export const FactEntryVersionSchema = z.object({
   id: z.string().uuid(),
