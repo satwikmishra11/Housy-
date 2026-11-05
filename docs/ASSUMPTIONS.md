@@ -18,5 +18,9 @@ This document records all architectural and product assumptions made during the 
 - **A14**: All fact entries (pricing ranges ₹65L–₹85L for 2 BHK, ₹95L–₹1.2Cr for 3 BHK, possession Dec 2026/Mar 2027, amenities, bank loan approvals, and parking specifications) are simulated data for evaluation and testing.
 - **A15**: Seed script generates deterministic pseudo-random sequences using a linear congruential generator (LCG) with a fixed seed to guarantee idempotent database resets.
 - **A16**: Hardik Patel's visit (LD-58210) was booked for 2026-11-01 11:00 IST (in the past relative to current date 2026-11-05), and is recorded in `visit_bookings` with status `'confirmed'` and flagged as awaiting outcome.
+- **A17**: Demo staff accounts (Sales Head `harshil.mehta@example.com` and executives `amit.shah@example.com`, `priya.patel@example.com`, etc.) are seeded with demo password "DemoPass123!" hashed using Argon2id. Passwords are never hard-coded into application code paths.
+- **A18**: CSRF protection enforces the presence of a custom header (`X-Requested-With`, `X-CSRF-Token`, or `X-Housy-Client`) on all mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`), rejecting requests missing these headers with HTTP 403 Forbidden.
+- **A19**: Resource authorization strictly returns HTTP 403 Forbidden (not 404) when an authenticated sales executive attempts to access or modify a lead that exists in the database but is assigned to a different executive.
+- **A20**: Buyer session tokens and magic link tokens for the "manage my visit" page are signed with HMAC-SHA256 using `SESSION_SECRET` with 30-day and 48-hour expirations respectively.
 
 

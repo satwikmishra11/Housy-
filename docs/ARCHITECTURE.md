@@ -85,31 +85,66 @@ Centralized error handling middleware converts errors into structured, predictab
 | `ForbiddenError` | 403 | `FORBIDDEN` | Authenticated user lacks permission |
 | `NotFoundError` | 404 | `NOT_FOUND` | Requested resource does not exist |
 | `ConflictError` | 409 | `CONFLICT` | Resource conflict (e.g., slot already booked) |
+| `TooManyRequestsError` | 429 | `TOO_MANY_REQUESTS` | Rate limit exceeded |
 | `DatabaseError` | 500 | `DATABASE_ERROR` | Unrecoverable database failure |
 | `ServiceUnavailableError` | 503 | `SERVICE_UNAVAILABLE` | External dependency or database down |
 
 ---
 
-## 5. Asynchronous Messaging & Channel Outbox (`apps/api/src/channels/`)
+## 5. Authentication, Authorization (RBAC) & API Hygiene
+
+### Staff Authentication & Password Security
+- **Hashing**: Passwords are saved with Argon2id (`argon2` module) with OWASP-recommended memory (19 MiB) and time costs. Passwords come strictly from seed scripts or user registration, never hard-coded in app code paths.
+- **JWT Session Tokens**: Encoded via `jose` with HMAC-SHA256 and signed with `JWT_SECRET`. Stored in an `httpOnly`, `SameSite=Lax`, `Secure` (production) cookie named `staff_token` with a 24-hour lifetime.
+- **CSRF Protection**: Mutating HTTP verbs (`POST`, `PUT`, `PATCH`, `DELETE`) require a custom header (`X-Requested-With`, `X-CSRF-Token`, or `X-Housy-Client`). Browser-enforced preflight requirements prevent cross-origin HTML form exploits.
+- **Session Introspection**: `GET /api/auth/me` returns authenticated profile. `POST /api/auth/logout` clears auth cookies.
+
+### Role-Based Access Control (RBAC) & Resource Ownership
+- **Roles**: `executive` and `sales_head` (admin).
+- **Middleware**:
+  - `authenticateStaff`: Extracts and validates JWT from cookie or `Authorization: Bearer <token>` header.
+  - `requireAuth`: Enforces that an authenticated staff session is present (returns 401).
+  - `requireRole(...roles)`: Enforces allowed roles for the target action (returns 403).
+- **Ownership Enforcement**:
+  - `assertLeadOwnership(leadId, user)`: Sales Executives see and edit **only leads assigned to them**. Sales Head has global organizational visibility.
+  - Forbidden lead access explicitly returns **HTTP 403 Forbidden** (not 404), distinguishing unassigned resources from non-existent resources.
+
+### Buyer Sessions & Magic Link Tokens
+- **Buyer Sessions**: Signed `buyer_session` cookie tied to an active chat conversation (`conversationId`), enabling continuous dialogue across page visits without passwords.
+- **Single-Purpose Magic Links**: Signed JWTs with `purpose: 'manage_visit'` and 48-hour expiration for the self-serve visit management page.
+
+### API Hygiene & Protection
+- **Security Headers**: Configured via `helmet()` for defense-in-depth HTTP response protection.
+- **Strict CORS Allowlist**: Reads allowed origins from `CORS_ORIGIN` env, blocking unauthorized cross-origin requests with 403.
+- **Rate Limiting (`express-rate-limit`)**:
+  - General API: 100 req/min per IP.
+  - Staff Login: 5 attempts per 15-minute window per IP to eliminate brute-force password cracking.
+  - Chat Assistant: 30 req/min tracked per IP and buyer session token.
+- **Pino Telemetry & Redaction**: Request correlation via `X-Request-Id` UUIDs. Built-in pino redaction replaces `password`, `email`, `phone`, `token`, and `cookie` fields with `[REDACTED]` across logs.
+- **Payload Limits**: Ingestion bodies restricted to `100kb` to protect against Denial of Service memory exhaustion.
+
+---
+
+## 6. Asynchronous Messaging & Channel Outbox (`apps/api/src/channels/`)
 In adherence to Assumption **A5**, all promotional, notification, and reminder messages (WhatsApp, SMS, Email) are routed through an outbox pattern:
 - `ChannelSender` interface with pluggable channel adapters (`OutboxChannelAdapter`).
 - Prepares for RERA compliance (displaying project registration numbers) and DPDP Act 2023 consent validation prior to delivery.
 
 ---
 
-## 6. Scheduled Jobs (`apps/api/src/jobs/`)
+## 7. Scheduled Jobs (`apps/api/src/jobs/`)
 - `ScheduledJob` contract providing structured job execution telemetry (`JobExecutionResult`).
 - `ReminderJob`: Scheduled runner designed to evaluate site visit slots requiring 1-day and 2-hour advance reminders.
 
 ---
 
-## 7. LLM Assistant Layer (`apps/api/src/llm/`)
+## 8. LLM Assistant Layer (`apps/api/src/llm/`)
 - Typed schemas for chat messages (`role`, `content`), tool definitions, and completions.
 - `LlmProvider` contract enabling pluggable LLM integrations (e.g. Gemini / OpenAI / Anthropic) with strict fact-sheet grounding.
 
 ---
 
-## 8. Database & Persistence
+## 9. Database & Persistence
 - **Engine**: PostgreSQL 16 Alpine containerized in `docker-compose.yml` with automated `pg_isready` healthcheck.
 - **Connection Management**: Connection pooling via `pg.Pool` (`apps/api/src/db/index.ts`) with connection timeouts, parameterized query enforcement, and graceful shutdown hooks (`SIGINT`/`SIGTERM`).
 - **Migrations**: Managed via `node-pg-migrate` in `apps/api/migrations/`:
@@ -125,13 +160,13 @@ In adherence to Assumption **A5**, all promotional, notification, and reminder m
 
 ---
 
-## 9. Time Zone Standard
+## 10. Time Zone Standard
 - **Storage**: All database timestamps are persisted as UTC (`TIMESTAMPTZ` in PostgreSQL, ISO 8601 strings in JSON / APIs).
 - **Presentation**: All timestamps presented to the user are formatted in the `Asia/Kolkata` time zone (IST, UTC+05:30) using `apps/web/src/lib/date.ts`.
 
 ---
 
-## 10. Database Schema Entity Catalog
+## 11. Database Schema Entity Catalog
 The 19 relational entities in PostgreSQL:
 
 | Entity | Primary Key | Key Attributes & Foreign Keys | Purpose |
@@ -158,7 +193,7 @@ The 19 relational entities in PostgreSQL:
 
 ---
 
-## 11. Design Tokens & Styling (`apps/web`)
+## 12. Design Tokens & Styling (`apps/web`)
 The client requested a calm, minimal, and premium aesthetic fitting ₹65L – ₹1.2 Cr residences:
 - **Palette**:
   - `background`: `#FBFAF8`
@@ -186,7 +221,7 @@ The client requested a calm, minimal, and premium aesthetic fitting ₹65L – �
 
 ---
 
-## 12. Component Catalog (`apps/web/src/components/`)
+## 13. Component Catalog (`apps/web/src/components/`)
 A comprehensive set of accessible, strictly typed React components:
 - **`Button`**: Primary, secondary, outline, ghost, danger variants; sm/md/lg sizes; loading & disabled states; 44px min touch target.
 - **`Input`**: Text, number, tel, email; label, helper text, error state, left/right icons, disabled.
@@ -210,9 +245,24 @@ A comprehensive set of accessible, strictly typed React components:
 
 ---
 
-## 13. Application Shell Layouts (`apps/web/src/layouts/`)
+## 14. Application Shell Layouts (`apps/web/src/layouts/`)
 - **`BuyerLayout`**: Single centered column (`max-w-2xl`), mobile-first design, clean top bar with language switcher, and regulatory footer displaying RERA registration (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP Act 2023 privacy consent notice.
-- **`StaffLayout`**: Desktop persistent sidebar with company identity, role badges (`Sales Head (Admin)` vs `Sales Executive`), navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Design System`), and mobile responsive top bar with drawer navigation.
+- **`StaffLayout`**: Desktop persistent sidebar with company identity, role badges (`Sales Head (Admin)` vs `Sales Executive`), navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Design System`), and mobile responsive top bar with drawer navigation. Includes authenticated user indicator, logout trigger, and role-based link indicators.
+
+---
+
+## 15. Internationalization (i18n) (`apps/web/src/i18n/`)
+- Configured via `react-i18next` with three language bundles:
+  - English (`en`): default
+  - Hindi (`hi`): हिन्दी
+  - Gujarati (`gu`): ગુજરાતી
+- Covers all buyer-facing strings, greeting messages, project details, legal statements, and slot booking interactions.
+- Selected language is persisted in `localStorage`.
+
+---
+
+## 16. Styleguide Route (`/styleguide`)
+- Route accessible at `/styleguide` showcasing every design system token, atomic primitive, domain component, and state (default, active, loading, disabled, error) in both Staff and Buyer layouts.
 
 ---
 
