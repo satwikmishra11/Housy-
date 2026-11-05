@@ -1,20 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../src/app.js';
-import { query, pool } from '../src/db/index.js';
+import { query } from '../src/db/index.js';
 import { visitService } from '../src/services/visit.service.js';
-import { slotRepository } from '../src/repositories/slot.repository.js';
 import { visitRepository } from '../src/repositories/visit.repository.js';
-import { signStaffToken } from '../src/auth/tokens.js';
 import { SlotUnavailableError } from '../src/errors/index.js';
 
 describe('Site-Visit Booking, Concurrency & Reminders', () => {
   let projectId: string;
   let exec1Id: string;
   let exec2Id: string;
-  let salesHeadId: string;
-  let exec1Token: string;
-  let salesHeadToken: string;
 
   beforeAll(async () => {
     const projRes = await query<{ id: string }>('SELECT id FROM projects LIMIT 1');
@@ -25,14 +20,6 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
     );
     exec1Id = execRes.rows[0]!.id;
     exec2Id = execRes.rows[1]!.id;
-
-    const headRes = await query<{ id: string; name: string; email: string; role: 'sales_head'; phone: string }>(
-      "SELECT id, name, email, role, phone FROM users WHERE role = 'sales_head' LIMIT 1",
-    );
-    salesHeadId = headRes.rows[0]!.id;
-
-    exec1Token = await signStaffToken(execRes.rows[0]!);
-    salesHeadToken = await signStaffToken(headRes.rows[0]!);
   });
 
   afterAll(async () => {
