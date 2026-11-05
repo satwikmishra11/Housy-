@@ -217,3 +217,4 @@ export const UpdateMonthlySpendPayloadSchema = z.object({
   allocations: z.array(AdSpendAllocationItemSchema).min(1, 'At least one source allocation required'),
 });
 export type UpdateMonthlySpendPayload = z.infer<typeof UpdateMonthlySpendPayloadSchema>;
+
