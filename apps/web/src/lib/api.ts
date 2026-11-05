@@ -8,7 +8,7 @@ export async function fetchHealth(): Promise<HealthCheckResponse> {
   const parsed = HealthCheckResponseSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(
-      `Invalid health response schema from server: ${parsed.error.issues.map((i) => i.message).join(', ')}`,
+      `Invalid health response schema from server: ${parsed.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
     );
   }
 
