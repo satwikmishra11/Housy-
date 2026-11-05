@@ -18,6 +18,7 @@ import {
   Flag,
   Send,
   Sparkles,
+  IndianRupee,
 } from 'lucide-react';
 import { Badge } from '../components/Badge.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -79,9 +80,14 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       adminOnly: true,
     },
     {
-      label: 'Source Analytics',
+      label: 'Sales Dashboard',
       path: '/analytics',
       icon: <BarChart3 className="w-4 h-4" />,
+    },
+    {
+      label: 'Monthly Ad Spend',
+      path: '/ad-spend',
+      icon: <IndianRupee className="w-4 h-4" />,
       adminOnly: true,
     },
     {

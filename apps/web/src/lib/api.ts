@@ -45,6 +45,8 @@ import {
   type FlaggedConversationItem,
   type OutboundMessageItem,
   type DemoSimulateLeadPayload,
+  type DashboardFilterQuery,
+  type SalesDashboardData,
 } from '@housy/shared';
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
@@ -820,5 +822,50 @@ export async function optOutLead(leadId: string): Promise<{
       method: 'POST',
     },
   );
+}
+
+// ==========================================
+// SALES DASHBOARD API CLIENT
+// ==========================================
+
+export async function fetchDashboardMetrics(
+  filter: DashboardFilterQuery,
+): Promise<SalesDashboardData> {
+  const queryParams = new URLSearchParams();
+  queryParams.set('period', filter.period);
+  if (filter.from) queryParams.set('from', filter.from);
+  if (filter.to) queryParams.set('to', filter.to);
+  if (filter.projectId) queryParams.set('projectId', filter.projectId);
+
+  return apiFetch<SalesDashboardData>(`/api/dashboard/metrics?${queryParams.toString()}`);
+}
+
+export function getDashboardCsvUrl(filter: DashboardFilterQuery): string {
+  const queryParams = new URLSearchParams();
+  queryParams.set('period', filter.period);
+  if (filter.from) queryParams.set('from', filter.from);
+  if (filter.to) queryParams.set('to', filter.to);
+  if (filter.projectId) queryParams.set('projectId', filter.projectId);
+
+  return `/api/dashboard/export-csv?${queryParams.toString()}`;
+}
+
+export async function downloadDashboardCsv(filter: DashboardFilterQuery): Promise<void> {
+  const url = getDashboardCsvUrl(filter);
+  const res = await fetch(url, {
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to download CSV export (${res.status})`);
+  }
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = `sales-dashboard-${filter.period}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(downloadUrl);
 }
 

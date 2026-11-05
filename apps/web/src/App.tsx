@@ -10,6 +10,7 @@ import { VisitManagePage } from './pages/VisitManagePage.js';
 import { FactSheetPage } from './pages/FactSheetPage.js';
 import { SlotEditorPage } from './pages/SlotEditorPage.js';
 import { AdSpendPage } from './pages/AdSpendPage.js';
+import { DashboardPage } from './pages/DashboardPage.js';
 import { BuyerChatPage } from './pages/BuyerChatPage.js';
 import { HandoffsPage } from './pages/HandoffsPage.js';
 import { FlaggedChatsPage } from './pages/FlaggedChatsPage.js';
@@ -100,8 +101,16 @@ export const App: React.FC = () => {
               <Route
                 path="/analytics"
                 element={
-                  <ProtectedRoute allowedRoles={['sales_head']}>
-                    <AdSpendPage />
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
                   </ProtectedRoute>
                 }
               />
