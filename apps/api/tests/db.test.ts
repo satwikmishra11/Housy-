@@ -23,6 +23,7 @@ describe('Database Schema & Seed Verification', () => {
       'ad_spend',
       'audit_log',
       'llm_calls',
+      'unanswered_questions',
     ];
 
     const res = await query<{ table_name: string }>(

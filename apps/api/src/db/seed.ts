@@ -33,6 +33,7 @@ export async function runSeed(): Promise<void> {
   // 1. Truncate all tables and restart sequence
   await query(`
     TRUNCATE TABLE
+      unanswered_questions,
       source_api_keys,
       llm_calls,
       audit_log,
@@ -177,6 +178,39 @@ export async function runSeed(): Promise<void> {
   for (const f of p1Facts) await insertFact(f, p1Id);
   for (const f of p2Facts) await insertFact(f, p2Id);
   logger.info(`Inserted ~50 fact entries with version history across both projects.`);
+
+  // 4b. Unanswered Questions (Inbox for Sales Head)
+  const sampleUnanswered = [
+    {
+      question: 'Can we install personal solar panels on the terrace of the penthouse?',
+      buyerLanguage: 'en',
+      projectId: p1Id,
+    },
+    {
+      question: 'શું ગેસ લાઇન કનેક્શન પ્રોજેક્ટમાં સામેલ છે કે સિલિન્ડર વાપરવું પડશે?',
+      buyerLanguage: 'gu',
+      projectId: p2Id,
+    },
+    {
+      question: 'Is there a dedicated box cricket pitch or practice net inside the sports zone?',
+      buyerLanguage: 'en',
+      projectId: p1Id,
+    },
+    {
+      question: 'Are pets allowed in the apartment towers and clubhouse garden areas?',
+      buyerLanguage: 'en',
+      projectId: p2Id,
+    },
+  ];
+
+  for (const u of sampleUnanswered) {
+    await query(
+      `INSERT INTO unanswered_questions (question, buyer_language, project_id, status)
+       VALUES ($1, $2, $3, 'unresolved')`,
+      [u.question, u.buyerLanguage, u.projectId],
+    );
+  }
+  logger.info(`Inserted 4 unanswered questions for Sales Head fact inbox.`);
 
   // 5. Availability Rules (Mon-Sun 10:00 to 18:00, 60-min slots)
   for (const execId of executiveIds) {
