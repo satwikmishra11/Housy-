@@ -392,11 +392,10 @@ export const VisitsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedOutcome('visited')}
-                  className={`flex-1 p-3 rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    selectedOutcome === 'visited'
+                  className={`flex-1 p-3 rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${selectedOutcome === 'visited'
                       ? 'border-accent bg-accent-soft text-accent font-semibold'
                       : 'border-hairline bg-surface text-ink hover:bg-background'
-                  }`}
+                    }`}
                 >
                   <CheckCircle className="w-4 h-4 text-success" />
                   <span>Visited</span>
@@ -404,11 +403,10 @@ export const VisitsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedOutcome('no_show')}
-                  className={`flex-1 p-3 rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    selectedOutcome === 'no_show'
+                  className={`flex-1 p-3 rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${selectedOutcome === 'no_show'
                       ? 'border-danger/60 bg-danger/10 text-danger font-semibold'
                       : 'border-hairline bg-surface text-ink hover:bg-background'
-                  }`}
+                    }`}
                 >
                   <XCircle className="w-4 h-4 text-danger" />
                   <span>No-Show</span>

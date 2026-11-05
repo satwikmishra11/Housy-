@@ -44,7 +44,7 @@ export class VisitService {
   constructor(
     private readonly slotRepo: SlotRepository = slotRepository,
     private readonly visitRepo: VisitRepository = visitRepository,
-  ) {}
+  ) { }
 
   /**
    * Returns open slots grouped by calendar day in Asia/Kolkata for a project.

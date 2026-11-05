@@ -21,28 +21,28 @@ export function csrfProtection(req: Request, _res: Response, next: NextFunction)
     return next();
   }
 
-  // Exempt public buyer endpoints (chat, booking, magic-link visit management)
-  if (
-    req.path.startsWith('/api/conversations') ||
-    req.path.startsWith('/conversations') ||
-    req.path.includes('/visits/manage') ||
-    req.path.includes('/book')
-  ) {
-    return next();
-  }
+    // Exempt public buyer endpoints (chat, booking, magic-link visit management)
+    if (
+      req.path.startsWith('/api/conversations') ||
+      req.path.startsWith('/conversations') ||
+      req.path.includes('/visits/manage') ||
+      req.path.includes('/book')
+    ) {
+      return next();
+    }
 
-  const hasCustomHeader = Boolean(
-    req.headers['x-requested-with'] ||
-    req.headers['x-csrf-token'] ||
-    req.headers['x-housy-client']
-  );
-
-  if (!hasCustomHeader) {
-    return next(
-      new ForbiddenError('CSRF protection: request missing required custom header (e.g. X-Requested-With)')
+    const hasCustomHeader = Boolean(
+      req.headers['x-requested-with'] ||
+      req.headers['x-csrf-token'] ||
+      req.headers['x-housy-client']
     );
-  }
 
-  next();
-}
+    if (!hasCustomHeader) {
+      return next(
+        new ForbiddenError('CSRF protection: request missing required custom header (e.g. X-Requested-With)')
+      );
+    }
+
+    next();
+  }
 

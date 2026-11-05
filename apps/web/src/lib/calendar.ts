@@ -52,3 +52,4 @@ export function downloadIcsCalendar(event: CalendarEvent, filename = 'site-visit
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+

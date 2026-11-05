@@ -19,8 +19,8 @@ export interface GroupedSlotSummary extends QueryResultRow {
   available_count: number;
 }
 
-interface DbAvailabilityRuleRow extends QueryResultRow, AvailabilityRuleInput {}
-interface DbBlackoutDateRow extends QueryResultRow, BlackoutDateInput {}
+interface DbAvailabilityRuleRow extends QueryResultRow, AvailabilityRuleInput { }
+interface DbBlackoutDateRow extends QueryResultRow, BlackoutDateInput { }
 
 export class SlotRepository {
   /**

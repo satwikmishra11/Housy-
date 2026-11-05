@@ -91,11 +91,11 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
   if (days.length === 0 || totalSlots === 0) {
     const formattedNextDate = nextAvailableDate
       ? formatInKolkataTime(new Date(nextAvailableDate).toISOString(), {
-          timeZone: 'Asia/Kolkata',
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-        })
+        timeZone: 'Asia/Kolkata',
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
       : null;
 
     return (
@@ -110,10 +110,10 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
         action={
           formattedNextDate && onRetry
             ? {
-                label: `Check ${formattedNextDate}`,
-                onClick: onRetry,
-                icon: <ArrowRight className="w-4 h-4" />,
-              }
+              label: `Check ${formattedNextDate}`,
+              onClick: onRetry,
+              icon: <ArrowRight className="w-4 h-4" />,
+            }
             : undefined
         }
         className={className}
@@ -194,18 +194,16 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                 aria-selected={isSelected}
                 disabled={!hasSlots}
                 onClick={() => setSelectedDate(day.date)}
-                className={`min-h-[72px] min-w-[70px] sm:min-w-[80px] p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  isSelected
+                className={`min-h-[72px] min-w-[70px] sm:min-w-[80px] p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isSelected
                     ? 'border-accent bg-accent text-white shadow-subtle'
                     : hasSlots
                       ? 'border-hairline bg-surface text-ink hover:border-accent/60 hover:bg-accent-soft/30'
                       : 'border-hairline/60 bg-background/50 text-muted/40 cursor-not-allowed opacity-60'
-                }`}
+                  }`}
               >
                 <span
-                  className={`text-[11px] font-medium uppercase tracking-wider ${
-                    isSelected ? 'text-white/80' : 'text-muted'
-                  }`}
+                  className={`text-[11px] font-medium uppercase tracking-wider ${isSelected ? 'text-white/80' : 'text-muted'
+                    }`}
                 >
                   {dayName}
                 </span>
@@ -213,20 +211,18 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                   {dayNumber}
                 </span>
                 <span
-                  className={`text-[11px] font-medium ${
-                    isSelected ? 'text-white/90' : 'text-muted'
-                  }`}
+                  className={`text-[11px] font-medium ${isSelected ? 'text-white/90' : 'text-muted'
+                    }`}
                 >
                   {monthName}
                 </span>
                 <span
-                  className={`text-[10px] mt-1 px-1.5 py-0.2 rounded-full font-medium ${
-                    isSelected
+                  className={`text-[10px] mt-1 px-1.5 py-0.2 rounded-full font-medium ${isSelected
                       ? 'bg-white/20 text-white'
                       : hasSlots
                         ? 'bg-accent-soft text-accent'
                         : 'text-muted/50'
-                  }`}
+                    }`}
                 >
                   {hasSlots ? `${slotCount} open` : 'Full'}
                 </span>
@@ -266,17 +262,15 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                   type="button"
                   onClick={() => onSelectSlot(slot)}
                   aria-pressed={isSelected}
-                  className={`min-h-[48px] px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors flex items-center justify-between gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                    isSelected
+                  className={`min-h-[48px] px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors flex items-center justify-between gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isSelected
                       ? 'border-accent bg-accent text-white shadow-subtle'
                       : 'border-hairline bg-surface text-ink hover:border-accent hover:bg-accent-soft/40 active:bg-accent-soft'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Clock
-                      className={`w-3.5 h-3.5 flex-shrink-0 ${
-                        isSelected ? 'text-white' : 'text-accent'
-                      }`}
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? 'text-white' : 'text-accent'
+                        }`}
                       aria-hidden="true"
                     />
                     <span className="font-mono tracking-tight font-medium">
@@ -286,9 +280,8 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
 
                   {slot.availableCount > 1 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-accent-soft text-accent'
-                      }`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isSelected ? 'bg-white/20 text-white' : 'bg-accent-soft text-accent'
+                        }`}
                     >
                       {slot.availableCount}
                     </span>

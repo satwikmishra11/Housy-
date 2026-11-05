@@ -60,81 +60,81 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
   it(
     '20 parallel bookings for the same single slot via Promise.all: exactly 1 succeeds, 19 get SlotUnavailable',
     async () => {
-    // Target time: 10 days in the future at 11:00 UTC
-    const targetStartsAt = new Date(Date.now() + 10 * 24 * 3600 * 1000);
-    targetStartsAt.setUTCHours(11, 0, 0, 0);
-    const targetEndsAt = new Date(targetStartsAt.getTime() + 60 * 60 * 1000);
+      // Target time: 10 days in the future at 11:00 UTC
+      const targetStartsAt = new Date(Date.now() + 10 * 24 * 3600 * 1000);
+      targetStartsAt.setUTCHours(11, 0, 0, 0);
+      const targetEndsAt = new Date(targetStartsAt.getTime() + 60 * 60 * 1000);
 
-    // Ensure ONLY 1 single slot exists at targetStartsAt for this project
-    await query(
-      'DELETE FROM visit_bookings WHERE slot_id IN (SELECT id FROM visit_slots WHERE project_id = $1 AND starts_at = $2)',
-      [projectId, targetStartsAt.toISOString()],
-    );
-    await query(
-      'DELETE FROM visit_slots WHERE project_id = $1 AND starts_at = $2',
-      [projectId, targetStartsAt.toISOString()],
-    );
+      // Ensure ONLY 1 single slot exists at targetStartsAt for this project
+      await query(
+        'DELETE FROM visit_bookings WHERE slot_id IN (SELECT id FROM visit_slots WHERE project_id = $1 AND starts_at = $2)',
+        [projectId, targetStartsAt.toISOString()],
+      );
+      await query(
+        'DELETE FROM visit_slots WHERE project_id = $1 AND starts_at = $2',
+        [projectId, targetStartsAt.toISOString()],
+      );
 
-    // Create alternative slots so the 19 failing requests receive 3 alternatives
-    for (let i = 1; i <= 3; i++) {
-      const altStart = new Date(targetStartsAt.getTime() + i * 2 * 3600 * 1000);
-      const altEnd = new Date(altStart.getTime() + 3600 * 1000);
-      await createSlot(exec1Id, altStart, altEnd, 'open');
-    }
-
-    // Now insert the single contested slot
-    const slotId = await createSlot(exec1Id, targetStartsAt, targetEndsAt, 'open');
-
-    // Create 20 unique leads
-    const leadIds: string[] = [];
-    for (let i = 0; i < 20; i++) {
-      const lid = await createLead(`ConcurrentBuyer${i}`);
-      leadIds.push(lid);
-    }
-
-    // Fire 20 parallel booking requests at the exact same moment
-    const results = await Promise.allSettled(
-      leadIds.map((lid, idx) =>
-        visitService.bookVisit(
-          lid,
-          projectId,
-          targetStartsAt.toISOString(),
-          `IDEM-CONCURRENT-RACE-${idx}-${Date.now()}`,
-        ),
-      ),
-    );
-
-    const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    const rejected = results.filter((r) => r.status === 'rejected');
-
-    // Exactly 1 must succeed
-    expect(fulfilled).toHaveLength(1);
-
-    // Exactly 19 must fail
-    expect(rejected).toHaveLength(19);
-
-    // All 19 rejected must be SlotUnavailableError with alternatives
-    for (const rej of rejected) {
-      if (rej.status === 'rejected') {
-        expect(rej.reason).toBeInstanceOf(SlotUnavailableError);
-        const err = rej.reason as SlotUnavailableError;
-        expect(err.statusCode).toBe(409);
-        expect(err.code).toBe('SLOT_UNAVAILABLE');
-        expect(err.alternatives.length).toBeGreaterThanOrEqual(1);
+      // Create alternative slots so the 19 failing requests receive 3 alternatives
+      for (let i = 1; i <= 3; i++) {
+        const altStart = new Date(targetStartsAt.getTime() + i * 2 * 3600 * 1000);
+        const altEnd = new Date(altStart.getTime() + 3600 * 1000);
+        await createSlot(exec1Id, altStart, altEnd, 'open');
       }
-    }
 
-    // Database verification: Slot status must be 'booked'
-    const slotCheck = await query<{ status: string }>('SELECT status FROM visit_slots WHERE id = $1', [slotId]);
-    expect(slotCheck.rows[0]!.status).toBe('booked');
+      // Now insert the single contested slot
+      const slotId = await createSlot(exec1Id, targetStartsAt, targetEndsAt, 'open');
 
-    // Database verification: Exactly 1 confirmed booking exists for that slot
-    const bookingCheck = await query<{ count: string }>(
-      "SELECT COUNT(*) FROM visit_bookings WHERE slot_id = $1 AND status = 'confirmed'",
-      [slotId],
-    );
-    expect(parseInt(bookingCheck.rows[0]!.count, 10)).toBe(1);
-  }, 15000);
+      // Create 20 unique leads
+      const leadIds: string[] = [];
+      for (let i = 0; i < 20; i++) {
+        const lid = await createLead(`ConcurrentBuyer${i}`);
+        leadIds.push(lid);
+      }
+
+      // Fire 20 parallel booking requests at the exact same moment
+      const results = await Promise.allSettled(
+        leadIds.map((lid, idx) =>
+          visitService.bookVisit(
+            lid,
+            projectId,
+            targetStartsAt.toISOString(),
+            `IDEM-CONCURRENT-RACE-${idx}-${Date.now()}`,
+          ),
+        ),
+      );
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      // Exactly 1 must succeed
+      expect(fulfilled).toHaveLength(1);
+
+      // Exactly 19 must fail
+      expect(rejected).toHaveLength(19);
+
+      // All 19 rejected must be SlotUnavailableError with alternatives
+      for (const rej of rejected) {
+        if (rej.status === 'rejected') {
+          expect(rej.reason).toBeInstanceOf(SlotUnavailableError);
+          const err = rej.reason as SlotUnavailableError;
+          expect(err.statusCode).toBe(409);
+          expect(err.code).toBe('SLOT_UNAVAILABLE');
+          expect(err.alternatives.length).toBeGreaterThanOrEqual(1);
+        }
+      }
+
+      // Database verification: Slot status must be 'booked'
+      const slotCheck = await query<{ status: string }>('SELECT status FROM visit_slots WHERE id = $1', [slotId]);
+      expect(slotCheck.rows[0]!.status).toBe('booked');
+
+      // Database verification: Exactly 1 confirmed booking exists for that slot
+      const bookingCheck = await query<{ count: string }>(
+        "SELECT COUNT(*) FROM visit_bookings WHERE slot_id = $1 AND status = 'confirmed'",
+        [slotId],
+      );
+      expect(parseInt(bookingCheck.rows[0]!.count, 10)).toBe(1);
+    }, 15000);
 
   it('Idempotent retry: double click returns the same booking without re-booking', async () => {
     const leadId = await createLead('IdempotentLead');

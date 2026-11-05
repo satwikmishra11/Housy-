@@ -50,3 +50,4 @@ export class SlotGeneratorJob implements ScheduledJob {
 }
 
 export const slotGeneratorJob = new SlotGeneratorJob();
+
