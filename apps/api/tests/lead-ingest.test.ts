@@ -423,6 +423,14 @@ describe('Lead Ingest, Deduplication, Merge & Role Scoping', () => {
       for (const lead of res.body.data) {
         expect(lead.assignedTo).toBe(exec1User.id);
       }
+      expect(res.body.data.some((l: { id: string }) => l.id === leadAssignedToExec1Id)).toBe(true);
+
+      // Verify Exec 2 sees their own assigned lead
+      const res2 = await request(app)
+        .get('/api/leads')
+        .set('Cookie', `staff_token=${exec2Token}`);
+      expect(res2.status).toBe(200);
+      expect(res2.body.data.every((l: { assignedTo: string }) => l.assignedTo === exec2User.id)).toBe(true);
     });
 
     it('Sales Head sees leads from all executives on GET /api/leads', async () => {
