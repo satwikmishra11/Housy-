@@ -65,6 +65,8 @@ export async function apiFetch<T>(
         message = `API server unavailable (HTTP ${response.status}). Please check that the backend API server is running on port 3001.`;
       } else if (response.status === 404) {
         message = `API endpoint not found: ${endpoint} (HTTP 404)`;
+      } else if (response.status === 405) {
+        message = `HTTP 405 Method Not Allowed: The hosting environment or static server intercepted the POST request. Ensure the backend API server is running or the Vercel serverless function rewrite is active.`;
       } else {
         message = rawText.trim() || `Request failed with status ${response.status}`;
       }

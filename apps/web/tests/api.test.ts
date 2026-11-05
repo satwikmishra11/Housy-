@@ -82,6 +82,19 @@ describe('apiFetch Client Resilience', () => {
     );
   });
 
+  it('handles HTTP 405 Method Not Allowed with an actionable message', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 405,
+      headers: new Headers({ 'content-type': 'text/plain' }),
+      text: vi.fn().mockResolvedValue('Method Not Allowed'),
+    } as unknown as Response);
+
+    await expect(apiFetch('/api/auth/login', { method: 'POST' })).rejects.toThrow(
+      /HTTP 405 Method Not Allowed/,
+    );
+  });
+
   it('handles HTML error pages without throwing JSON syntax errors', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
