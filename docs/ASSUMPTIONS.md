@@ -58,6 +58,7 @@ This document records all architectural and product assumptions made during the 
 - **A54**: Production cookie policy supports both same-origin deployment via reverse-proxy (`COOKIE_SAME_SITE=lax`) and cross-origin deployment (`COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`), while client API calls automatically forward bearer and session tokens in request headers to guarantee authentication in browsers that block third-party cookies.
 - **A55**: Free-tier cloud server cold starts (Render/Railway idle spindown) are detected client-side via a 3.5s latency threshold and 502/504 gateway status codes, displaying a polite, non-blocking notification banner (`ServerColdStartBanner`) and slow-start reassurance note in the buyer chat.
 - **A56**: Periodic site-visit reminder processing is triggered in production either by an internal cron HTTP endpoint (`/api/internal/run-reminders` authenticated via `INTERNAL_API_KEY` or staff token) or by a daemonized 60-second in-process worker loop in long-running Node environments.
+- **A57**: Vercel multi-service project deployment configures `api` (`apps/api`, Express) and `web` (`apps/web`, Vite) under a unified root `vercel.json`. Because `web` is a client-side SPA whose requests to `/api/*` originate from the user's web browser, both `api` and `web` are configured as public services (`/api` and `/api/(.*)` routing to `api`, and `/(.*)` routing to `web`), eliminating the need for server-to-server internal service bindings while preserving same-origin cookie security.
 
 
 

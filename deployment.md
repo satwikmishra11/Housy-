@@ -136,19 +136,18 @@ npm run eval:ai
 ### Hosting Architecture
 The application separates concerns between a globally distributed static frontend and a containerized Node.js API backed by managed serverless PostgreSQL:
 
-1. **Frontend (Vercel)**:
-   - Hosted on Vercel as a single-page application built from `apps/web/`.
-   - Build command: `npm run build:web` (or root `npm run build`).
-   - Output directory: `apps/web/dist`.
-   - Single Page Application routing is guaranteed via `vercel.json` rewrites (`/(.*) -> /index.html`).
-   - **Cookie & Proxy Strategy**:
-     - *Option A (Same-Origin Reverse Proxy - Recommended)*: Vercel routes `/api/(.*)` to the Render API destination via `vercel.json`. The browser communicates with a single origin, completely bypassing third-party cookie restrictions in Safari, Chrome, and iOS, with `SameSite=Lax`.
-     - *Option B (Direct Cross-Origin)*: When frontend and backend reside on separate origins (`housy.vercel.app` and `housy-api.onrender.com`), the backend configures `CORS_ORIGIN=https://housy.vercel.app`, `COOKIE_SECURE=true`, and `COOKIE_SAME_SITE=none`. The frontend API client automatically transmits `credentials: 'include'` and forwards the `X-Buyer-Session` token header.
+1. **Vercel Services Architecture (`vercel.json`)**:
+   - The repository is configured to deploy directly to Vercel as a single project with multiple services using root `vercel.json`:
+     - **Service `web`**: Root `apps/web/`, framework preset `"vite"`, serving the buyer chat, staff portal, and sales analytics UI. Publicly routed via `/(.*)`.
+     - **Service `api`**: Root `apps/api/`, framework preset `"express"`, running the Express backend. Publicly routed via `/api` and `/api/(.*)`.
+   - **Unified Domain Routing**: Both services deploy atomically under the same project domain (e.g. `https://housy.vercel.app`). Requests to `/api/*` are routed by Vercel edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction without needing third-party cookie workarounds.
+   - **Service Bindings Note**: In a client-side SPA architecture, all API requests originate from the buyer's/staff's browser; therefore, `api` is exposed via the public `/api/*` rewrite rather than an internal-only service binding.
 
-2. **Backend API (Render / Railway)**:
-   - Node.js 20 environment executing compiled TypeScript (`apps/api/dist/server.js`).
+2. **Alternative Platform Split (Render / Railway + Vercel)**:
+   - Frontend hosted on Vercel as a static SPA built from `apps/web/dist`.
+   - Backend API hosted on Render or Railway executing `node dist/server.js`.
    - Monorepo build command: `npm run build --workspace=@housy/shared && npm run build --workspace=@housy/api`.
-   - Start command: `npm run start --workspace=@housy/api` (`node dist/server.js`).
+   - Start command: `npm run start --workspace=@housy/api`.
 
 3. **Database (Neon / Supabase)**:
    - Managed PostgreSQL 16 cluster accessed via connection pooling URL with SSL (`sslmode=require`).
@@ -301,3 +300,4 @@ Follow this structured 5-minute walkthrough to evaluate all critical platform ca
 2. **Free-Tier Sleep Cycles**: In hosting environments utilizing free Render containers, idle spindown occurs after 15 minutes. Cold starts take ~30–45 seconds, during which the application surfaces the floating `<ServerColdStartBanner />` to keep users informed.
 3. **Advance Booking Lead Time**: Site visits require a minimum 3-hour advance window from `NOW()` to prevent uncoordinated arrivals at the developer sales gallery.
 4. **Authoritative Fact Confinement**: The AI conversational assistant is strictly constrained to the sales head's fact sheet. Inquiries about unverified external amenities, custom price reductions, or unauthorized architectural alterations trigger a graceful handoff to human sales executives.
+
