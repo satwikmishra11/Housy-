@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "./dist/server.js",
+  "main": "./server.js",
   "exports": {
-    ".": "./dist/server.js"
+    ".": "./server.js"
   },
   "scripts": {
     "prebuild": "npm run build --workspace=@housy/shared",

@@ -843,6 +843,7 @@ Top-level rewrites route traffic cleanly across both services on a shared domain
 - **CORS & CSP Integration**: Automatically admits `*.vercel.app` and `https://vercel.live` in CORS validators and Helmet CSP `connect-src`.
 - **Database & Serverless Connection Limits**: Non-localhost PostgreSQL connections enable SSL (`ssl: { rejectUnauthorized: false }`) with `max: 10` pool size on serverless to prevent database connection exhaustion.
 - **Demo Mode Production Fallback**: Permits `LLM_PROVIDER=mock` when `DEMO_MODE=true` in production, ensuring resilient boot without failing Zod startup schema validations.
+- **Self-Contained Entrypoint Resolution**: Entrypoint resolution uses root `apps/api/server.js` and `apps/api/index.js` which dynamically import the self-contained `esbuild` bundles (`dist/server.js` and `dist/index.js`) with Node module require shims. This guarantees compatibility with Vercel's zero-config Express framework detection and eliminates hoisted monorepo dependency misses and missing artifact validation errors during deployment.
 
 
 
