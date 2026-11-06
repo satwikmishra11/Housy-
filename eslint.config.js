@@ -30,6 +30,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
       '**/vite.config.ts.*',
+      'apps/api/index.js',
+      'apps/api/server.js',
     ],
   },
   {
