@@ -81,8 +81,8 @@ export class ChatService {
     } catch (err) {
       if (config.DEMO_MODE) {
         logger.warn({ err }, 'Database unavailable during chat start in demo mode; using fallback ephemeral demo session');
-        conversationId = 'demo-conv-00000000-0000-0000-0000-000000000001';
-        leadId = 'demo-lead-00000000-0000-0000-0000-000000000001';
+        conversationId = '00000000-0000-0000-0000-000000000001';
+        leadId = '00000000-0000-0000-0000-000000000002';
       } else {
         throw err;
       }
@@ -108,7 +108,7 @@ export class ChatService {
    * Process a message sent by a buyer through pre-filters, agent loop, post-checks, and persistence.
    */
   async sendMessage(payload: ChatMessagePayload): Promise<ChatReply> {
-    if (payload.conversationId.startsWith('demo-conv-')) {
+    if (payload.conversationId === '00000000-0000-0000-0000-000000000001' || payload.conversationId.startsWith('00000000-')) {
       const targetLang: ChatLanguage = payload.language ?? 'en';
       return {
         text: 'Namaste! At Company A, we are pleased to present luxury 2 BHK (starting at ₹1.2 Cr) and 3 BHK homes (starting at ₹2.1 Cr) at The Grand View, Bodakdev, Ahmedabad. Would you like to schedule a private gallery tour or speak with an advisor?',
@@ -502,6 +502,22 @@ export class ChatService {
    * Return message history for a conversation.
    */
   async getHistory(conversationId: string): Promise<ChatHistoryItem[]> {
+    if (conversationId === '00000000-0000-0000-0000-000000000001' || conversationId.startsWith('00000000-')) {
+      return [
+        {
+          id: '00000000-0000-0000-0000-000000000010',
+          conversationId,
+          role: 'assistant',
+          content: 'Namaste! Welcome to Company A. How may I assist you with your luxury home search today?',
+          citedFactIds: [],
+          meta: {
+            quickReplies: ['Explore 2 BHK', 'Explore 3 BHK Luxury', 'Schedule a Site Visit'],
+          },
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+
     const conversation = await chatRepository.findConversationById(conversationId);
     if (!conversation) {
       throw new NotFoundError('Conversation not found');
