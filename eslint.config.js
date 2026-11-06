@@ -32,6 +32,8 @@ export default tseslint.config(
       '**/vite.config.ts.*',
       'apps/api/index.js',
       'apps/api/server.js',
+      'apps/api/index.cjs',
+      'apps/api/server.cjs',
     ],
   },
   {
