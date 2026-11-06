@@ -63,7 +63,7 @@ export const chatRateLimiter = rateLimit({
   skip: () => config.NODE_ENV === 'test',
   validate: { keyGeneratorIpFallback: false },
   keyGenerator: (req: Request): string => {
-    const sessionToken = req.cookies?.['buyer_session'] as string | undefined;
+    const sessionToken = (req.headers['x-buyer-session'] || req.cookies?.['buyer_session']) as string | undefined;
     const ip = req.ip || req.socket.remoteAddress || 'unknown-ip';
     return sessionToken ? `${ip}:${sessionToken}` : ip;
   },

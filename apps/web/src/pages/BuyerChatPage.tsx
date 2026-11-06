@@ -173,6 +173,7 @@ export const BuyerChatPage: React.FC = () => {
             // History fetch failed, start fresh session
             sessionStorage.removeItem('housy_chat_conversation_id');
             sessionStorage.removeItem('housy_chat_lead_id');
+            sessionStorage.removeItem('housy_chat_buyer_token');
           }
         }
 
@@ -188,6 +189,7 @@ export const BuyerChatPage: React.FC = () => {
           setLeadId(startRes.leadId);
           sessionStorage.setItem('housy_chat_conversation_id', startRes.conversationId);
           sessionStorage.setItem('housy_chat_lead_id', startRes.leadId);
+          sessionStorage.setItem('housy_chat_buyer_token', startRes.sessionToken);
 
           const greetingMsg: UiChatMessage = {
             id: `msg_init_${Date.now()}`,
@@ -214,7 +216,7 @@ export const BuyerChatPage: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [currentLang, mappedSource, selectedProjectId]);
+  }, []);
 
   // When handed off to a human sales executive, poll conversation history every 5s for executive responses
   useEffect(() => {

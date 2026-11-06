@@ -485,7 +485,7 @@ export const DashboardPage: React.FC = () => {
                       </Badge>
                     </div>
 
-                    <div className="h-64 w-full" aria-label="Median Response Time Chart">
+                    <div className="h-64 w-full" role="img" aria-label="Median Response Time Chart">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={data.responseTimeBySource.map((s) => ({
@@ -571,7 +571,7 @@ export const DashboardPage: React.FC = () => {
                     </div>
 
                     {/* Styled Funnel Progression View */}
-                    <div className="space-y-3 pt-2" aria-label="Conversion Funnel Progression">
+                    <div className="space-y-3 pt-2" role="region" aria-label="Conversion Funnel Progression">
                       {data.funnel.map((stage, idx) => {
                         const total = data.summary.totalLeads || 1;
                         const barWidthPercent = Math.max(10, Math.round((stage.count / total) * 100));

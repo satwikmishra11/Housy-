@@ -11,6 +11,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -28,7 +29,10 @@
     "db:reset": "npm run db:reset --workspace=@housy/api"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.65.0",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.21.0",
     "prettier": "^3.5.2",
     "typescript": "^5.7.3",
@@ -36,7 +40,8 @@
   },
   "overrides": {
     "glob": "^14.0.3",
-    "minimatch": "^11.0.4"
+    "minimatch": "^11.0.4",
+    "tinypool": "^2.2.0",
+    "zod": "^3.24.4"
   }
 }
-

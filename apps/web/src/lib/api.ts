@@ -75,6 +75,14 @@ export async function apiFetch<T>(
     }
   }
 
+  // Attach buyer session token if available in sessionStorage
+  if (typeof window !== 'undefined') {
+    const buyerToken = sessionStorage.getItem('housy_chat_buyer_token');
+    if (buyerToken && !headers.has('X-Buyer-Session')) {
+      headers.set('X-Buyer-Session', buyerToken);
+    }
+  }
+
   const response = await fetch(endpoint, {
     ...options,
     headers,
@@ -606,11 +614,28 @@ export async function fetchSpendMonths(): Promise<string[]> {
 // BUYER CHAT ASSISTANT API CLIENT
 // ==========================================
 
+let inFlightStartPromise: Promise<ChatStartResponse> | null = null;
+
 export async function startChat(payload: Partial<ChatStartPayload> = {}): Promise<ChatStartResponse> {
-  return apiFetch<ChatStartResponse>('/api/chat/start', {
+  if (inFlightStartPromise) {
+    return inFlightStartPromise;
+  }
+
+  inFlightStartPromise = apiFetch<ChatStartResponse>('/api/chat/start', {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
+  })
+    .then((res) => {
+      if (typeof window !== 'undefined' && res.sessionToken) {
+        sessionStorage.setItem('housy_chat_buyer_token', res.sessionToken);
+      }
+      return res;
+    })
+    .finally(() => {
+      inFlightStartPromise = null;
+    });
+
+  return inFlightStartPromise;
 }
 
 export async function sendChatMessage(payload: ChatMessagePayload): Promise<ChatReply> {

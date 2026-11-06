@@ -26,8 +26,8 @@ async function assertBuyerConversationAccess(
   targetConversationId: string,
 ): Promise<void> {
   const token =
-    (req.cookies?.['buyer_session'] as string | undefined) ||
-    (req.headers['x-buyer-session'] as string | undefined);
+    (req.headers['x-buyer-session'] as string | undefined) ||
+    (req.cookies?.['buyer_session'] as string | undefined);
 
   if (!token) {
     throw new UnauthorizedError('Buyer session token is missing. Please start a chat session.');
