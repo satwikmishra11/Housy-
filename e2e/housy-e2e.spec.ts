@@ -116,19 +116,23 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
     await expect(transcriptButton).toBeVisible({ timeout: 10000 });
     await transcriptButton.scrollIntoViewIfNeeded();
 
-    // Verify transcript modal shows conversation history
-    const transcriptModal = page.locator('[data-testid="transcript-modal"]').or(page.locator('[role="dialog"]'));
+    // Verify transcript modal opens and shows conversation history
+    const transcriptModal = page.locator('[data-testid="transcript-modal"]');
     await expect(async () => {
       if (!(await transcriptModal.isVisible())) {
         await transcriptButton.click();
       }
       await expect(transcriptModal).toBeVisible({ timeout: 2000 });
+      await expect(transcriptModal.locator('h2')).toContainText('Conversation Transcript', { timeout: 2000 });
     }).toPass({ timeout: 15000 });
 
-    await expect(transcriptModal.locator('h2')).toContainText('Conversation Transcript', { timeout: 10000 });
-
     // Close transcript modal and wait for dismissal
-    await page.keyboard.press('Escape');
+    const closeBtn = transcriptModal.locator('button[aria-label="Close dialog"]').or(transcriptModal.locator('button:has-text("Close")')).first();
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click();
+    } else {
+      await page.keyboard.press('Escape');
+    }
     await expect(transcriptModal).toHaveCount(0, { timeout: 5000 });
 
     // 3. Navigate to Visits page and mark a visit as visited

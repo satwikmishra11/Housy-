@@ -75,7 +75,16 @@ handoffsRouter.get(
         throw new NotFoundError('Handoff not found');
       }
       const messages = await chatRepository.getMessages(item.conversationId);
-      res.status(200).json({ success: true, data: messages });
+      const formatted = messages.map((m) => ({
+        id: m.id,
+        conversationId: m.conversation_id,
+        role: m.role,
+        content: m.content,
+        citedFactIds: m.cited_fact_ids || [],
+        meta: m.meta || {},
+        createdAt: m.created_at,
+      }));
+      res.status(200).json({ success: true, data: formatted });
     } catch (err) {
       next(err);
     }
