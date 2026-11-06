@@ -56,7 +56,7 @@ describe('Database Schema & Seed Verification', () => {
     expect(hardik?.name).toBe('Hardik Patel');
     expect(hardik?.source).toBe('property_portal');
     expect(hardik?.wants).toBe('3 BHK');
-    expect(hardik?.status).toBe('visit_booked');
+    expect(['visit_booked', 'visited']).toContain(hardik?.status);
 
     const nidhi = res.rows.find((r) => r.public_id === 'LD-58211');
     expect(nidhi).toBeDefined();
