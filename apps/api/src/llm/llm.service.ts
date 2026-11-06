@@ -15,9 +15,9 @@ export class LLMService {
     this.providerName = config.LLM_PROVIDER;
     this.modelName = config.LLM_MODEL;
 
-    if (config.NODE_ENV === 'production' && this.providerName === 'mock') {
+    if (config.NODE_ENV === 'production' && !config.DEMO_MODE && this.providerName === 'mock') {
       throw new Error(
-        'Refusing to start in production with LLM_PROVIDER=mock. Must be configured with real provider (anthropic or gemini).',
+        'Refusing to start in production with LLM_PROVIDER=mock when DEMO_MODE is false. Must be configured with real provider (anthropic or gemini).',
       );
     }
 

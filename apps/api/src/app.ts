@@ -24,6 +24,12 @@ export function createApp(): Express {
   const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
 
   const isOriginAllowed = (origin: string): boolean => {
+    if (
+      process.env.VERCEL &&
+      (origin.endsWith('.vercel.app') || origin === 'https://vercel.live' || origin.endsWith('.vercel.dev'))
+    ) {
+      return true;
+    }
     return allowedOrigins.some((pattern) => {
       if (pattern === '*' || pattern === origin) return true;
       if (pattern.includes('*')) {
@@ -43,7 +49,7 @@ export function createApp(): Express {
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-          connectSrc: ["'self'", ...allowedOrigins],
+          connectSrc: ["'self'", ...allowedOrigins, 'https://*.vercel.app', 'https://vercel.live'],
           fontSrc: ["'self'", 'data:', 'https:'],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
@@ -81,8 +87,9 @@ export function createApp(): Express {
   app.use(authenticateStaff);
   app.use(csrfProtection);
 
-  // 7. Mount API router
+  // 7. Mount API router (both with /api prefix and root for reverse proxies)
   app.use('/api', apiRouter);
+  app.use('/', apiRouter);
 
   // 8. Fallback 404 handler for unknown routes
   app.use((_req, _res, next) => {

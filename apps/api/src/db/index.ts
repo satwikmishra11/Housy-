@@ -3,11 +3,20 @@ import { config } from '../config/index.js';
 
 const { Pool } = pg;
 
+const isLocalhost =
+  config.DATABASE_URL.includes('localhost') ||
+  config.DATABASE_URL.includes('127.0.0.1');
+
+const useSsl =
+  !isLocalhost &&
+  (config.NODE_ENV === 'production' || !!process.env.VERCEL || config.DATABASE_URL.includes('sslmode=require'));
+
 export const pool = new Pool({
   connectionString: config.DATABASE_URL,
-  max: 30, // Support up to 30 concurrent transactions without pool starvation
+  max: process.env.VERCEL ? 10 : 30, // Limit pool size in serverless to prevent connection exhaustion
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
 export interface QueryResultRow {

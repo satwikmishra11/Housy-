@@ -837,6 +837,13 @@ Top-level rewrites route traffic cleanly across both services on a shared domain
 - In client SPA architectures (React/Vite), network requests to `/api/*` originate client-side in the user's browser; therefore, `api` is exposed via top-level public rewrites.
 - Internal service-to-service bindings (which inject private internal URLs at runtime into serverless functions) are reserved for server-to-server microservice communication and are omitted here as all API communication occurs via the public `/api/*` path.
 
+### 4. Serverless Express Entrypoint & Runtime Hardening
+- **Handler Export**: `apps/api/src/server.ts` and `apps/api/src/index.ts` export `default app` and named `app`, omitting `app.listen()` and background `setInterval` workers when `process.env.VERCEL` is active.
+- **Prefix Agnostic Routing**: The Express app mounts `apiRouter` at both `/api` and `/` so routes match seamlessly regardless of whether the ingress proxy rewrites paths.
+- **CORS & CSP Integration**: Automatically admits `*.vercel.app` and `https://vercel.live` in CORS validators and Helmet CSP `connect-src`.
+- **Database & Serverless Connection Limits**: Non-localhost PostgreSQL connections enable SSL (`ssl: { rejectUnauthorized: false }`) with `max: 10` pool size on serverless to prevent database connection exhaustion.
+- **Demo Mode Production Fallback**: Permits `LLM_PROVIDER=mock` when `DEMO_MODE=true` in production, ensuring resilient boot without failing Zod startup schema validations.
+
 
 
 

@@ -28,9 +28,9 @@ const EnvSchema = z.object({
   DEMO_MODE: z.coerce.boolean().default(true),
   INTERNAL_API_KEY: z.string().default('housy-internal-cron-key-12345'),
 }).refine(
-  (data) => !(data.NODE_ENV === 'production' && data.LLM_PROVIDER === 'mock'),
+  (data) => !(data.NODE_ENV === 'production' && !data.DEMO_MODE && data.LLM_PROVIDER === 'mock'),
   {
-    message: 'Refusing to start in production with LLM_PROVIDER=mock. Must be configured with real provider (anthropic or gemini).',
+    message: 'Refusing to start in production with LLM_PROVIDER=mock when DEMO_MODE is false. Must be configured with real provider (anthropic or gemini).',
     path: ['LLM_PROVIDER'],
   },
 );
