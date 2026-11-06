@@ -7,7 +7,10 @@
 
 > Production-quality full-stack AI residence advisor and site-visit scheduling engine designed specifically for luxury real estate developers in Ahmedabad, Gujarat.
 >
-> 📖 **Production Deployment Guide**: For live hosting topology, platform setup (Vercel, Render, Neon), environment variables, reviewer credentials, and the 5-minute demonstration script, see [deployment.md](./deployment.md).
+> 🌐 **Live Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)  
+> 📐 **Technical Design Document (TDD)**: [`docs/TDD.md`](./docs/TDD.md) | [Exported PDF](./docs/TDD.pdf)  
+> 📖 **Production Deployment Guide**: [`deployment.md`](./deployment.md)  
+> 📦 **Reviewer Submission ZIP**: [`submission.zip`](./submission.zip) (Contains `TDD.pdf` and `deployment.md`, 3.5 MB)
 
 ---
 

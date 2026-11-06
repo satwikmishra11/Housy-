@@ -37,14 +37,14 @@ Housy is a production-grade conversational sales assistant, site-visit schedulin
 
 | Service / Interface | Live URL | Description |
 | :--- | :--- | :--- |
-| **Web Application & Buyer Chat** | `https://housy.vercel.app` | Buyer chat assistant entry point with language toggle and RERA footer |
-| **Attributed Portal Campaign** | `https://housy.vercel.app/chat?src=portal` | MagicBricks & 99acres campaign landing with source attribution tag |
-| **Attributed Social Campaign** | `https://housy.vercel.app/chat?src=social` | Meta Ads / Instagram campaign entry point |
-| **Staff Portal (Login)** | `https://housy.vercel.app/login` | Staff authentication screen with quick-demo role selection buttons |
-| **Sales Analytics Dashboard** | `https://housy.vercel.app/dashboard` | Sales Head KPIs: response time SLA, show-up rate, cost per visit |
-| **Demo Simulation Center** | `https://housy.vercel.app/demo` | Reviewer sandbox: simulate leads, advance reminders, inspect outbox |
+| **Web Application & Buyer Chat** | `https://housy-ebon.vercel.app` | Buyer chat assistant entry point with language toggle and RERA footer |
+| **Attributed Portal Campaign** | `https://housy-ebon.vercel.app/chat?src=portal` | MagicBricks & 99acres campaign landing with source attribution tag |
+| **Attributed Social Campaign** | `https://housy-ebon.vercel.app/chat?src=social` | Meta Ads / Instagram campaign entry point |
+| **Staff Portal (Login)** | `https://housy-ebon.vercel.app/login` | Staff authentication screen with quick-demo role selection buttons |
+| **Sales Analytics Dashboard** | `https://housy-ebon.vercel.app/dashboard` | Sales Head KPIs: response time SLA, show-up rate, cost per visit |
+| **Demo Simulation Center** | `https://housy-ebon.vercel.app/demo` | Reviewer sandbox: simulate leads, advance reminders, inspect outbox |
 | **API Health & Diagnostic** | `https://housy-api.onrender.com/api/health` | Diagnostic endpoint returning database and memory status |
-| **Outbox Message Inspector** | `https://housy.vercel.app/outbox` | View rendered WhatsApp/SMS notifications and RERA registration |
+| **Outbox Message Inspector** | `https://housy-ebon.vercel.app/outbox` | View rendered WhatsApp/SMS notifications and RERA registration |
 
 ---
 
@@ -140,7 +140,7 @@ The application separates concerns between a globally distributed static fronten
    - The repository is configured to deploy directly to Vercel as a single project with multiple services using root `vercel.json`:
      - **Service `web`**: Root `apps/web/`, framework preset `"vite"`, serving the buyer chat, staff portal, and sales analytics UI. Publicly routed via `/(.*)`.
      - **Service `api`**: Root `apps/api/`, framework preset `"express"`, running the Express backend. Publicly routed via `/api` and `/api/(.*)`.
-   - **Unified Domain Routing**: Both services deploy atomically under the same project domain (e.g. `https://housy.vercel.app`). Requests to `/api/*` are routed by Vercel edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction without needing third-party cookie workarounds.
+   - **Unified Domain Routing**: Both services deploy atomically under the same project domain (e.g. `https://housy-ebon.vercel.app`). Requests to `/api/*` are routed by Vercel edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction without needing third-party cookie workarounds.
    - **Service Bindings Note**: In a client-side SPA architecture, all API requests originate from the buyer's/staff's browser; therefore, `api` is exposed via the public `/api/*` rewrite rather than an internal-only service binding.
 
 2. **Alternative Platform Split (Render / Railway + Vercel)**:
@@ -187,7 +187,7 @@ All configuration is managed strictly through platform environment variable dash
 | `NODE_ENV` | API | Application execution mode (`production`, `development`, `test`) | **Required** |
 | `PORT` | API | HTTP listening port for Express (Render automatically injects `10000`) | Optional (default: 3001) |
 | `DATABASE_URL` | API | PostgreSQL connection string (`postgresql://user:pass@host/db?sslmode=require`) | **Required** |
-| `CORS_ORIGIN` | API | Comma-separated allowed origins, supports wildcards (e.g. `https://housy.vercel.app,https://*.vercel.app`) | **Required in Production** |
+| `CORS_ORIGIN` | API | Comma-separated allowed origins, supports wildcards (e.g. `https://housy-ebon.vercel.app,https://*.vercel.app`) | **Required in Production** |
 | `COOKIE_SECURE` | API | Enforces `Secure: true` flag on auth cookies over HTTPS | Optional (default: true in prod) |
 | `COOKIE_SAME_SITE` | API | SameSite cookie policy (`lax`, `strict`, `none`). Use `none` if cross-origin without proxy | Optional (default: `lax`) |
 | `JWT_SECRET` | API | Secret key used to sign staff session tokens via HMAC-SHA256 (min 16 chars) | **Required** |
@@ -217,7 +217,7 @@ The system is seeded with authentic sample data adhering strictly to the client 
 
 | Role | Name | Email | Password | Access Privileges |
 | :--- | :--- | :--- | :--- | :--- |
-| **Sales Head** | Harshil Mehta | `harshil.mehta@example.com` | `DemoPass123!` | Complete access: All leads across all projects, Fact Sheet Editor (`/admin/facts`), Slot Availability Editor (`/admin/slots`), Marketing Spend allocations (`/admin/spend`), Flagged chat reviews, and Company-wide Sales Analytics (`/dashboard`). |
+| **Sales Head** | Harshil Mehta | `harshil.mehta@example.com` | `DemoPass123!` | Complete access: All leads across all projects, Fact Sheet Editor (`/fact-sheet`), Slot Availability Editor (`/admin/slots`), Marketing Spend allocations (`/admin/spend`), Flagged chat reviews, and Company-wide Sales Analytics (`/dashboard`). |
 | **Sales Executive 1** | Amit Shah | `amit.shah@example.com` | `DemoPass123!` | Executive view: Scoped strictly to assigned leads, personal site-visit agenda (`/visits`), and consultation handoff inbox (`/handoffs`). |
 | **Sales Executive 2** | Priya Patel | `priya.patel@example.com` | `DemoPass123!` | Executive view: Assigned leads and appointments. |
 | **Sales Executive 3** | Rohit Sharma | `rohit.sharma@example.com` | `DemoPass123!` | Executive view: Assigned leads and appointments. |
@@ -225,11 +225,11 @@ The system is seeded with authentic sample data adhering strictly to the client 
 *(Quick demo buttons are also present directly on `/login` to populate these credentials with a single click).*
 
 ### Buyer Chat Access URLs
-- **Default Residence Advisor**: [`/chat`](https://housy.vercel.app/chat)
-- **Portal Attribution (MagicBricks/99acres)**: [`/chat?src=portal`](https://housy.vercel.app/chat?src=portal)
-- **Social Ad Attribution (Instagram/Facebook)**: [`/chat?src=social`](https://housy.vercel.app/chat?src=social)
-- **Hoarding QR Attribution (S.G. Highway Billboard)**: [`/chat?src=hoarding`](https://housy.vercel.app/chat?src=hoarding)
-- **Website Attribution**: [`/chat?src=website`](https://housy.vercel.app/chat?src=website)
+- **Default Residence Advisor**: [`/chat`](https://housy-ebon.vercel.app/chat)
+- **Portal Attribution (MagicBricks/99acres)**: [`/chat?src=portal`](https://housy-ebon.vercel.app/chat?src=portal)
+- **Social Ad Attribution (Instagram/Facebook)**: [`/chat?src=social`](https://housy-ebon.vercel.app/chat?src=social)
+- **Hoarding QR Attribution (S.G. Highway Billboard)**: [`/chat?src=hoarding`](https://housy-ebon.vercel.app/chat?src=hoarding)
+- **Website Attribution**: [`/chat?src=website`](https://housy-ebon.vercel.app/chat?src=website)
 
 ### Sample Data Notes
 - **Verbatim Brief Leads**:
@@ -246,7 +246,7 @@ The system is seeded with authentic sample data adhering strictly to the client 
 Follow this structured 5-minute walkthrough to evaluate all critical platform capabilities:
 
 ### Minute 1: Conversational AI & Guarded Site-Visit Booking
-1. Open [`/chat?src=portal`](https://housy.vercel.app/chat?src=portal) in an incognito window.
+1. Open [`/chat?src=portal`](https://housy-ebon.vercel.app/chat?src=portal) in an incognito window.
 2. Select your language in the header (e.g. switch between **English**, **हिन्दी**, or **ગુજરાતી**).
 3. Type: *"What is the price of a 3 BHK flat?"*
    - Observe that the assistant answers with the exact price range (*₹95 Lakh to ₹1.2 Crore*) and refuses to invent unauthorized discounts.
@@ -258,7 +258,7 @@ Follow this structured 5-minute walkthrough to evaluate all critical platform ca
    - The **Booking Confirmation Card** appears immediately with scheduled time, assigned executive, calendar download (`.ics`), and a live Google Maps location pin.
 
 ### Minute 2: Lead Triage, Deduplication & Handoff
-1. Open [`/login`](https://housy.vercel.app/login) in a new tab and click **"Quick Demo: Sales Executive (Amit)"**.
+1. Open [`/login`](https://housy-ebon.vercel.app/login) in a new tab and click **"Quick Demo: Sales Executive (Amit)"**.
 2. On `/leads`, observe Rahul Sharma at the top of the list marked with the **"Property Portal"** attribution tag and **"Visit Booked"** status badge.
 3. Click the lead row to open the **Lead Detail Drawer**:
    - Review the complete multi-source touchpoint timeline.
@@ -268,22 +268,22 @@ Follow this structured 5-minute walkthrough to evaluate all critical platform ca
 
 ### Minute 3: Sales Head Fact Sheet & Real-Time Prompt Injection
 1. Click **Log Out** and sign in as **Sales Head Harshil Mehta** (`harshil.mehta@example.com` / `DemoPass123!`).
-2. Navigate to [`/admin/facts`](https://housy.vercel.app/admin/facts) (Fact Sheet Editor).
+2. Navigate to [`/fact-sheet`](https://housy-ebon.vercel.app/fact-sheet) (Fact Sheet Editor).
 3. Filter by *Pricing* or *Amenities*. Click **Edit** on a fact entry (e.g. Clubhouse area or Possession Date) and save.
 4. Open the **"Preview as Assistant Sees It"** panel:
    - Notice the updated fact value is instantly injected into the model prompt context with version increment and audit log entry.
 
 ### Minute 4: Scheduled Reminders & Outbox Inspector
-1. Navigate to [`/demo`](https://housy.vercel.app/demo) (Demo Simulation Center).
+1. Navigate to [`/demo`](https://housy-ebon.vercel.app/demo) (Demo Simulation Center).
 2. Under **Scheduled Reminders**, note the newly generated T-24h and T-2h visit reminders for your booking.
 3. Click **"Time-Travel: Advance Reminders into Due Window"** to simulate time passing.
 4. Click **"Trigger Reminder Worker Now"** to execute the background processor.
-5. Click **"View Message Outbox"** or navigate to [`/outbox`](https://housy.vercel.app/outbox):
+5. Click **"View Message Outbox"** or navigate to [`/outbox`](https://housy-ebon.vercel.app/outbox):
    - Review the dispatched WhatsApp and SMS templates.
    - Verify that messages contain the recipient phone, customer name, confirmed visit time, directions link, and statutory RERA registration number.
 
 ### Minute 5: Sales Analytics Dashboard & Concurrency Defense
-1. Navigate to [`/dashboard`](https://housy.vercel.app/dashboard).
+1. Navigate to [`/dashboard`](https://housy-ebon.vercel.app/dashboard).
 2. Review the core business metrics defined in the client brief:
    - **Median First Response Time**: Tracked with a 5-minute target line (current performance: 2.1 minutes).
    - **48h SLA Breach %**: Leads uncontacted within 48 hours (current: < 3%, well below the 35% legacy baseline).
