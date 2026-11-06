@@ -6,13 +6,7 @@
       "framework": "express",
       "entrypoint": "index.js",
       "installCommand": "cd ../.. && npm install",
-      "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build",
-      "rewrites": [
-        {
-          "source": "/(.*)",
-          "destination": "/index.js"
-        }
-      ]
+      "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build"
     },
     "web": {
       "root": "apps/web",
