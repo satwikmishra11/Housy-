@@ -79,3 +79,14 @@ jobs:
           TZ: Asia/Kolkata
         run: npm test
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Tests
+        env:
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          NODE_ENV: test
+          LLM_PROVIDER: mock
+          PORT: 3001
+        run: npm run test:e2e
+
