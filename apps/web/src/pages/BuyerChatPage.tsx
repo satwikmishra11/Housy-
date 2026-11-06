@@ -418,7 +418,33 @@ export const BuyerChatPage: React.FC = () => {
       }
     } catch (err) {
       setIsBookingVisit(false);
-      setFallbackWarning(err instanceof Error ? err.message : 'Unable to confirm slot. Please try another time.');
+      const apiErr = err as ApiError;
+      if (apiErr.code === 'SLOT_UNAVAILABLE') {
+        const altTimes = apiErr.alternatives?.map((a) => a.displayTime || a.startsAt) || [];
+        const altMessage =
+          altTimes.length > 0
+            ? `That slot was just booked by another visitor. Here are the nearest available times: ${altTimes.join(', ')}. Please choose an alternative slot below.`
+            : 'That slot was just booked by another visitor. Please select an alternative slot below.';
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst_slot_conflict_${Date.now()}`,
+            role: 'assistant',
+            content: altMessage,
+            createdAt: new Date().toISOString(),
+            quickReplies: altTimes.slice(0, 3),
+            uiAction: 'show_slots',
+          },
+        ]);
+        if (altTimes.length > 0) {
+          setActiveQuickReplies(altTimes.slice(0, 3));
+        }
+        setActiveUiAction('show_slots');
+        setFallbackWarning('The selected slot was just taken. Please choose an alternative time slot.');
+      } else {
+        setFallbackWarning(err instanceof Error ? err.message : 'Unable to confirm slot. Please try another time.');
+      }
     }
   };
 
