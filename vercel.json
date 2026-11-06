@@ -4,6 +4,7 @@
     "api": {
       "root": "apps/api",
       "framework": "express",
+      "entrypoint": "dist/server.js",
       "buildCommand": "npm run build"
     },
     "web": {
@@ -15,13 +16,15 @@
     {
       "source": "/api",
       "destination": {
-        "service": "api"
+        "service": "api",
+        "path": "/"
       }
     },
     {
       "source": "/api/(.*)",
       "destination": {
-        "service": "api"
+        "service": "api",
+        "path": "/$1"
       }
     },
     {
