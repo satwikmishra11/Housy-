@@ -768,6 +768,51 @@ The E2E suite (`playwright.config.ts`, `e2e/housy-e2e.spec.ts`) automates five c
 - Automates Gitleaks secret scanning, local secret verification, ESLint, TypeScript typecheck, unit/integration tests with Vitest, and Playwright Chromium E2E execution against a containerized PostgreSQL service.
 - Status badge prominently displayed in `README.md`.
 
+---
+
+## Phase 12: Production Deployment Architecture, Multi-Origin Strategy & Release Automation
+
+### 1. Production Topology & Platform Split
+The production infrastructure separates static presentation assets from stateful application services and managed database storage:
+- **Frontend Layer (Vercel)**:
+  - Globally distributed edge deployment of the React 18 + Vite SPA bundle.
+  - SPA routing is managed via `vercel.json` rewrites with fallback to `/index.html`.
+  - Supports reverse-proxying `/api/*` to eliminate third-party cookie restrictions in Safari, Chrome, and iOS.
+- **Application Layer (Render / Railway)**:
+  - Containerized Node.js 20 environment executing compiled TypeScript (`apps/api/dist/server.js`).
+  - Pre-deploy release command executes `npm run release` (`node-pg-migrate up`) to apply schema updates before routing live traffic.
+  - Safe seed utility (`npm run db:seed:demo`) enforces `DEMO_MODE=true` in production to prevent data loss.
+- **Persistence Layer (Neon / Supabase)**:
+  - Managed PostgreSQL 16 cluster accessed over TLS (`sslmode=require`) with connection pooling.
+  - Uses `pg_trgm` extension for trigram similarity matching in lead deduplication.
+
+### 2. Multi-Origin CORS & Cookie Authentication
+Authentication tokens are secured across cross-origin boundaries via a dual strategy:
+1. **Configurable SameSite & Secure Cookies**:
+   - Authentication cookies (`staff_token` and `buyer_session`) enforce `secure: config.COOKIE_SECURE` (`true` in production) and `sameSite: config.COOKIE_SAME_SITE` (`lax` when proxied, `none` for direct cross-origin calls).
+   - Strict CORS allowlist supports comma-separated origins and wildcards (e.g. `https://*.vercel.app`).
+2. **Resilient Header Fallback**:
+   - `apps/web/src/lib/api.ts` automatically forwards `X-Buyer-Session` tokens persisted in `sessionStorage` alongside standard cookies.
+   - The API layer prioritizes the explicit request header, ensuring full functionality even in privacy-hardened browsers that block cross-site cookies.
+
+### 3. Graceful Free-Tier Cold-Start Handling
+Free-tier containers on Render spin down after 15 minutes of inactivity, requiring ~30–45 seconds to boot on subsequent requests. Housy shields end-users from confusion via proactive UI feedback:
+1. **Client Latency Watchdog**: `apiFetch` monitors in-flight HTTP requests. If a request is pending for > 3.5 seconds or returns HTTP 502/504 Bad Gateway, it dispatches a `housy:backend-waking-up` custom event.
+2. **Floating Notification Banner (`ServerColdStartBanner.tsx`)**: Renders a calm, non-blocking notification bar informing the user that the free-tier service is waking from sleep.
+3. **Smooth Dismissal**: When the backend responds, the banner displays a success checkmark and auto-dismisses after 2.5 seconds.
+4. **Buyer Chat Context**: Dedicated slow-start reassurance messaging renders beneath skeleton loaders to prevent premature drop-offs during initial assistant handshake.
+
+### 4. Background Reminder Jobs & Cron Strategy
+Site-visit appointment reminders (T-24h and T-2h) operate reliably across both serverless and long-lived hosting environments:
+- **Long-Lived Process Daemon**: `server.ts` maintains a background interval (`setInterval(..., 60000)`) claiming pending reminders using row-level locking (`SELECT ... FOR UPDATE SKIP LOCKED`).
+- **External Cron Trigger**: Endpoint `POST/GET /api/internal/run-reminders` authenticated via `X-Internal-Key` header, query parameter `?key=`, or staff JWT, enabling scheduled execution from external cron providers (e.g. cron-job.org).
+- **DPDP Safety**: Reminders evaluate `canContact(lead, channel)`: if a buyer has revoked consent or texted `STOP`, reminders are marked `skipped` and omitted from outbound queues.
+
+### 5. LLM Cost Containment & Spending Caps
+- Production API keys configure hard monthly spend limits in developer consoles (Anthropic Console / Google Cloud Budgets & Alerts).
+- Runtime safeguards enforce `LLM_DAILY_MESSAGE_CAP` (default: 1000 requests/day). Daily message counts are evaluated against the database; upon exceeding the cap, calls are intercepted with outcome `cap_exceeded` before invoking external provider endpoints.
+
+
 
 
 

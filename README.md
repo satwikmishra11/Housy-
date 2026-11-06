@@ -6,6 +6,8 @@
 [![Compliance](https://img.shields.io/badge/Compliance-DPDP%202023%20%7C%20RERA%20Gujarat-emerald.svg)]()
 
 > Production-quality full-stack AI residence advisor and site-visit scheduling engine designed specifically for luxury real estate developers in Ahmedabad, Gujarat.
+>
+> 📖 **Production Deployment Guide**: For live hosting topology, platform setup (Vercel, Render, Neon), environment variables, reviewer credentials, and the 5-minute demonstration script, see [deployment.md](./deployment.md).
 
 ---
 
@@ -97,3 +99,4 @@ npm run scan:secrets
 ## Regulatory Compliance
 - **Digital Personal Data Protection (DPDP) Act 2023**: Granular consent recording, affirmative purpose notices, and `canContact` enforcement.
 - **Real Estate (Regulation and Development) Act (RERA)**: Registered Gujarat AUDA numbers embedded in headers, calendar `.ics` files, and message outbox templates.
+
