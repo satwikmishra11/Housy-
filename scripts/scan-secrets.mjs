@@ -77,7 +77,7 @@ const workingDirIssues = scanDirectory(process.cwd());
 
 console.info('Scanning recent git commits...');
 try {
-  const gitLog = execSync('git log -n 50 -p', { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+  const gitLog = execSync('git log -n 50 -p', { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024 });
   let gitIssues = 0;
   for (const pattern of SECRET_PATTERNS) {
     const matches = gitLog.match(pattern.regex);

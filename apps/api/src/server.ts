@@ -8,7 +8,7 @@ import { slotRepository } from './repositories/slot.repository.js';
 
 let server: ReturnType<typeof app.listen> | undefined;
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && !process.env.VERCEL_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.NOW_REGION) {
   server = app.listen(config.PORT, () => {
     logger.info(
       {

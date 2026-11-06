@@ -22415,8 +22415,8 @@ var require_application = __commonJS({
       tryRender(view, renderOptions, done);
     };
     app2.listen = function listen() {
-      var server2 = http.createServer(this);
-      return server2.listen.apply(server2, arguments);
+      var server = http.createServer(this);
+      return server.listen.apply(server, arguments);
     };
     function logerror(err) {
       if (this.get("env") !== "test") console.error(err.stack || err.toString());
@@ -37777,13 +37777,14 @@ var require_src5 = __commonJS({
   }
 });
 
-// src/server.ts
-var server_exports = {};
-__export(server_exports, {
+// src/index.ts
+var index_exports = {};
+__export(index_exports, {
   app: () => app,
-  default: () => server_default
+  createApp: () => createApp,
+  default: () => index_default
 });
-module.exports = __toCommonJS(server_exports);
+module.exports = __toCommonJS(index_exports);
 
 // src/app.ts
 var import_express14 = __toESM(require_express2(), 1);
@@ -43315,9 +43316,6 @@ pool.on("error", (err) => {
 });
 async function query(text, params) {
   return pool.query(text, params);
-}
-async function closePool() {
-  await pool.end();
 }
 
 // src/repositories/health.repository.ts
@@ -52512,89 +52510,12 @@ function createApp() {
 }
 var app = createApp();
 
-// src/jobs/reminder.job.ts
-var ReminderJob = class {
-  name = "visit-slot-reminders";
-  async execute() {
-    const start = performance.now();
-    logger.info({ job: this.name }, "Executing site visit reminder check (1 day / 2 hours before)");
-    let processedCount = 0;
-    let errorCount = 0;
-    try {
-      const result = await reminderService.processDueReminders(50);
-      processedCount = result.processedCount;
-      errorCount = result.failedCount;
-      logger.info(
-        { job: this.name, ...result },
-        `Completed reminder processing: ${result.sentCount} sent, ${result.skippedCount} skipped, ${result.failedCount} failed`
-      );
-    } catch (err) {
-      errorCount++;
-      logger.error({ job: this.name, err }, "Unhandled error running reminder job");
-    }
-    const durationMs = Math.round(performance.now() - start);
-    return {
-      jobName: this.name,
-      processedCount,
-      errorCount,
-      durationMs,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-};
-var reminderJob = new ReminderJob();
-
-// src/server.ts
-var server;
-if (!process.env.VERCEL) {
-  server = app.listen(config.PORT, () => {
-    logger.info(
-      {
-        port: config.PORT,
-        env: config.NODE_ENV,
-        healthUrl: `http://localhost:${config.PORT}/api/health`
-      },
-      `Housy API server running on port ${config.PORT}`
-    );
-    if (config.NODE_ENV !== "test") {
-      runSlotGeneration(slotRepository, 21).catch((err) => {
-        logger.warn({ err }, "Initial slot generation skipped/failed on startup");
-      });
-      const reminderInterval = setInterval(() => {
-        reminderJob.execute().catch((err) => {
-          logger.warn({ err }, "Periodic reminder job execution error");
-        });
-      }, 60 * 1e3);
-      reminderInterval.unref();
-    }
-  });
-  process.on("SIGINT", () => handleShutdown("SIGINT"));
-  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
-}
-async function handleShutdown(signal) {
-  logger.info({ signal }, `Received ${signal}, initiating graceful shutdown...`);
-  if (server) {
-    server.close(async () => {
-      logger.info("HTTP server closed.");
-      try {
-        await closePool();
-        logger.info("Database pool closed.");
-        process.exit(0);
-      } catch (err) {
-        logger.error({ err }, "Error during database pool closure.");
-        process.exit(1);
-      }
-    });
-    setTimeout(() => {
-      logger.error("Shutdown timed out, forcefully exiting.");
-      process.exit(1);
-    }, 1e4).unref();
-  }
-}
-var server_default = app;
+// src/index.ts
+var index_default = app;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  app
+  app,
+  createApp
 });
 /*! Bundled license information:
 
@@ -52916,4 +52837,4 @@ cookie-parser/index.js:
    * MIT Licensed
    *)
 */
-module.exports = server_default; module.exports.default = server_default; module.exports.app = app;
+module.exports = index_default; module.exports.default = index_default; module.exports.app = app; module.exports.createApp = createApp;

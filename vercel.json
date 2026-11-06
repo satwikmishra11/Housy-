@@ -1,11 +1,10 @@
 {
-  "version": 2,
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "api": {
       "root": "apps/api",
       "framework": "express",
-      "entrypoint": "index.cjs",
+      "entrypoint": "index.js",
       "installCommand": "cd ../.. && npm install",
       "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build"
     },
