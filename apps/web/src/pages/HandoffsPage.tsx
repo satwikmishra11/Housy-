@@ -259,6 +259,7 @@ export const HandoffsPage: React.FC = () => {
                           setIsTranscriptOpen(true);
                         }}
                         leftIcon={<Eye className="w-4 h-4" />}
+                        data-testid="view-transcript-btn"
                       >
                         Transcript
                       </Button>

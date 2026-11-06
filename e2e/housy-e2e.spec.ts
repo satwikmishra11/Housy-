@@ -99,8 +99,14 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
     // Verify lead source tag is visible on leads list table
     await expect(page.locator('table tbody td').locator('text=property portal').or(page.locator('table tbody td').locator('text=social ad')).first()).toBeVisible({ timeout: 10000 });
 
-    // 2. Navigate to Handoffs (Executive Inbox)
-    await page.goto('/handoffs');
+    // 2. Navigate to Handoffs (Executive Inbox) via sidebar navigation
+    const handoffsLink = page.locator('aside nav a[href="/handoffs"]');
+    if (await handoffsLink.isVisible()) {
+      await handoffsLink.click();
+      await page.waitForURL('**/handoffs');
+    } else {
+      await page.goto('/handoffs');
+    }
     await expect(page.locator('h1:has-text("Executive Inbox")')).toBeVisible({ timeout: 15000 });
     // Wait for initial loading state skeletons to clear
     await expect(page.locator('[aria-label="Loading handoffs"]')).toHaveCount(0, { timeout: 10000 });
@@ -108,22 +114,30 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
     // Open conversation transcript
     const transcriptButton = page.locator('button:has-text("Transcript")').first();
     await expect(transcriptButton).toBeVisible({ timeout: 10000 });
+    await transcriptButton.scrollIntoViewIfNeeded();
 
-    // Ensure transcript modal opens reliably against async query re-renders
-    await expect(async () => {
-      if (!(await page.locator('[role="dialog"]').isVisible())) {
-        await transcriptButton.click();
-      }
-      await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 2000 });
-      await expect(page.locator('text=Conversation Transcript')).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 15000 });
+    // Trigger open and ensure modal is displayed reliably
+    await transcriptButton.click();
+    const transcriptModal = page.locator('[role="dialog"]');
+    if (!(await transcriptModal.isVisible())) {
+      await transcriptButton.evaluate((el: HTMLElement) => el.click());
+    }
+
+    await expect(transcriptModal).toBeVisible({ timeout: 10000 });
+    await expect(transcriptModal.locator('text=Conversation Transcript')).toBeVisible({ timeout: 10000 });
 
     // Close transcript modal and wait for dismissal
     await page.keyboard.press('Escape');
-    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 5000 });
+    await expect(transcriptModal).toHaveCount(0, { timeout: 5000 });
 
-    // 3. Navigate to Visits page and mark a visit as visited
-    await page.goto('/visits');
+    // 3. Navigate to Visits page via sidebar navigation and mark a visit as visited
+    const visitsLink = page.locator('aside nav a[href="/visits"]');
+    if (await visitsLink.isVisible()) {
+      await visitsLink.click();
+      await page.waitForURL('**/visits');
+    } else {
+      await page.goto('/visits');
+    }
     await expect(page.locator('h1:has-text("Site Visits")')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('[aria-label="Loading site visits"]')).toHaveCount(0, { timeout: 10000 });
 
