@@ -766,6 +766,7 @@ The E2E suite (`playwright.config.ts`, `e2e/housy-e2e.spec.ts`) automates five c
 
 ### 4. Continuous Integration Pipeline (`.github/workflows/ci.yml`)
 - Automates Gitleaks secret scanning, local secret verification, ESLint, TypeScript typecheck, unit/integration tests with Vitest, and Playwright Chromium E2E execution against a containerized PostgreSQL service.
+- **E2E Test Hardening & Backdrop Click Defense**: Modal dialogs (`Modal.tsx`) enforce mousedown origin tracking (`isMouseDownOnBackdrop`) to guarantee that browser automation clicks do not trigger backdrop dismissals when dialog overlays mount in-flight. E2E journey triggers utilize `toPass` retry encapsulation and target discrete `data-testid` attributes (`data-testid="transcript-modal"`, `data-testid="view-transcript-btn"`).
 - Status badge prominently displayed in `README.md`.
 
 ---
