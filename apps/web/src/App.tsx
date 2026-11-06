@@ -17,6 +17,7 @@ import { FlaggedChatsPage } from './pages/FlaggedChatsPage.js';
 import { OutboxPage } from './pages/OutboxPage.js';
 import { DemoPage } from './pages/DemoPage.js';
 import { ToastProvider } from './components/Toast.js';
+import { ServerColdStartBanner } from './components/ServerColdStartBanner.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { LoadingState } from './components/LoadingState.js';
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AuthProvider>
+          <ServerColdStartBanner />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

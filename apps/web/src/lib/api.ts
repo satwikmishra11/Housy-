@@ -58,6 +58,71 @@ export interface ApiError extends Error {
 }
 
 /**
+ * Resolves the absolute or relative URL for API requests.
+ * In development, defaults to relative /api to use the Vite proxy.
+ * In production, if VITE_API_URL is set to an absolute URL (e.g. https://api.render.com),
+ * it prepends it to the endpoint unless the endpoint is already absolute.
+ */
+export function resolveApiUrl(endpoint: string): string {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
+  if (configured && (configured.startsWith('http://') || configured.startsWith('https://'))) {
+    if (!import.meta.env.DEV) {
+      const cleanBase = configured.replace(/\/$/, '');
+      const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      return `${cleanBase}${cleanPath}`;
+    }
+  }
+  return endpoint;
+}
+
+let activeRequestsCount = 0;
+let coldStartTimer: ReturnType<typeof setTimeout> | null = null;
+
+function notifyRequestStart(): void {
+  activeRequestsCount++;
+  if (activeRequestsCount === 1 && typeof window !== 'undefined') {
+    // If request takes longer than 3.5s, signal that server is potentially waking from idle
+    coldStartTimer = setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('housy:backend-waking-up', {
+          detail: {
+            reason: 'latency',
+            message: 'Free-tier cloud backend is waking up (~30–45s). Waiting for response...',
+          },
+        }),
+      );
+    }, 3500);
+  }
+}
+
+function notifyRequestEnd(isSuccess: boolean, status?: number): void {
+  activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+  if (activeRequestsCount === 0 && coldStartTimer) {
+    clearTimeout(coldStartTimer);
+    coldStartTimer = null;
+  }
+
+  if (typeof window !== 'undefined') {
+    if (isSuccess) {
+      window.dispatchEvent(new CustomEvent('housy:backend-ready'));
+    } else if (status === 502 || status === 504) {
+      window.dispatchEvent(
+        new CustomEvent('housy:backend-waking-up', {
+          detail: {
+            reason: 'gateway_timeout',
+            status,
+            message: 'Backend server is booting up. Retrying connection...',
+          },
+        }),
+      );
+    }
+  }
+}
+
+/**
  * Universal API fetch helper with credentials and CSRF custom header support.
  */
 export async function apiFetch<T>(
@@ -83,11 +148,20 @@ export async function apiFetch<T>(
     }
   }
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-    credentials: 'include', // Include httpOnly auth cookies
-  });
+  const targetUrl = resolveApiUrl(endpoint);
+  notifyRequestStart();
+
+  let response: Response;
+  try {
+    response = await fetch(targetUrl, {
+      ...options,
+      headers,
+      credentials: 'include', // Include httpOnly auth cookies
+    });
+  } catch (networkErr) {
+    notifyRequestEnd(false, 0);
+    throw networkErr;
+  }
 
   // Safely read response body as text first to handle empty responses (204, proxy errors, timeouts)
   // without triggering "Unexpected end of JSON input" SyntaxErrors
@@ -102,6 +176,8 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
+    notifyRequestEnd(false, response.status);
+
     if (response.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
       window.dispatchEvent(new CustomEvent('housy:session-expired'));
     }
@@ -127,6 +203,7 @@ export async function apiFetch<T>(
     throw error;
   }
 
+  notifyRequestEnd(true, response.status);
   return data as T;
 }
 

@@ -107,5 +107,21 @@ describe('apiFetch Client Resilience', () => {
       /API server unavailable \(HTTP 504\)/,
     );
   });
+
+  it('dispatches housy:backend-waking-up event on HTTP 502/504 gateway response', async () => {
+    const listener = vi.fn();
+    window.addEventListener('housy:backend-waking-up', listener);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: vi.fn().mockResolvedValue(JSON.stringify({ error: { message: 'Bad Gateway' } })),
+    } as unknown as Response);
+
+    await expect(apiFetch('/api/health')).rejects.toThrow('Bad Gateway');
+    expect(listener).toHaveBeenCalled();
+    window.removeEventListener('housy:backend-waking-up', listener);
+  });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Button } from '../src/components/Button.js';
 import { Input } from '../src/components/Input.js';
 import { Select } from '../src/components/Select.js';
@@ -11,6 +11,7 @@ import { SlotChip } from '../src/components/SlotChip.js';
 import { ChatBubble } from '../src/components/ChatBubble.js';
 import { Tabs } from '../src/components/Tabs.js';
 import { ResponsiveTable } from '../src/components/ResponsiveTable.js';
+import { ServerColdStartBanner } from '../src/components/ServerColdStartBanner.js';
 
 describe('Design System Components', () => {
   describe('Button', () => {
@@ -199,6 +200,29 @@ describe('Design System Components', () => {
       ];
       render(<ResponsiveTable data={data} columns={columns} keyExtractor={(d) => d.id} />);
       expect(screen.getAllByText('Hardik').length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('ServerColdStartBanner', () => {
+    it('is initially hidden and renders on housy:backend-waking-up event', () => {
+      render(<ServerColdStartBanner />);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('housy:backend-waking-up', {
+            detail: { message: 'Cloud backend is booting up' },
+          }),
+        );
+      });
+
+      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByText(/cloud backend is booting up/i)).toBeInTheDocument();
+
+      // Dismiss button closes banner
+      const dismissBtn = screen.getByLabelText(/dismiss cold-start notification/i);
+      fireEvent.click(dismissBtn);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
 });

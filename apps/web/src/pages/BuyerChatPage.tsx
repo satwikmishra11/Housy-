@@ -82,6 +82,7 @@ export const BuyerChatPage: React.FC = () => {
   const [isHandoff, setIsHandoff] = useState(false);
 
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isSlowStart, setIsSlowStart] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
   const [inputMessage, setInputMessage] = useState('');
@@ -123,6 +124,11 @@ export const BuyerChatPage: React.FC = () => {
   // Session resume or initialize fresh chat
   useEffect(() => {
     let isCancelled = false;
+    const slowStartTimer = setTimeout(() => {
+      if (!isCancelled) {
+        setIsSlowStart(true);
+      }
+    }, 3500);
 
     async function initializeSession() {
       setIsInitializing(true);
@@ -215,6 +221,7 @@ export const BuyerChatPage: React.FC = () => {
 
     return () => {
       isCancelled = true;
+      clearTimeout(slowStartTimer);
     };
   }, []);
 
@@ -540,6 +547,11 @@ export const BuyerChatPage: React.FC = () => {
             <div className="flex justify-end">
               <Skeleton variant="rectangular" width="60%" height="42px" className="rounded-xl" />
             </div>
+            {isSlowStart && (
+              <p className="text-xs text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3.5 py-2.5 text-center max-w-md mx-auto shadow-subtle animate-pulse">
+                Connecting to AI advisor... Free-tier cloud backend may be spinning up from idle (~30–45s). Thank you for your patience!
+              </p>
+            )}
           </div>
         )}
 
