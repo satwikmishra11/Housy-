@@ -7,17 +7,23 @@ import { verifyStaffToken } from '../auth/tokens.js';
 export const internalRouter = Router();
 
 /**
- * POST /api/internal/run-reminders
+ * POST / GET /api/internal/run-reminders
  * Internal cron endpoint to trigger due reminder processing.
- * Authenticated via X-Internal-Key header OR valid staff JWT.
+ * Authenticated via X-Internal-Key header, ?key= query param, or valid staff JWT.
  */
-internalRouter.post(
+internalRouter.all(
   '/internal/run-reminders',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const internalKey = req.headers['x-internal-key'];
+      const internalKey =
+        (req.headers['x-internal-key'] as string | undefined) ||
+        (req.query['key'] as string | undefined) ||
+        (req.query['apiKey'] as string | undefined);
       const authHeader = req.headers.authorization;
-      const token = req.cookies?.['staff_token'] || req.cookies?.['auth_token'] || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
+      const token =
+        req.cookies?.['staff_token'] ||
+        req.cookies?.['auth_token'] ||
+        (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
 
       let isAuthorized = false;
 

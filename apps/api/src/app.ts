@@ -20,8 +20,19 @@ export function createApp(): Express {
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 
-  // 2. Strict CORS allowlist from configuration
+  // 2. Strict CORS allowlist from configuration (supports exact origins and wildcards like https://*.vercel.app)
   const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
+
+  const isOriginAllowed = (origin: string): boolean => {
+    return allowedOrigins.some((pattern) => {
+      if (pattern === '*' || pattern === origin) return true;
+      if (pattern.includes('*')) {
+        const regexStr = '^' + pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$';
+        return new RegExp(regexStr).test(origin);
+      }
+      return false;
+    });
+  };
 
   // 3. Security headers via Helmet with Content Security Policy
   app.use(
@@ -46,7 +57,7 @@ export function createApp(): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || isOriginAllowed(origin)) {
           callback(null, true);
         } else {
           callback(new ForbiddenError(`Origin '${origin}' not allowed by CORS`));

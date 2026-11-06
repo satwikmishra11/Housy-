@@ -12,6 +12,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(16).default('housy-dev-jwt-secret-min-32-chars-long!'),
   SESSION_SECRET: z.string().min(16).default('housy-dev-session-secret-min-32-chars-long!'),
   COOKIE_SECURE: z.coerce.boolean().default(process.env.NODE_ENV === 'production'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   RATE_LIMIT_LOGIN_MAX: z.coerce.number().default(5),
   RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),
   RATE_LIMIT_GENERAL_MAX: z.coerce.number().default(100),

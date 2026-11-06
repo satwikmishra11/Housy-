@@ -34,7 +34,11 @@ export async function resetDatabase(): Promise<void> {
   logger.info('Database reset and seed completed successfully!');
 }
 
-if (process.argv[1]?.endsWith('reset.ts')) {
+if (
+  process.argv[1]?.endsWith('reset.ts') ||
+  process.argv[1]?.endsWith('reset.js') ||
+  process.argv[1]?.includes('reset')
+) {
   resetDatabase()
     .then(async () => {
       await pool.end();

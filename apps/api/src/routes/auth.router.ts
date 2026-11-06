@@ -24,7 +24,7 @@ export function createAuthRouter(service: AuthService = authService): Router {
         res.cookie('staff_token', result.token, {
           httpOnly: true,
           secure: config.COOKIE_SECURE,
-          sameSite: 'lax',
+          sameSite: config.COOKIE_SAME_SITE,
           maxAge: 24 * 60 * 60 * 1000, // 24 hours
           path: '/',
         });
@@ -51,7 +51,7 @@ export function createAuthRouter(service: AuthService = authService): Router {
       res.clearCookie('staff_token', {
         httpOnly: true,
         secure: config.COOKIE_SECURE,
-        sameSite: 'lax',
+        sameSite: config.COOKIE_SAME_SITE,
         path: '/',
       });
 

@@ -61,8 +61,8 @@ chatRouter.post(
 
       res.cookie('buyer_session', result.sessionToken, {
         httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: config.COOKIE_SECURE,
+        sameSite: config.COOKIE_SAME_SITE,
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         path: '/',
       });

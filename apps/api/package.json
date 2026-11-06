@@ -14,7 +14,10 @@
     "test": "vitest run",
     "eval:ai": "tsx evals/eval-runner.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:demo": "DEMO_MODE=true tsx src/db/seed.ts",
+    "seed:demo": "DEMO_MODE=true node dist/db/seed.js",
     "db:reset": "tsx src/db/reset.ts",
+    "release": "node-pg-migrate up",
     "migrate:create": "node-pg-migrate create",
     "migrate:up": "node-pg-migrate up --envPath .env",
     "migrate:down": "node-pg-migrate down --envPath .env"

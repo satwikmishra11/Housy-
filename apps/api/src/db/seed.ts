@@ -25,6 +25,12 @@ class LcgPrng {
 }
 
 export async function runSeed(): Promise<void> {
+  // In production, require DEMO_MODE=true to prevent accidental wiping of production data
+  if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
+    logger.warn('Skipping database seed: NODE_ENV is production and DEMO_MODE is not set to true.');
+    return;
+  }
+
   const prng = new LcgPrng(42);
   const now = new Date('2026-11-05T15:40:00+05:30'); // Anchor timestamp for deterministic test runs
 
@@ -541,8 +547,12 @@ export async function runSeed(): Promise<void> {
   logger.info('Deterministic database reset and seeding completed successfully!');
 }
 
-// Allow direct execution: npx tsx src/db/seed.ts
-if (process.argv[1]?.endsWith('seed.ts')) {
+// Allow direct execution: npx tsx src/db/seed.ts or node dist/db/seed.js
+if (
+  process.argv[1]?.endsWith('seed.ts') ||
+  process.argv[1]?.endsWith('seed.js') ||
+  process.argv[1]?.includes('seed')
+) {
   runSeed()
     .then(async () => {
       await pool.end();

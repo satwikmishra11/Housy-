@@ -10,6 +10,10 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:api": "npm run build --workspace=@housy/api",
+    "build:web": "npm run build --workspace=@housy/web",
+    "start": "npm run start --workspace=@housy/api",
+    "release": "npm run build --workspace=@housy/shared && npm run build --workspace=@housy/api && npm run release --workspace=@housy/api",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "playwright test",
     "lint": "eslint .",
@@ -26,6 +30,7 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run migrate:up --workspace=@housy/api",
     "db:seed": "npm run db:seed --workspace=@housy/api",
+    "db:seed:demo": "npm run db:seed:demo --workspace=@housy/api",
     "db:reset": "npm run db:reset --workspace=@housy/api"
   },
   "devDependencies": {
