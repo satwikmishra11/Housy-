@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": "./dist/server.js",
+  "exports": {
+    ".": "./dist/server.js"
+  },
   "scripts": {
     "prebuild": "npm run build --workspace=@housy/shared",
     "build": "tsc",

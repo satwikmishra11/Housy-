@@ -14,6 +14,20 @@ import { dashboardRouter } from './dashboard.router.js';
 
 export const apiRouter = Router();
 
+apiRouter.get('/', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'housy-api',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      chat: '/api/chat',
+      leads: '/api/leads',
+      visits: '/api/visits',
+    },
+  });
+});
+
 apiRouter.use(healthRouter);
 apiRouter.use(authRouter);
 apiRouter.use(ingestRouter);

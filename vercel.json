@@ -3,7 +3,8 @@
   "services": {
     "api": {
       "root": "apps/api",
-      "framework": "express"
+      "framework": "express",
+      "buildCommand": "npm run build"
     },
     "web": {
       "root": "apps/web",
