@@ -68,7 +68,12 @@ export function resolveApiUrl(endpoint: string): string {
     return endpoint;
   }
   const configured = import.meta.env.VITE_API_URL as string | undefined;
-  if (configured && (configured.startsWith('http://') || configured.startsWith('https://'))) {
+  if (
+    configured &&
+    (configured.startsWith('http://') || configured.startsWith('https://')) &&
+    !configured.includes('localhost') &&
+    !configured.includes('127.0.0.1')
+  ) {
     if (!import.meta.env.DEV) {
       const cleanBase = configured.replace(/\/$/, '');
       const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

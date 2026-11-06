@@ -19,6 +19,11 @@ export const pool = new Pool({
   ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
+// Guard against uncaught error events emitted on idle clients in serverless/transient environments
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle database pool client', err);
+});
+
 export interface QueryResultRow {
   [column: string]: unknown;
 }
