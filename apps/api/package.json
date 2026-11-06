@@ -9,7 +9,7 @@
   },
   "scripts": {
     "prebuild": "npm run build --workspace=@housy/shared",
-    "build": "tsc",
+    "build": "tsc && esbuild src/server.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/server.js --external:argon2 && esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --external:argon2",
     "pretypecheck": "npm run build --workspace=@housy/shared",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/server.ts",
@@ -50,6 +50,7 @@
     "@types/pg": "^8.11.11",
     "@types/supertest": "^6.0.2",
     "@vitest/coverage-v8": "^3.2.7",
+    "esbuild": "^0.25.0",
     "js-yaml": "^5.5.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.3",
