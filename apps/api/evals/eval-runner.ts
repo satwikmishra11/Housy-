@@ -40,7 +40,6 @@ export async function runEvals(): Promise<void> {
   const yamlCandidates = [
     path.resolve(process.cwd(), 'evals/cases.yaml'),
     path.resolve(process.cwd(), 'apps/api/evals/cases.yaml'),
-    path.resolve(import.meta.dirname, 'cases.yaml'),
   ];
   const yamlPath = yamlCandidates.find((p) => fs.existsSync(p));
   if (!yamlPath) {
@@ -286,7 +285,6 @@ ${tableRowsMd}
   const docCandidates = [
     path.resolve(process.cwd(), 'docs/AI_EVALS.md'),
     path.resolve(process.cwd(), '../../docs/AI_EVALS.md'),
-    path.resolve(import.meta.dirname, '../../../docs/AI_EVALS.md'),
   ];
   const docPath =
     docCandidates.find((p) => fs.existsSync(path.dirname(p))) || docCandidates[0]!;
@@ -305,7 +303,7 @@ ${tableRowsMd}
 }
 
 // Execute if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1]?.includes('eval-runner')) {
   runEvals().catch((err) => {
     console.error('Eval runner error:', err);
     process.exit(1);

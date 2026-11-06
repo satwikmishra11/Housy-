@@ -4,7 +4,7 @@
     "api": {
       "root": "apps/api",
       "framework": "express",
-      "entrypoint": "index.cjs",
+      "entrypoint": "index.js",
       "installCommand": "cd ../.. && npm install",
       "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build"
     },

@@ -37787,8 +37787,8 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/app.ts
-var import_express14 = __toESM(require_express2(), 1);
-var import_cors = __toESM(require_lib3(), 1);
+var import_express14 = __toESM(require_express2());
+var import_cors = __toESM(require_lib3());
 
 // ../../node_modules/helmet/index.mjs
 var dashify = (str) => str.replace(/[A-Z]/g, (capitalLetter) => "-" + capitalLetter.toLowerCase());
@@ -38358,8 +38358,8 @@ var helmet = Object.assign(
 );
 
 // src/app.ts
-var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_pino_http = __toESM(require_logger(), 1);
+var import_cookie_parser = __toESM(require_cookie_parser());
+var import_pino_http = __toESM(require_logger());
 
 // ../../node_modules/zod/v3/external.js
 var external_exports = {};
@@ -42403,7 +42403,7 @@ var coerce = {
 var NEVER = INVALID;
 
 // src/config/index.ts
-var import_dotenv = __toESM(require_main(), 1);
+var import_dotenv = __toESM(require_main());
 import_dotenv.default.config();
 var EnvSchema = external_exports.object({
   PORT: external_exports.coerce.number().default(3001),
@@ -42449,7 +42449,7 @@ var config = parsedConfig.success ? parsedConfig.data : EnvSchema.parse({
 });
 
 // src/utils/logger.ts
-var import_pino = __toESM(require_pino(), 1);
+var import_pino = __toESM(require_pino());
 var logger = (0, import_pino.default)({
   level: config.LOG_LEVEL,
   base: {
@@ -42503,10 +42503,10 @@ var logger = (0, import_pino.default)({
 });
 
 // src/routes/index.ts
-var import_express13 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2());
 
 // src/routes/health.router.ts
-var import_express = __toESM(require_express2(), 1);
+var import_express = __toESM(require_express2());
 
 // ../../packages/shared/dist/health.js
 var DatabaseHealthSchema = external_exports.object({
@@ -43395,7 +43395,7 @@ function createHealthRouter(service = healthService) {
 var healthRouter = createHealthRouter();
 
 // src/routes/auth.router.ts
-var import_express2 = __toESM(require_express2(), 1);
+var import_express2 = __toESM(require_express2());
 
 // src/repositories/user.repository.ts
 var UserRepository = class {
@@ -43423,7 +43423,7 @@ var UserRepository = class {
 var userRepository = new UserRepository();
 
 // src/auth/password.ts
-var import_node_crypto = __toESM(require("node:crypto"), 1);
+var import_node_crypto = __toESM(require("node:crypto"));
 var argon2Module = null;
 var argon2LoadAttempted = false;
 async function getArgon2() {
@@ -45643,7 +45643,7 @@ function createAuthRouter(service = authService) {
 var authRouter = createAuthRouter();
 
 // src/routes/leads.router.ts
-var import_express3 = __toESM(require_express2(), 1);
+var import_express3 = __toESM(require_express2());
 
 // src/middleware/ownership.ts
 async function assertLeadOwnership(leadId, user) {
@@ -46930,7 +46930,7 @@ leadsRouter.post(
 );
 
 // src/routes/admin.router.ts
-var import_express4 = __toESM(require_express2(), 1);
+var import_express4 = __toESM(require_express2());
 
 // src/repositories/fact.repository.ts
 var FactRepository = class {
@@ -48534,8 +48534,8 @@ adminRouter.post(
 );
 
 // src/routes/ingest.router.ts
-var import_node_crypto3 = __toESM(require("node:crypto"), 1);
-var import_express5 = __toESM(require_express2(), 1);
+var import_node_crypto3 = __toESM(require("node:crypto"));
+var import_express5 = __toESM(require_express2());
 var ingestRouter = (0, import_express5.Router)();
 ingestRouter.post(
   "/ingest/:source",
@@ -48605,7 +48605,7 @@ ingestRouter.post(
 );
 
 // src/routes/visits.router.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express6 = __toESM(require_express2());
 
 // src/repositories/visit.repository.ts
 var VisitRepository = class {
@@ -50298,7 +50298,7 @@ visitsRouter.post(
 );
 
 // src/routes/chat.router.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2());
 
 // src/llm/guardrails.ts
 function detectLanguage(text, fallback = "en") {
@@ -51298,7 +51298,7 @@ chatRouter.get(
 );
 
 // src/routes/handoffs.router.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2());
 var handoffsRouter = (0, import_express8.Router)();
 var HandoffFilterQuerySchema = external_exports.object({
   status: HandoffStatusSchema.optional(),
@@ -51395,7 +51395,7 @@ handoffsRouter.post(
 );
 
 // src/routes/outbox.router.ts
-var import_express9 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2());
 var outboxRouter = (0, import_express9.Router)();
 var OutboxQuerySchema = external_exports.object({
   status: external_exports.enum(["pending", "sent", "failed"]).optional(),
@@ -51462,7 +51462,7 @@ outboxRouter.get(
 );
 
 // src/routes/internal.router.ts
-var import_express10 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2());
 
 // src/channels/templates.ts
 var TEMPLATES = {
@@ -51740,7 +51740,7 @@ internalRouter.all(
 );
 
 // src/routes/demo.router.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express11 = __toESM(require_express2());
 var demoRouter = (0, import_express11.Router)();
 demoRouter.use("/demo", (_req, _res, next) => {
   if (!config.DEMO_MODE) {
@@ -51873,7 +51873,7 @@ demoRouter.post(
 );
 
 // src/routes/dashboard.router.ts
-var import_express12 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2());
 
 // src/repositories/dashboard.repository.ts
 var DashboardRepository = class {
@@ -52409,7 +52409,7 @@ apiRouter.use(demoRouter);
 apiRouter.use(dashboardRouter);
 
 // src/middleware/requestId.ts
-var import_node_crypto4 = __toESM(require("node:crypto"), 1);
+var import_node_crypto4 = __toESM(require("node:crypto"));
 function requestIdMiddleware(req, res, next) {
   const existing = req.headers["x-request-id"];
   const id = typeof existing === "string" && existing.trim().length > 0 ? existing.trim() : import_node_crypto4.default.randomUUID();
