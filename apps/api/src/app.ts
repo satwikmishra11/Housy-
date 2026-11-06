@@ -73,6 +73,11 @@ export function createApp(): Express {
     }),
   );
 
+  // Diagnostic ping route accessible prior to any stateful middleware
+  app.get(['/ping', '/api/ping'], (_req, res) => {
+    res.json({ status: 'ok', service: 'housy-api', timestamp: new Date().toISOString() });
+  });
+
   // 4. Request size limits and body parsing
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());

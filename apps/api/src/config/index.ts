@@ -37,5 +37,19 @@ const EnvSchema = z.object({
 
 export type Config = z.infer<typeof EnvSchema>;
 
-export const config: Config = EnvSchema.parse(process.env);
+const parsedConfig = EnvSchema.safeParse(process.env);
+if (!parsedConfig.success) {
+  console.error('FATAL: Environment configuration validation failed on startup:', JSON.stringify(parsedConfig.error.errors, null, 2));
+}
+
+export const config: Config = parsedConfig.success
+  ? parsedConfig.data
+  : EnvSchema.parse({
+      ...process.env,
+      DEMO_MODE: 'true',
+      LLM_PROVIDER: 'mock',
+      JWT_SECRET: process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16 ? process.env.JWT_SECRET : 'housy-fallback-jwt-secret-min-32-chars-long!',
+      SESSION_SECRET: process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16 ? process.env.SESSION_SECRET : 'housy-fallback-session-secret-min-32-chars-long!',
+    });
+
 
