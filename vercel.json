@@ -4,7 +4,7 @@
     "api": {
       "root": "apps/api",
       "framework": "express",
-      "entrypoint": "index.js",
+      "entrypoint": "index.cjs",
       "installCommand": "cd ../.. && npm install",
       "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build"
     },
@@ -13,7 +13,13 @@
       "framework": "vite",
       "installCommand": "cd ../.. && npm install",
       "buildCommand": "cd ../.. && npm run build:shared && cd apps/web && npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
     }
   },
   "rewrites": [
