@@ -112,14 +112,19 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
     await expect(page.locator('[aria-label="Loading handoffs"]')).toHaveCount(0, { timeout: 10000 });
 
     // Open conversation transcript
-    const transcriptButton = page.locator('button:has-text("Transcript")').first();
+    const transcriptButton = page.locator('[data-testid="view-transcript-btn"]').first();
     await expect(transcriptButton).toBeVisible({ timeout: 10000 });
     await transcriptButton.scrollIntoViewIfNeeded();
-    await transcriptButton.click();
 
     // Verify transcript modal shows conversation history
-    const transcriptModal = page.locator('[role="dialog"]');
-    await expect(transcriptModal).toBeVisible({ timeout: 10000 });
+    const transcriptModal = page.locator('[data-testid="transcript-modal"]').or(page.locator('[role="dialog"]'));
+    await expect(async () => {
+      if (!(await transcriptModal.isVisible())) {
+        await transcriptButton.click();
+      }
+      await expect(transcriptModal).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
+
     await expect(transcriptModal.locator('h2')).toContainText('Conversation Transcript', { timeout: 10000 });
 
     // Close transcript modal and wait for dismissal

@@ -390,6 +390,7 @@ export const HandoffsPage: React.FC = () => {
           title={`Conversation Transcript: ${selectedHandoff?.leadName || ''}`}
           description={`Lead ID: ${selectedHandoff?.leadPublicId || ''} • Channel: Web Chat`}
           maxWidth="lg"
+          data-testid="transcript-modal"
           footer={
             <div className="flex items-center justify-between w-full">
               <span className="text-xs text-muted">

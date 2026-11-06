@@ -178,6 +178,38 @@ describe('Human Handoff, Flagged Review, Outbox & Demo Controls Frontend Views',
         expect(postSpy).toHaveBeenCalledWith(sampleHandoff.id, 'Namaste Rajesh, I am Amit Shah.');
       });
     });
+
+    it('opens transcript modal when Transcript button is clicked', async () => {
+      vi.spyOn(api, 'fetchHandoffs').mockResolvedValue({
+        data: [sampleHandoff],
+        totalCount: 1,
+      });
+      vi.spyOn(api, 'fetchHandoffTranscript').mockResolvedValue([
+        {
+          id: 'msg-1',
+          conversationId: sampleHandoff.conversationId,
+          role: 'buyer',
+          content: 'Hello, looking for 3 BHK',
+          meta: {},
+          citedFactIds: [],
+          createdAt: '2026-11-05T10:00:00.000Z',
+        },
+      ]);
+
+      renderWithProviders(<HandoffsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Rajesh Sharma')).toBeInTheDocument();
+      });
+
+      const transcriptBtn = screen.getByRole('button', { name: /transcript/i });
+      fireEvent.click(transcriptBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Conversation Transcript: Rajesh Sharma/i)).toBeInTheDocument();
+    });
   });
 
   describe('FlaggedChatsPage View', () => {
