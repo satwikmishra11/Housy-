@@ -720,6 +720,55 @@ PostgreSQL query execution plans were analyzed with `EXPLAIN ANALYZE`, adding fo
   - `role="log"` and `aria-live="polite"` stream assistant messages to assistive technologies.
   - Minimum 44px touch targets across mobile viewports.
 
+---
+
+## Phase 11: Comprehensive Test Hardening, Code Coverage & Playwright End-to-End Suite
+
+### 1. Architectural Strategy & Test Pyramid
+The platform test architecture enforces a multi-layered pyramid combining pure function unit tests, PostgreSQL integration tests, and deterministic browser-level end-to-end user journeys:
+1. **Pure Functions & Schemas (`@housy/shared`)**: Fast Vitest execution validating Zod schemas, date transformations, currency formatting, and DPDP consent evaluations (`canContact`).
+2. **Integration & Concurrency Tests (`@housy/api`)**: Direct PostgreSQL integration covering atomic transactions, row-level slot locking (`SELECT ... FOR UPDATE SKIP LOCKED`), deduplication logic, RBAC matrix, and reminder background workers.
+3. **Component & View Tests (`@housy/web`)**: Testing Library + Vitest verifying loading, empty, and error states across all staff and buyer views.
+4. **Playwright E2E Suite (`e2e/housy-e2e.spec.ts`)**: End-to-end browser journeys running in Chromium against an isolated test server using `MockProvider` and a seeded database.
+
+### 2. Playwright E2E User Journeys
+The E2E suite (`playwright.config.ts`, `e2e/housy-e2e.spec.ts`) automates five critical business workflows:
+- **Journey 1 (Buyer Multilingual Chat & Site-Visit Booking)**:
+  - Navigates to `/chat?src=portal`.
+  - Buyer converses in Hindi asking for a site visit.
+  - Assistant responds with `ui_action: collect_contact`, rendering the DPDP Collect Contact Form.
+  - Buyer inputs name, 10-digit Indian mobile number, grants DPDP consent, and proceeds to the slot picker.
+  - Buyer selects an open slot, clicks "Confirm Site Visit", and receives the Booking Confirmation Card featuring the scheduled appointment time, assigned host, and Google Maps pin link.
+- **Journey 2 (Sales Executive Lead Workflow & Visit Completion)**:
+  - Sales Executive logs in via Quick Demo credentials (`amit.shah@example.com` / `DemoPass123!`).
+  - Verifies the assigned lead appears on `/leads` with source attribution tag (`Property Portal` / `Social Media Ad`).
+  - Navigates to `/handoffs` (Executive Inbox), reviews the AI-generated consultation summary card, and opens the conversation transcript modal.
+  - Navigates to `/visits` (Site Visits Schedule) and marks a scheduled visit as "Visited", recording the customer attendance outcome in real time.
+- **Journey 3 (Sales Head Fact Sheet Management & Dashboard Analytics)**:
+  - Sales Head logs in (`harshil.mehta@example.com` / `DemoPass123!`).
+  - Navigates to `/fact-sheet`, edits an authoritative project fact value, and commits changes.
+  - Verifies that `fact_entry_versions` increments and an audit log row is recorded.
+  - Opens the "Assistant Preview" panel to verify that the updated fact text is immediately reflected in the injected prompt context.
+  - Navigates to `/dashboard` and reviews Sales Analytics KPIs (Median First Response, 48h SLA breach %, Show-Up Rate, Lead-to-Visit Rate), confirming all figures render safely without `NaN` or unhandled errors.
+- **Journey 4 (Concurrency Defenses & "Just-Taken" Alternatives)**:
+  - Two isolated browser contexts (Buyer 1 and Buyer 2) concurrently attempt to reserve the last open visit slot for a given date and time.
+  - Context 1 successfully locks the slot with `SELECT ... FOR UPDATE SKIP LOCKED` and receives "Visit Confirmed".
+  - Context 2 simultaneously submits for the same slot; the API rejects the request with HTTP 409 `SLOT_UNAVAILABLE` and nearest available times.
+  - Context 2 receives the "just taken" notification banner alongside alternative slot chips, keeping the slot picker active for immediate alternative selection.
+- **Journey 5 (DPDP 2023 Opt-Out Stops Reminders)**:
+  - Buyer sends opt-out keyword (`STOP`) in chat.
+  - Pre-filter catches the command without calling an LLM endpoint, marking `opted_out_at = NOW()` and `consent_status = 'revoked'`.
+  - Validates that `canContact` evaluates to false, causing the reminder background worker to mark all pending appointment reminders as `skipped` without dispatching messages.
+
+### 3. Automated WCAG 2.1 AA Accessibility Audits
+- Integrated `@axe-core/playwright` across primary application views (`/chat`, `/login`, `/dashboard`).
+- Resolved all ARIA structural requirements: generic chart container elements declare explicit ARIA roles (`role="img"` or `role="region"`), achieving 0 violations under WCAG 2.1 AA and Section 508.
+
+### 4. Continuous Integration Pipeline (`.github/workflows/ci.yml`)
+- Automates Gitleaks secret scanning, local secret verification, ESLint, TypeScript typecheck, unit/integration tests with Vitest, and Playwright Chromium E2E execution against a containerized PostgreSQL service.
+- Status badge prominently displayed in `README.md`.
+
+
 
 
 
