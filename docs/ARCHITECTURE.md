@@ -3,6 +3,11 @@
 ## 1. Overview
 Housy is a production-quality full-stack TypeScript platform built for Company A (Ahmedabad). The platform provides unified lead intake, duplicate detection, an AI-powered conversational sales assistant, site-visit slot booking with calendar conflict prevention, executive handoff, and an executive analytics dashboard.
 
+- **Technical Design Document**: [`docs/TDD.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/TDD.md)
+- **Exported TDD (PDF)**: [`docs/TDD.pdf`](file:///Users/satwik/Documents/GitHub/Housy-/docs/TDD.pdf)
+- **Live Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)
+- **GitHub Repository**: [https://github.com/satwikmishra11/Housy-](https://github.com/satwikmishra11/Housy-)
+
 ---
 
 ## 2. Monorepo Layout & Workspaces
