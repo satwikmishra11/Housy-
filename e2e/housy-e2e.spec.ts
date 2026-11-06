@@ -102,19 +102,30 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
     // 2. Navigate to Handoffs (Executive Inbox)
     await page.goto('/handoffs');
     await expect(page.locator('h1:has-text("Executive Inbox")')).toBeVisible({ timeout: 15000 });
+    // Wait for initial loading state skeletons to clear
+    await expect(page.locator('[aria-label="Loading handoffs"]')).toHaveCount(0, { timeout: 10000 });
 
     // Open conversation transcript
     const transcriptButton = page.locator('button:has-text("Transcript")').first();
     await expect(transcriptButton).toBeVisible({ timeout: 10000 });
-    await transcriptButton.click();
 
-    // Verify transcript modal shows conversation history
-    await expect(page.locator('text=Conversation Transcript')).toBeVisible({ timeout: 10000 });
+    // Ensure transcript modal opens reliably against async query re-renders
+    await expect(async () => {
+      if (!(await page.locator('[role="dialog"]').isVisible())) {
+        await transcriptButton.click();
+      }
+      await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 2000 });
+      await expect(page.locator('text=Conversation Transcript')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
+
+    // Close transcript modal and wait for dismissal
     await page.keyboard.press('Escape');
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 5000 });
 
     // 3. Navigate to Visits page and mark a visit as visited
     await page.goto('/visits');
     await expect(page.locator('h1:has-text("Site Visits")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[aria-label="Loading site visits"]')).toHaveCount(0, { timeout: 10000 });
 
     // Find a visit with "Mark Visited" button
     const markVisitedButton = page.locator('button:has-text("Mark Visited")').first();
@@ -169,6 +180,7 @@ test.describe('Journey 3: Sales Head Fact Sheet Management & Dashboard Analytics
 
     // Close preview modal
     await page.keyboard.press('Escape');
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 5000 });
 
     // 3. Open Sales Dashboard
     await page.goto('/dashboard');
