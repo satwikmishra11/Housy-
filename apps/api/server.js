@@ -50162,6 +50162,21 @@ visitsRouter.get(
       const resDb = await query(`SELECT id, name, rera_number, address, bhk_types FROM projects ORDER BY name ASC`);
       res.status(200).json({ success: true, data: resDb.rows });
     } catch (err) {
+      if (config.DEMO_MODE) {
+        res.status(200).json({
+          success: true,
+          data: [
+            {
+              id: "11111111-1111-1111-1111-111111111111",
+              name: "The Grand View (Demo)",
+              rera_number: "PR/GJ/AHMEDABAD/AUDA/RAA01234/011126",
+              address: "Near SG Highway, Bodakdev, Ahmedabad",
+              bhk_types: ["2 BHK", "3 BHK", "4 BHK Penthouse"]
+            }
+          ]
+        });
+        return;
+      }
       next(err);
     }
   }
@@ -50848,18 +50863,6 @@ var ChatService = class {
    */
   async startChat(payload) {
     const language = payload.language ?? "en";
-    const lead = await leadRepository.createLead({
-      name: "Guest Buyer",
-      phoneE164: null,
-      email: null,
-      source: payload.source ?? "website",
-      projectId: payload.projectId ?? null,
-      wants: "Exploring residential projects",
-      language,
-      status: "new",
-      consentStatus: "unknown"
-    });
-    const conversation = await chatRepository.createConversation(lead.id, language);
     const greetings = {
       en: "Namaste! Welcome to Company A. How may I assist you with your luxury home search today?",
       hi: "\u0928\u092E\u0938\u094D\u0924\u0947! \u0915\u0902\u092A\u0928\u0940 \u090F \u092E\u0947\u0902 \u0906\u092A\u0915\u093E \u0938\u094D\u0935\u093E\u0917\u0924 \u0939\u0948\u0964 \u0906\u091C \u092E\u0948\u0902 \u0906\u092A\u0915\u0947 \u0917\u0943\u0939 \u0905\u0928\u0941\u0938\u0902\u0927\u093E\u0928 \u092E\u0947\u0902 \u0915\u093F\u0938 \u092A\u094D\u0930\u0915\u093E\u0930 \u0938\u0939\u093E\u092F\u0924\u093E \u0915\u0930 \u0938\u0915\u0924\u093E \u0939\u0942\u0901?",
@@ -50872,22 +50875,48 @@ var ChatService = class {
     };
     const greeting = greetings[language] ?? greetings.en;
     const quickReplies = quickRepliesMap[language] ?? quickRepliesMap.en;
-    await chatRepository.insertMessage(
-      conversation.id,
-      "assistant",
-      greeting,
-      [],
-      { quickReplies }
-    );
-    await chatRepository.setFirstResponseAt(lead.id);
+    let conversationId;
+    let leadId;
+    try {
+      const lead = await leadRepository.createLead({
+        name: "Guest Buyer",
+        phoneE164: null,
+        email: null,
+        source: payload.source ?? "website",
+        projectId: payload.projectId ?? null,
+        wants: "Exploring residential projects",
+        language,
+        status: "new",
+        consentStatus: "unknown"
+      });
+      const conversation = await chatRepository.createConversation(lead.id, language);
+      conversationId = conversation.id;
+      leadId = lead.id;
+      await chatRepository.insertMessage(
+        conversation.id,
+        "assistant",
+        greeting,
+        [],
+        { quickReplies }
+      );
+      await chatRepository.setFirstResponseAt(lead.id);
+    } catch (err) {
+      if (config.DEMO_MODE) {
+        logger.warn({ err }, "Database unavailable during chat start in demo mode; using fallback ephemeral demo session");
+        conversationId = "demo-conv-00000000-0000-0000-0000-000000000001";
+        leadId = "demo-lead-00000000-0000-0000-0000-000000000001";
+      } else {
+        throw err;
+      }
+    }
     const sessionToken = await signBuyerSession({
-      conversationId: conversation.id,
-      leadId: lead.id
+      conversationId,
+      leadId
     });
     return {
       success: true,
-      conversationId: conversation.id,
-      leadId: lead.id,
+      conversationId,
+      leadId,
       sessionToken,
       language,
       greeting,
@@ -50898,6 +50927,17 @@ var ChatService = class {
    * Process a message sent by a buyer through pre-filters, agent loop, post-checks, and persistence.
    */
   async sendMessage(payload) {
+    if (payload.conversationId.startsWith("demo-conv-")) {
+      const targetLang2 = payload.language ?? "en";
+      return {
+        text: "Namaste! At Company A, we are pleased to present luxury 2 BHK (starting at \u20B91.2 Cr) and 3 BHK homes (starting at \u20B92.1 Cr) at The Grand View, Bodakdev, Ahmedabad. Would you like to schedule a private gallery tour or speak with an advisor?",
+        language: targetLang2,
+        confidence: 0.98,
+        citedFactIds: [],
+        conversationId: payload.conversationId,
+        quickReplies: ["Schedule Site Visit", "Explore Floor Plans", "Contact Sales Executive"]
+      };
+    }
     const conversation = await chatRepository.findConversationById(payload.conversationId);
     if (!conversation) {
       throw new NotFoundError("Conversation not found");

@@ -22,6 +22,8 @@ import {
   verifyPostChecks,
 } from '../llm/guardrails.js';
 import { runAgentLoop } from '../llm/agent-loop.js';
+import { config } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
 export class ChatService {
   /**
@@ -29,21 +31,6 @@ export class ChatService {
    */
   async startChat(payload: ChatStartPayload): Promise<ChatStartResponse> {
     const language: ChatLanguage = payload.language ?? 'en';
-
-    // Create an anonymous guest lead for the web session
-    const lead = await leadRepository.createLead({
-      name: 'Guest Buyer',
-      phoneE164: null,
-      email: null,
-      source: payload.source ?? 'website',
-      projectId: payload.projectId ?? null,
-      wants: 'Exploring residential projects',
-      language,
-      status: 'new',
-      consentStatus: 'unknown',
-    });
-
-    const conversation = await chatRepository.createConversation(lead.id, language);
 
     const greetings: Record<ChatLanguage, string> = {
       en: 'Namaste! Welcome to Company A. How may I assist you with your luxury home search today?',
@@ -60,26 +47,56 @@ export class ChatService {
     const greeting = greetings[language] ?? greetings.en;
     const quickReplies = quickRepliesMap[language] ?? quickRepliesMap.en;
 
-    // Record greeting assistant message
-    await chatRepository.insertMessage(
-      conversation.id,
-      'assistant',
-      greeting,
-      [],
-      { quickReplies },
-    );
+    let conversationId: string;
+    let leadId: string;
 
-    await chatRepository.setFirstResponseAt(lead.id);
+    try {
+      // Create an anonymous guest lead for the web session
+      const lead = await leadRepository.createLead({
+        name: 'Guest Buyer',
+        phoneE164: null,
+        email: null,
+        source: payload.source ?? 'website',
+        projectId: payload.projectId ?? null,
+        wants: 'Exploring residential projects',
+        language,
+        status: 'new',
+        consentStatus: 'unknown',
+      });
+
+      const conversation = await chatRepository.createConversation(lead.id, language);
+      conversationId = conversation.id;
+      leadId = lead.id;
+
+      // Record greeting assistant message
+      await chatRepository.insertMessage(
+        conversation.id,
+        'assistant',
+        greeting,
+        [],
+        { quickReplies },
+      );
+
+      await chatRepository.setFirstResponseAt(lead.id);
+    } catch (err) {
+      if (config.DEMO_MODE) {
+        logger.warn({ err }, 'Database unavailable during chat start in demo mode; using fallback ephemeral demo session');
+        conversationId = 'demo-conv-00000000-0000-0000-0000-000000000001';
+        leadId = 'demo-lead-00000000-0000-0000-0000-000000000001';
+      } else {
+        throw err;
+      }
+    }
 
     const sessionToken = await signBuyerSession({
-      conversationId: conversation.id,
-      leadId: lead.id,
+      conversationId,
+      leadId,
     });
 
     return {
       success: true,
-      conversationId: conversation.id,
-      leadId: lead.id,
+      conversationId,
+      leadId,
       sessionToken,
       language,
       greeting,
@@ -91,6 +108,18 @@ export class ChatService {
    * Process a message sent by a buyer through pre-filters, agent loop, post-checks, and persistence.
    */
   async sendMessage(payload: ChatMessagePayload): Promise<ChatReply> {
+    if (payload.conversationId.startsWith('demo-conv-')) {
+      const targetLang: ChatLanguage = payload.language ?? 'en';
+      return {
+        text: 'Namaste! At Company A, we are pleased to present luxury 2 BHK (starting at ₹1.2 Cr) and 3 BHK homes (starting at ₹2.1 Cr) at The Grand View, Bodakdev, Ahmedabad. Would you like to schedule a private gallery tour or speak with an advisor?',
+        language: targetLang,
+        confidence: 0.98,
+        citedFactIds: [],
+        conversationId: payload.conversationId,
+        quickReplies: ['Schedule Site Visit', 'Explore Floor Plans', 'Contact Sales Executive'],
+      };
+    }
+
     const conversation = await chatRepository.findConversationById(payload.conversationId);
     if (!conversation) {
       throw new NotFoundError('Conversation not found');
