@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build --workspace=@housy/shared",
     "build:api": "npm run build --workspace=@housy/api",
     "build:web": "npm run build --workspace=@housy/web",
     "start": "npm run start --workspace=@housy/api",

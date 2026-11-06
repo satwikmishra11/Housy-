@@ -6,6 +6,7 @@ node_modules/
 # Build and distribution
 dist/
 build/
+.vercel/
 *.tsbuildinfo
 
 # Environment variables and secrets

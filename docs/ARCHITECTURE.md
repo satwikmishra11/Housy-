@@ -822,16 +822,23 @@ The repository is structured to deploy on Vercel as a single project with multip
 - **`services.api`**:
   - `root`: `apps/api`
   - `framework`: `express`
+  - `entrypoint`: `index.js`
+  - `installCommand`: `cd ../.. && npm install` (ensures root monorepo workspace dependencies and symlinks are resolved)
+  - `buildCommand`: `cd ../.. && npm run build:shared && cd apps/api && npm run build` (builds shared contracts before bundling API)
   - Executes the Express 3-tier backend with full database connectivity, Zod validation, and AI agent loop.
 - **`services.web`**:
   - `root`: `apps/web`
   - `framework`: `vite`
+  - `installCommand`: `cd ../.. && npm install`
+  - `buildCommand`: `cd ../.. && npm run build:shared && cd apps/web && npm run build`
+  - `outputDirectory`: `dist`
   - Builds and serves the React 18 SPA assets with responsive design and WCAG 2.1 AA accessibility.
 
 ### 2. Unified Public Routing
 Top-level rewrites route traffic cleanly across both services on a shared domain:
 - `/api` and `/api/(.*)` -> `{ "service": "api" }`: Forwards all API endpoints directly to Express with full path preservation.
-- `/(.*)` -> `{ "service": "web" }`: Serves the frontend application with SPA fallback.
+- `/assets/(.*)` -> `{ "service": "web" }`: Serves bundled static assets (JS, CSS, fonts).
+- `/(.*)` -> `{ "service": "web", "path": "/index.html" }`: Serves the frontend application with SPA fallback so direct navigation and refreshes to routes like `/login`, `/chat`, `/leads` correctly render the application.
 
 ### 3. Service Bindings Architecture
 - In client SPA architectures (React/Vite), network requests to `/api/*` originate client-side in the user's browser; therefore, `api` is exposed via top-level public rewrites.

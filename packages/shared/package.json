@@ -12,8 +12,8 @@
     }
   },
   "scripts": {
-    "prepare": "tsc -b",
-    "build": "tsc -b",
+    "prepare": "tsc -b --force",
+    "build": "tsc -b --force",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
