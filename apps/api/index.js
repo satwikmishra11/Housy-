@@ -37782,7 +37782,8 @@ var index_exports = {};
 __export(index_exports, {
   app: () => app,
   createApp: () => createApp,
-  default: () => index_default
+  default: () => index_default,
+  serverlessHandler: () => serverlessHandler
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -42440,13 +42441,30 @@ var parsedConfig = EnvSchema.safeParse(process.env);
 if (!parsedConfig.success) {
   console.error("FATAL: Environment configuration validation failed on startup:", JSON.stringify(parsedConfig.error.errors, null, 2));
 }
-var config = parsedConfig.success ? parsedConfig.data : EnvSchema.parse({
-  ...process.env,
-  DEMO_MODE: "true",
-  LLM_PROVIDER: "mock",
+var fallbackSafeConfig = {
+  PORT: 3001,
+  NODE_ENV: process.env.NODE_ENV === "production" ? "production" : process.env.NODE_ENV === "test" ? "test" : "development",
+  DATABASE_URL: process.env.DATABASE_URL || "postgres://housy_user:housy_password@localhost:5432/housy_db",
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
+  LOG_LEVEL: "info",
   JWT_SECRET: process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16 ? process.env.JWT_SECRET : "housy-fallback-jwt-secret-min-32-chars-long!",
-  SESSION_SECRET: process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16 ? process.env.SESSION_SECRET : "housy-fallback-session-secret-min-32-chars-long!"
-});
+  SESSION_SECRET: process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16 ? process.env.SESSION_SECRET : "housy-fallback-session-secret-min-32-chars-long!",
+  COOKIE_SECURE: process.env.NODE_ENV === "production",
+  COOKIE_SAME_SITE: "lax",
+  RATE_LIMIT_LOGIN_MAX: 5,
+  RATE_LIMIT_LOGIN_WINDOW_MS: 15 * 60 * 1e3,
+  RATE_LIMIT_GENERAL_MAX: 100,
+  RATE_LIMIT_GENERAL_WINDOW_MS: 60 * 1e3,
+  RATE_LIMIT_CHAT_MAX: 30,
+  RATE_LIMIT_CHAT_WINDOW_MS: 60 * 1e3,
+  LLM_PROVIDER: "mock",
+  LLM_MODEL: "gemini-1.5-flash",
+  LLM_TIMEOUT_MS: 2e4,
+  LLM_DAILY_MESSAGE_CAP: 1e3,
+  DEMO_MODE: true,
+  INTERNAL_API_KEY: process.env.INTERNAL_API_KEY || "housy-internal-cron-key-12345"
+};
+var config = parsedConfig.success ? parsedConfig.data : fallbackSafeConfig;
 
 // src/utils/logger.ts
 var import_pino = __toESM(require_pino());
@@ -52511,11 +52529,39 @@ function createApp() {
 var app = createApp();
 
 // src/index.ts
-var index_default = app;
+var serverlessHandler = (req, res) => {
+  try {
+    app(req, res);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify(
+          {
+            success: false,
+            error: {
+              code: "SERVERLESS_INVOCATION_ERROR",
+              message: error.message,
+              stack: error.stack
+            }
+          },
+          null,
+          2
+        )
+      );
+    }
+  }
+};
+Object.setPrototypeOf(serverlessHandler, app);
+Object.assign(serverlessHandler, app);
+var index_default = serverlessHandler;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   app,
-  createApp
+  createApp,
+  serverlessHandler
 });
 /*! Bundled license information:
 

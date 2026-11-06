@@ -42,14 +42,32 @@ if (!parsedConfig.success) {
   console.error('FATAL: Environment configuration validation failed on startup:', JSON.stringify(parsedConfig.error.errors, null, 2));
 }
 
+const fallbackSafeConfig: Config = {
+  PORT: 3001,
+  NODE_ENV: process.env.NODE_ENV === 'production' ? 'production' : process.env.NODE_ENV === 'test' ? 'test' : 'development',
+  DATABASE_URL: process.env.DATABASE_URL || 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+  LOG_LEVEL: 'info',
+  JWT_SECRET: process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16 ? process.env.JWT_SECRET : 'housy-fallback-jwt-secret-min-32-chars-long!',
+  SESSION_SECRET: process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16 ? process.env.SESSION_SECRET : 'housy-fallback-session-secret-min-32-chars-long!',
+  COOKIE_SECURE: process.env.NODE_ENV === 'production',
+  COOKIE_SAME_SITE: 'lax',
+  RATE_LIMIT_LOGIN_MAX: 5,
+  RATE_LIMIT_LOGIN_WINDOW_MS: 15 * 60 * 1000,
+  RATE_LIMIT_GENERAL_MAX: 100,
+  RATE_LIMIT_GENERAL_WINDOW_MS: 60 * 1000,
+  RATE_LIMIT_CHAT_MAX: 30,
+  RATE_LIMIT_CHAT_WINDOW_MS: 60 * 1000,
+  LLM_PROVIDER: 'mock',
+  LLM_MODEL: 'gemini-1.5-flash',
+  LLM_TIMEOUT_MS: 20000,
+  LLM_DAILY_MESSAGE_CAP: 1000,
+  DEMO_MODE: true,
+  INTERNAL_API_KEY: process.env.INTERNAL_API_KEY || 'housy-internal-cron-key-12345',
+};
+
 export const config: Config = parsedConfig.success
   ? parsedConfig.data
-  : EnvSchema.parse({
-      ...process.env,
-      DEMO_MODE: 'true',
-      LLM_PROVIDER: 'mock',
-      JWT_SECRET: process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16 ? process.env.JWT_SECRET : 'housy-fallback-jwt-secret-min-32-chars-long!',
-      SESSION_SECRET: process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16 ? process.env.SESSION_SECRET : 'housy-fallback-session-secret-min-32-chars-long!',
-    });
+  : fallbackSafeConfig;
 
 
