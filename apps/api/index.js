@@ -37782,8 +37782,7 @@ var index_exports = {};
 __export(index_exports, {
   app: () => app,
   createApp: () => createApp,
-  default: () => index_default,
-  serverlessHandler: () => serverlessHandler
+  default: () => index_default
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -52529,39 +52528,11 @@ function createApp() {
 var app = createApp();
 
 // src/index.ts
-var serverlessHandler = (req, res) => {
-  try {
-    app(req, res);
-  } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    if (!res.headersSent) {
-      res.statusCode = 500;
-      res.setHeader("Content-Type", "application/json");
-      res.end(
-        JSON.stringify(
-          {
-            success: false,
-            error: {
-              code: "SERVERLESS_INVOCATION_ERROR",
-              message: error.message,
-              stack: error.stack
-            }
-          },
-          null,
-          2
-        )
-      );
-    }
-  }
-};
-Object.setPrototypeOf(serverlessHandler, app);
-Object.assign(serverlessHandler, app);
-var index_default = serverlessHandler;
+var index_default = app;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   app,
-  createApp,
-  serverlessHandler
+  createApp
 });
 /*! Bundled license information:
 
@@ -52883,4 +52854,4 @@ cookie-parser/index.js:
    * MIT Licensed
    *)
 */
-module.exports = index_default; module.exports.default = index_default; module.exports.app = app; module.exports.createApp = createApp;
+module.exports = app; module.exports.default = app; module.exports.app = app; module.exports.createApp = createApp;
