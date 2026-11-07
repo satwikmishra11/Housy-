@@ -26,6 +26,26 @@ class LcgPrng {
 }
 
 export async function runSeed(): Promise<void> {
+  // 0. Seed Password Guardrails:
+  // The known demo password must exist only where the seed creates it.
+  // Require DEMO_SEED_PASSWORD from env for seeding in any environment where DEMO_MODE is false,
+  // and refuse to seed production with the default.
+  const isProd = config.NODE_ENV === 'production' || process.env.NODE_ENV === 'production';
+  const isDemo = config.DEMO_MODE === true || process.env.DEMO_MODE === 'true';
+  const envDemoPass = process.env['DEMO_SEED_PASSWORD'];
+
+  if (isProd && (!envDemoPass || envDemoPass === 'DemoPass123!')) {
+    throw new Error(
+      'Refusing to seed production database with default demo password. A custom DEMO_SEED_PASSWORD must be explicitly provided in environment variables.'
+    );
+  }
+
+  if (!isDemo && !envDemoPass) {
+    throw new Error(
+      'DEMO_SEED_PASSWORD is required from environment for seeding in any environment where DEMO_MODE is false.'
+    );
+  }
+
   // In production, require DEMO_MODE=true to prevent accidental wiping of production data
   if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
     logger.warn('Skipping database seed: NODE_ENV is production and DEMO_MODE is not set to true.');
@@ -70,8 +90,7 @@ export async function runSeed(): Promise<void> {
   logger.info('Database truncated and sequences reset successfully.');
 
   // 2. Users (1 Sales Head + 5 Executives)
-  // Seed demo accounts with documented demo password, hashed with Argon2id
-  const DEMO_PASSWORD = process.env['DEMO_SEED_PASSWORD'] || 'DemoPass123!';
+  const DEMO_PASSWORD = envDemoPass || 'DemoPass123!';
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   const userRows = [
@@ -748,16 +767,12 @@ export async function runSeed(): Promise<void> {
   }
   logger.info(`Inserted ad spend records for 3 months totaling ₹30 Lakh / month.`);
 
-  // 11. Mock Outbound Messages (Outbox) and LLM Telemetry
+  // 11. Mock Outbound Messages (Outbox) - LLM calls telemetry comes strictly from real calls
   for (let i = 0; i < 5; i++) {
     await query(
       `INSERT INTO outbound_messages (lead_id, channel, template_key, body, status, sent_at)
        VALUES ($1, 'whatsapp', 'visit_confirmed_v1', 'Namaste! Your site visit is confirmed for Project 1.', 'sent', NOW())`,
       [leadIds[i]],
-    );
-    await query(
-      `INSERT INTO llm_calls (provider, model, latency_ms, input_tokens, output_tokens, outcome)
-       VALUES ('gemini', 'gemini-1.5-pro', 320, 480, 95, 'success')`,
     );
   }
 

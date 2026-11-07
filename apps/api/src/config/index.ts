@@ -112,6 +112,7 @@ const EnvSchema = z.object({
   LLM_TIMEOUT_MS: z.coerce.number().default(20000),
   LLM_DAILY_MESSAGE_CAP: z.coerce.number().default(1000),
   DEMO_MODE: booleanSchema.default(true),
+  DEMO_SEED_PASSWORD: z.string().optional(),
   INTERNAL_API_KEY: z.string().min(1, 'INTERNAL_API_KEY is required'),
   VERIFY_REPLIES: booleanSchema.default(false),
   GO_LIVE_DATE: z.string().default('2026-10-15T00:00:00Z'),
