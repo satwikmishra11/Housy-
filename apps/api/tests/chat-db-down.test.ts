@@ -72,13 +72,13 @@ describe('Chat Service Database Failure Resiliency', () => {
       .mockRejectedValueOnce(new DatabaseError('ECONNREFUSED'));
 
     // We pass any valid UUID
-    const testConvId = '11111111-2222-3333-4444-555555555555';
+    const testConvId = '11111111-2222-4333-8444-555555555555';
 
     // Sign a temporary buyer session to pass session check
     const { signBuyerSession } = await import('../src/auth/tokens.js');
     const token = await signBuyerSession({
       conversationId: testConvId,
-      leadId: '22222222-3333-4444-5555-666666666666',
+      leadId: '22222222-3333-4444-8555-666666666666',
     });
 
     const res = await request(app)

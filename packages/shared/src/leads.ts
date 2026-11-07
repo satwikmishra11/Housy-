@@ -134,7 +134,7 @@ export const LeadIngestPayloadSchema = z.object({
   language: z.enum(['en', 'hi', 'gu']).optional().default('en'),
   consent: z.boolean().optional().default(true),
   externalId: z.string().max(255).optional().nullable(),
-  meta: z.record(z.unknown()).optional().default({}),
+  meta: z.record(z.string(), z.unknown()).optional().default({}),
 });
 export type LeadIngestInput = z.input<typeof LeadIngestPayloadSchema>;
 export type LeadIngestPayload = z.infer<typeof LeadIngestPayloadSchema>;
@@ -182,7 +182,7 @@ export const LeadTouchpointSchema = z.object({
   channel: z.string(),
   occurredAt: z.string(),
   externalId: z.string().nullable(),
-  raw: z.record(z.unknown()),
+  raw: z.record(z.string(), z.unknown()),
 });
 export type LeadTouchpoint = z.infer<typeof LeadTouchpointSchema>;
 
@@ -213,7 +213,7 @@ export const LeadDetailSchema = LeadListItemSchema.extend({
     z.object({
       id: z.string().uuid(),
       reason: z.string(),
-      summary: z.record(z.unknown()),
+      summary: z.record(z.string(), z.unknown()),
       status: z.string(),
       executiveName: z.string(),
       createdAt: z.string(),
@@ -250,7 +250,7 @@ export type LeadMergePayload = z.infer<typeof LeadMergePayloadSchema>;
 
 export const CsvPreviewRowSchema = z.object({
   rowIndex: z.number(),
-  raw: z.record(z.string()),
+  raw: z.record(z.string(), z.string()),
   normalized: z.object({
     name: z.string(),
     phone: z.string().nullable(),

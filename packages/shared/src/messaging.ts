@@ -113,7 +113,7 @@ export const StaffNotificationSchema = z.object({
   message: z.string(),
   link: z.string().nullable().optional(),
   isRead: z.boolean(),
-  metadata: z.record(z.unknown()).default({}),
+  metadata: z.record(z.string(), z.unknown()).default({}),
   createdAt: z.string(),
   readAt: z.string().nullable().optional(),
 });

@@ -51,7 +51,8 @@ ingestRouter.post(
       // 3. Validate payload with Zod
       const parseResult = LeadIngestPayloadSchema.safeParse(req.body);
       if (!parseResult.success) {
-        const details = parseResult.error.errors.map((e) => ({
+        const issueList = parseResult.error.issues || (parseResult.error as unknown as { errors?: typeof parseResult.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,

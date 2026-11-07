@@ -22,7 +22,7 @@ export function parseBoolean(val: unknown): boolean {
 export const booleanSchema = z.preprocess((val) => {
   if (val === undefined || val === '') return undefined;
   return parseBoolean(val);
-}, z.boolean({ invalid_type_error: "Must be a valid boolean ('true'|'1' or 'false'|'0')" }));
+}, z.boolean({ message: "Must be a valid boolean ('true'|'1' or 'false'|'0')" }));
 
 const DEV_INTERNAL_CRON_DEFAULT = 'housy-internal-cron-key-12345'; // gitleaks:allow
 const DEV_JWT_SECRET = 'housy-dev-jwt-secret-min-32-chars-long!'; // gitleaks:allow

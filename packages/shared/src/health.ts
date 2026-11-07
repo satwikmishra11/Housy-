@@ -28,7 +28,7 @@ export const JobRunItemSchema = z.object({
   startedAt: z.string(),
   finishedAt: z.string(),
   ok: z.boolean(),
-  counts: z.record(z.unknown()).default({}),
+  counts: z.record(z.string(), z.unknown()).default({}),
   error: z.string().nullable().optional(),
   durationMs: z.number().optional(),
 });

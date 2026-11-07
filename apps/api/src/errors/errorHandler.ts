@@ -53,7 +53,8 @@ export function errorHandler(
   }
 
   if (err instanceof ZodError) {
-    const details: ErrorDetail[] = err.errors.map((e) => ({
+    const issueList = err.issues || (err as unknown as { errors?: typeof err.issues }).errors || [];
+    const details: ErrorDetail[] = issueList.map((e) => ({
       field: e.path.join('.'),
       message: e.message,
       code: e.code,

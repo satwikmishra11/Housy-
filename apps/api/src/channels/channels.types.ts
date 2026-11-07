@@ -12,7 +12,7 @@ export const OutboxMessageSchema = z.object({
   recipient: z.string().min(1),
   channel: ChannelTypeSchema,
   templateName: z.string().optional(),
-  payload: z.record(z.unknown()).default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
   body: z.string().optional(),
   status: MessageStatusSchema.default('pending'),
   attempts: z.number().int().nonnegative().default(0),

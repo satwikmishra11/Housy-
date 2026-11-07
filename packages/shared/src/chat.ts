@@ -19,7 +19,7 @@ export type ChatStartPayload = z.infer<typeof ChatStartPayloadSchema>;
 
 export const ChatMessagePayloadSchema = z.object({
   conversationId: z.string().uuid({ message: 'Must be a valid conversation UUID' }),
-  message: z.string().min(1, 'Message cannot be empty').max(2000, 'Message cannot exceed 2000 characters'),
+  message: z.string().min(1, 'Message cannot be empty').max(1000, 'Message cannot exceed 1000 characters'),
   language: ChatLanguageSchema.optional(),
 });
 export type ChatMessagePayload = z.infer<typeof ChatMessagePayloadSchema>;
@@ -64,7 +64,7 @@ export const ChatHistoryItemSchema = z.object({
   role: ChatMessageRoleSchema,
   content: z.string(),
   citedFactIds: z.array(z.string().uuid()),
-  meta: z.record(z.unknown()),
+  meta: z.record(z.string(), z.unknown()),
   createdAt: z.string().datetime(),
 });
 export type ChatHistoryItem = z.infer<typeof ChatHistoryItemSchema>;

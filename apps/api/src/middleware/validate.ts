@@ -27,7 +27,8 @@ export function validateRequest(schemas: RequestValidationSchemas) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details: ErrorDetail[] = error.errors.map((e) => ({
+        const issueList = error.issues || (error as unknown as { errors?: typeof error.issues }).errors || [];
+        const details: ErrorDetail[] = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,

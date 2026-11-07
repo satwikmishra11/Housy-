@@ -21,7 +21,8 @@ dashboardRouter.get(
     try {
       const parsed = DashboardFilterQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        const details = parsed.error.errors.map((e) => ({
+        const issueList = parsed.error.issues || (parsed.error as unknown as { errors?: typeof parsed.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,
@@ -52,7 +53,8 @@ dashboardRouter.get(
     try {
       const parsed = DashboardFilterQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        const details = parsed.error.errors.map((e) => ({
+        const issueList = parsed.error.issues || (parsed.error as unknown as { errors?: typeof parsed.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,

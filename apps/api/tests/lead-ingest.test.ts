@@ -376,8 +376,8 @@ describe('Lead Ingest, Deduplication, Merge & Role Scoping', () => {
         .set('Cookie', `staff_token=${salesHeadToken}`)
         .set(CSRF_HEADER)
         .send({
-          primaryLeadId: '11111111-1111-1111-1111-111111111111',
-          secondaryLeadId: '22222222-2222-2222-2222-222222222222',
+          primaryLeadId: 'a0000000-0000-4000-8000-000000000001',
+          secondaryLeadId: 'a0000000-0000-4000-8000-000000000002',
         });
 
       expect(res.status).toBe(404);

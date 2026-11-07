@@ -21,7 +21,7 @@ const LeadIdParamSchema = z.object({
 });
 
 const CsvPreviewBodySchema = z.object({
-  rows: z.array(z.record(z.string())),
+  rows: z.array(z.record(z.string(), z.string())),
   source: LeadSourceSchema.optional(),
 });
 
@@ -39,7 +39,8 @@ leadsRouter.get(
     try {
       const parsedQuery = LeadFilterQuerySchema.safeParse(req.query);
       if (!parsedQuery.success) {
-        const details = parsedQuery.error.errors.map((e) => ({
+        const issueList = parsedQuery.error.issues || (parsedQuery.error as unknown as { errors?: typeof parsedQuery.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,
@@ -212,7 +213,8 @@ leadsRouter.post(
     try {
       const parseResult = LeadMergePayloadSchema.safeParse(req.body);
       if (!parseResult.success) {
-        const details = parseResult.error.errors.map((e) => ({
+        const issueList = parseResult.error.issues || (parseResult.error as unknown as { errors?: typeof parseResult.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,
@@ -293,7 +295,8 @@ leadsRouter.post(
     try {
       const parseResult = CsvCommitPayloadSchema.safeParse(req.body);
       if (!parseResult.success) {
-        const details = parseResult.error.errors.map((e) => ({
+        const issueList = parseResult.error.issues || (parseResult.error as unknown as { errors?: typeof parseResult.error.issues }).errors || [];
+        const details = issueList.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
           code: e.code,
