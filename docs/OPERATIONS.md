@@ -147,9 +147,10 @@ Domain Event (Booking / Reminder)
      `PR/GJ/AHMEDABAD/AUDA/RAA01234/011126` (Project 1) or `PR/GJ/AHMEDABAD/AUDA/RAA05678/011126` (Project 2).
    - Unregistered amenities or speculative financial claims are strictly prohibited.
 2. **DPDP Act 2023 Personal Data Protection**:
-   - **Consent Verification**: Messages are dispatched only when `consent_status === 'granted'` and `opted_out_at IS NULL`.
-   - **Immediate Opt-Out**: Buyers can opt out via chat keyword (`STOP`, `unsubscribe`), self-service visit portal, or staff action.
+   - **Consent Verification**: Automated outbound messages are dispatched only when `consent_status === 'granted'` and `opted_out_at IS NULL`. Inbound buyer chat remains open so buyers can still interact.
+   - **Immediate Opt-Out**: Buyers can opt out via chat keyword (`STOP`, `unsubscribe`, `don't message me`), self-service visit portal, or staff action.
    - **Removals**: Opting out immediately sets `opted_out_at = NOW()`, logs revocation in `consents`, and marks all pending visit reminders for the lead as `cancelled`.
+   - **Re-Consent**: Buyers who previously opted out can re-grant affirmative consent via the self-service visit portal (`POST /api/visits/manage/:token/re-consent`) or when submitting contact details for a site-visit booking, clearing `opted_out_at` and restoring `consent_status = 'granted'`.
 3. **WhatsApp Template Registry**:
    - Free-form text dispatches over WhatsApp are rejected with `ValidationError`.
    - All dispatches must use pre-approved templates: `visit_confirmation`, `reminder_24h`, `reminder_2h`, and `first_response_link`.

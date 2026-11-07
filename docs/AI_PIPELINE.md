@@ -24,32 +24,40 @@ The AI Sales Assistant provides an intelligent, luxury-grade conversational advi
                                                  │
                                                  ▼
 +------------------------------------------------------------------------------------------------+
-| PRE-FILTER PIPELINE (Zero LLM Tokens, Zero Latency)                                            |
-|   • Opt-Out Check ("STOP", "unsubscribe", "band karo")       -> Lead opted_out_at, stop contact   |
-|   • Human Escalation ("talk to person", "insan se baat")      -> Flag human_requested, handoff  |
-|   • Price / Negotiation ("discount", "best price", "bhav")    -> Canned policy reply, price_ask |
+| INTENT DETECTION & PRE-FILTER (detectIntent - Zero LLM Tokens, Zero Latency)                   |
+|   • Script-first & weighted lexicon language detection (shared words score 0)                 |
+|   • opt_out ("STOP", "unsubscribe", "band karo")   -> Stop outbound only, buyer can still chat|
+|   • cancel_visit ("cancel my visit / appointment")  -> Route to manage-visit card (not opt-out)|
+|   • human ("talk to human", "sales manager phone") -> Escalate, warm handoff, persist reply    |
+|   • negotiation ("discount", "best price", "bhav") -> Canned policy reply, flag price_ask     |
+|   • price_info ("price range of 2 BHK", "loan rate")-> Route to LLM with fact grounding       |
 +------------------------------------------------------------------------------------------------+
-                                                 │ (clean)
+                                                 │ (clean / price_info / other)
                                                  ▼
 +------------------------------------------------------------------------------------------------+
 | AGENT LOOP (Max 4 Tool Execution Rounds)                                                        |
 |   • Injects active fact sheet with stable IDs: [FACT ID: <uuid>]                               |
+|   • Requires structured tool calls: plain-text replies rejected (re-ask once, else fallback)   |
 |   • Tools: update_lead_profile, get_open_slots, request_human, send_reply                      |
 |   • If phone/consent missing on visit intent -> emits ui_action: collect_contact               |
 +------------------------------------------------------------------------------------------------+
                                                  │ (model send_reply)
                                                  ▼
 +------------------------------------------------------------------------------------------------+
-| POST-CHECK GUARDRAIL (Deterministic Verification)                                               |
+| POST-CHECK GUARDRAIL & VERIFIER (Deterministic Validation + Optional LLM Verifier)             |
 |   • Fact ID Verification: Cited fact IDs must exist and be active                             |
-|   • Grounding Check: Every number, amount, or date must appear in cited facts                   |
-|   • Banned Claims: Prohibits "guarantee", "assured returns", "appreciation", "best price"     |
-|   • Confidence Check: Rejects replies with confidence score < 0.70                              |
+|   • Numeral Normalization: Devanagari (०-९), Gujarati (૦-૯) & words -> Arabic digits          |
+|   • Grounding Check: Token-boundary matching of numbers/dates/specs against cited facts        |
+|   • Fact Citation Requirement: Property claims without cited facts trigger grounding_failed    |
+|   • Expanded Banned Claims: Prohibits ROI, rental yield, "price will rise", safe investment,  |
+|     "selling fast" (English, Hindi, Gujarati)                                                  |
+|   • Independent Verifier (VERIFY_REPLIES=true): Non-conversational claims verified             |
+|   • Confidence Check: Evaluates model confidence against 0.70 threshold                        |
 +------------------------------------------------------------------------------------------------+
                                 ├── FAILED ──► Localized safe fallback ("Team will confirm shortly")
                                 │              + Log unanswered_questions + Flag conversation + Handoff
                                 │
-                                └── PASSED ──► Persist message + Return ChatReply to buyer
+                                └── PASSED ──► Persist assistant reply to messages + Return to buyer
 ```
 
 ---
@@ -85,23 +93,38 @@ export interface LLMProvider {
 
 ## 3. Deterministic Guardrail Pipeline
 
-### 1. Pre-Filter Pipeline (Zero-Latency Interception)
-Incoming messages are scanned by multilingual regex patterns across English, Hindi (Devanagari and Hinglish), and Gujarati (Gujarati script and Latin):
+### 1. Intent Detection & Pre-Filter Pipeline (`detectIntent`)
+Incoming messages are scanned by a multi-phase pre-filter using script-first language detection and phrase-level regex matching across English, Hindi (Devanagari and Hinglish), and Gujarati (Gujarati script and Latin transliteration):
 
 | Intent | Sample Triggers | Action Taken | LLM Invocation? |
 |---|---|---|---|
-| **Opt-Out** | `STOP`, `unsubscribe`, `band karo`, `હવે મેસેજ ના કરતા` | Sets `leads.opted_out_at = NOW()`, cancels pending reminders, logs DPDP revocation | **No** (0 tokens) |
-| **Human Request** | `talk to human`, `insan se baat`, `executive bulao`, `માણસ સાથે વાત` | Sets `conversations.status = 'human'`, logs `human_requested` flag, triggers warm handoff | **No** (0 tokens) |
-| **Price Negotiation** | `discount`, `best price`, `bhav ochho karo`, `final price kya hai` | Returns canned localized policy statement: *"Final pricing and special terms are confirmed in person by our sales team. Would you like to schedule a site visit?"* | **No** (0 tokens) |
+| **`opt_out`** | `STOP`, `unsubscribe`, `don't message me`, `band karo`, `સંદેશ ના મોકલો` | Sets `leads.opted_out_at = NOW()`, halts automated outbound reminders, logs DPDP revocation. Buyer can still continue chatting inbound. Reply is persisted to `messages`. | **No** (0 tokens) |
+| **`cancel_visit`** | `cancel my visit`, `cancel visit`, `appointment cancel kardo` | Dispatches instructions and a direct link to the manage-visit card/page. Never blacklists communications or opts the buyer out. | **No** (0 tokens) |
+| **`human`** | `talk to a human`, `speak with manager`, `insan se baat`, `એક્ઝિક્યુટિવ સાથે વાત` | Sets `conversations.status = 'human'`, logs `human_requested` flag, triggers warm handoff to executive, and persists assistant reassurance to `messages`. Uses phrase-level matching to avoid false positives on words like "agent" or "executive". | **No** (0 tokens) |
+| **`negotiation`** | `can you reduce price`, `give 10% discount`, `bhav ochho karo`, `waive fee` | Returns canned localized policy statement: *"All pricing and payment terms are finalized directly by our sales team. Would you like to schedule a site visit to discuss further?"* Flags conversation as `price_ask`. | **No** (0 tokens) |
+| **`price_info`** | `What is the price range of 2 BHK?`, `home loan rate`, `starting price` | Allowed through to Agent Loop to answer strictly grounded from authorized `fact_entries`. If fact is missing, triggers safe fallback and executive handoff. | **Yes** (Grounded) |
+| **`other`** | General inquiries, amenities, site-visit scheduling, specifications | Dispatched to Agent Loop. | **Yes** |
 
-### 2. Post-Check Guardrail (Deterministic Output Validation)
-Before any model-generated reply is rendered to the buyer, it undergoes automated verification:
+### 2. Multilingual & Script-First Language Detection
+- **Script-First Identification**: Messages with Unicode characters in the Devanagari range (`\u0900-\u097F`) resolve directly to Hindi (`hi`); messages in the Gujarati range (`\u0A80-\u0AFF`) resolve to Gujarati (`gu`).
+- **Weighted Lexicon for Latin Scripts**: Transliterated queries are evaluated against language-specific lexicons. Common shared words (e.g., `ghar`, `bhai`, `kem`, `kya`, `hai`) are assigned **zero weight** to prevent Hinglish queries from falsely matching Gujarati.
+- **Session Continuity**: When score differentials are ambiguous, the detector preserves the existing conversation language or defaults to English (`en`).
+
+### 3. Output Grounding & Guardrail Verification (`verifyPostChecks`)
+Before any assistant reply is delivered to the buyer, it undergoes automated post-checks:
 1. **Fact ID Verification**: Every cited fact ID must map to an active row in `fact_entries`.
-2. **Numeric & Date Grounding**: Regular expressions extract all numbers, currency figures (₹, Lakh, Crore), and dates from the response. Every token must exist verbatim in the text of the cited fact entries.
-3. **Banned Claims Check**: Prohibits speculative investment claims, e.g., *"guaranteed return"*, *"price appreciation"*, *"surefire investment"*.
-4. **Confidence Verification**: Rejects any candidate response where model-reported confidence falls below `0.70`.
+2. **Numeral & Word Normalization**: Converts Devanagari (`०-९`) and Gujarati (`૦-૯`) numerals as well as number words (`one`, `two`, `ek`, `do`, `tran`, `char`) into Arabic digits.
+3. **Token-Boundary Grounding**: Extracts numbers, currency figures (₹, Lakh, Crore), and dates, verifying that each token exists within word boundaries in cited facts (preventing `"5"` from falsely matching `"2025"`).
+4. **Property Fact Citation Requirement**: Assertions of property dimensions, prices, configurations, or amenities require at least one cited fact ID. Replies stating property facts without citations fail as `grounding_failed`.
+5. **Expanded Banned Claims**: Prohibits speculative claims, artificial urgency, and guarantees across English, Hindi, and Gujarati:
+   - ROI, rental yield, return on investment (`ROI`, `rental yield`, `bhadu`, `munafa`)
+   - Price appreciation (`price will rise`, `bhav vadhshe`, `keemat badhegi`)
+   - Safe investment (`safe investment`, `surefire`, `surakshit nivesh`)
+   - Artificial urgency (`selling fast`, `few units left`, `kharidi lo fatfat`)
+6. **Plain-Text Rejection & Re-Ask**: Plain-text replies lacking structured `send_reply` tool calls are rejected; the agent prompts the model once to invoke `send_reply`, falling back cleanly on repeated failure (`plain_text_rejected`).
+7. **Independent Verifier (`VERIFY_REPLIES=true`)**: An optional secondary verification pass (`apps/api/src/llm/verifier.ts`) evaluates candidate claims against cited facts. Unsupported factual assertions trigger an immediate fallback and executive handoff.
 
-If any check fails, the candidate text is discarded. The assistant returns the safe localized fallback, appends the buyer's query to `unanswered_questions`, flags the conversation for daily sales head review, and triggers executive handoff.
+If any check fails, the candidate text is discarded. The assistant returns the safe localized fallback, appends the buyer's query to `unanswered_questions`, flags the conversation for daily sales head review, and triggers executive handoff. All replies shown to buyers are recorded in the `messages` table.
 
 ---
 
