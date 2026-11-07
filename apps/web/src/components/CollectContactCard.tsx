@@ -158,25 +158,27 @@ export const CollectContactCard: React.FC<CollectContactCardProps> = ({
             onChange={(e) => setConsent(e.target.checked)}
             disabled={isLoading}
             label={
-              <span className="text-xs text-ink/90 leading-relaxed cursor-pointer select-none">
+              <span className="text-xs text-ink/90 leading-relaxed select-none">
                 I consent to receive site visit updates, directions, and project brochures via WhatsApp / SMS under the{' '}
-                <span className="font-semibold text-accent">Digital Personal Data Protection Act 2023</span>.{' '}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowPrivacyModal(true);
-                  }}
-                  className="inline-flex items-center text-accent underline underline-offset-2 hover:text-accent-hover text-xs font-medium ml-1"
-                >
-                  <Info className="w-3 h-3 inline mr-0.5" />
-                  Privacy Policy
-                </button>
+                <span className="font-semibold text-accent">Digital Personal Data Protection Act 2023</span>.
               </span>
             }
           />
+          <div className="mt-1 pl-8">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowPrivacyModal(true);
+              }}
+              className="inline-flex items-center text-accent underline underline-offset-2 hover:text-accent-hover text-xs font-medium"
+            >
+              <Info className="w-3 h-3 inline mr-0.5" />
+              Privacy Policy
+            </button>
+          </div>
           {!consent && (
-            <p className="text-xs text-danger mt-1.5">
+            <p className="text-xs text-danger mt-1.5 pl-8">
               Consent is required to reserve site visit slots in compliance with regulations.
             </p>
           )}
@@ -188,6 +190,7 @@ export const CollectContactCard: React.FC<CollectContactCardProps> = ({
           className="w-full justify-center text-sm py-2.5 mt-2"
           disabled={isLoading || !consent || !phone.trim()}
           isLoading={isLoading}
+          data-testid="continue-to-slots-btn"
         >
           <Check className="w-4 h-4 mr-1.5" />
           Continue to Select Slots

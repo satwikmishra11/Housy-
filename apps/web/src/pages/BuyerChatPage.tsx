@@ -320,6 +320,7 @@ export const BuyerChatPage: React.FC = () => {
     setIsSending(true);
     setIsTyping(true);
 
+    let shouldFocusInput = true;
     try {
       const reply = await sendChatMessage({
         conversationId,
@@ -350,6 +351,7 @@ export const BuyerChatPage: React.FC = () => {
       }
 
       if (reply.uiAction) {
+        shouldFocusInput = false;
         setActiveUiAction(reply.uiAction);
       }
 
@@ -373,7 +375,9 @@ export const BuyerChatPage: React.FC = () => {
         setFallbackWarning(apiErr.message || 'Unable to deliver message. Please retry.');
       }
     } finally {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      if (shouldFocusInput && !activeUiAction) {
+        setTimeout(() => inputRef.current?.focus(), 100);
+      }
     }
   };
 

@@ -33,8 +33,8 @@ describe('Site-Visit Booking, Concurrency & Reminders', () => {
     const email = `${namePrefix.toLowerCase()}.${Date.now()}@testbuyer.com`;
 
     const res = await query<{ id: string }>(
-      `INSERT INTO leads (name, phone_e164, email, source, project_id, wants, status)
-       VALUES ($1, $2, $3, 'website', $4, '2 BHK', 'engaged')
+      `INSERT INTO leads (name, phone_e164, email, source, project_id, wants, status, consent_status)
+       VALUES ($1, $2, $3, 'website', $4, '2 BHK', 'engaged', 'granted')
        RETURNING id`,
       [`${namePrefix} ${randomSuffix}`, phone, email, projectId],
     );

@@ -47,15 +47,16 @@ test.describe('Journey 1: Buyer Site-Visit Booking via AI Chat', () => {
     // Fill contact details
     await page.locator('#contact-name').fill('राकेश पटेल');
     await page.locator('#contact-phone').fill('9825123456');
+    await expect(page.locator('#contact-phone')).toHaveValue('9825123456');
 
     // Ensure DPDP consent checkbox is checked
     const consentCheckbox = page.locator('#dpdp-consent');
-    if (!(await consentCheckbox.isChecked())) {
-      await consentCheckbox.check();
-    }
+    await expect(consentCheckbox).toBeChecked();
 
     // Submit contact info to proceed to slot selection
-    await page.locator('button:has-text("Continue to Select Slots")').click();
+    const continueBtn = page.locator('button:has-text("Continue to Select Slots")');
+    await expect(continueBtn).toBeEnabled({ timeout: 10000 });
+    await continueBtn.click();
 
     // 4. Inline slot picker appears
     await expect(page.locator('[aria-label="Available Site Visit Slots"]')).toBeVisible({ timeout: 15000 });
@@ -253,7 +254,10 @@ test.describe('Journey 4: Concurrency Defenses & Just-Taken Alternatives', () =>
     await expect(page1.locator('#contact-name')).toBeVisible({ timeout: 15000 });
     await page1.locator('#contact-name').fill('Competitor Buyer 1');
     await page1.locator('#contact-phone').fill('9825999001');
-    await page1.locator('button:has-text("Continue to Select Slots")').click();
+    await expect(page1.locator('#contact-phone')).toHaveValue('9825999001');
+    const continueBtn1 = page1.locator('button:has-text("Continue to Select Slots")');
+    await expect(continueBtn1).toBeEnabled({ timeout: 10000 });
+    await continueBtn1.click();
 
     // Buyer 2 submits contact details
     await page2.locator('input[aria-label="Your message to the AI residence advisor"]').fill('Site visit booking please');
@@ -261,7 +265,10 @@ test.describe('Journey 4: Concurrency Defenses & Just-Taken Alternatives', () =>
     await expect(page2.locator('#contact-name')).toBeVisible({ timeout: 15000 });
     await page2.locator('#contact-name').fill('Competitor Buyer 2');
     await page2.locator('#contact-phone').fill('9825999002');
-    await page2.locator('button:has-text("Continue to Select Slots")').click();
+    await expect(page2.locator('#contact-phone')).toHaveValue('9825999002');
+    const continueBtn2 = page2.locator('button:has-text("Continue to Select Slots")');
+    await expect(continueBtn2).toBeEnabled({ timeout: 10000 });
+    await continueBtn2.click();
 
     // Both wait for slot pickers to render
     await expect(page1.locator('[aria-label="Available time slots"] button').first()).toBeVisible({ timeout: 15000 });

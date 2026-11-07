@@ -222,17 +222,17 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       );
       const bookingId = bookRes.rows[0]!.id;
 
-      // Insert reminder due in the past
+      // Insert reminder due in the past (using far-past scheduled_at so it is prioritized first)
       const remRes = await query<{ id: string }>(
         `INSERT INTO reminders (booking_id, kind, scheduled_at, status)
-         VALUES ($1, '2h', NOW() - INTERVAL '5 minutes', 'pending')
+         VALUES ($1, '2h', NOW() - INTERVAL '100 days', 'pending')
          RETURNING id`,
         [bookingId],
       );
       const reminderId = remRes.rows[0]!.id;
 
       // Execute reminder processing
-      const outcome = await reminderService.processDueReminders(10);
+      const outcome = await reminderService.processDueReminders(100);
       expect(outcome.sentCount).toBeGreaterThanOrEqual(1);
 
       // Verify reminder status is sent
@@ -286,15 +286,38 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       expect(simRes.body.success).toBe(true);
       expect(simRes.body.simulatedLead.source).toBe('social_ad');
 
-      // 2. Fast-forward reminders
+      // 2. Fast-forward reminders for a dedicated confirmed booking
+      const ffSlotRes = await query<{ id: string }>(
+        `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+         VALUES ($1, $2, NOW() + INTERVAL '48 hours', NOW() + INTERVAL '49 hours', 'booked')
+         ON CONFLICT (executive_id, starts_at) DO UPDATE SET status = 'booked'
+         RETURNING id`,
+        [projectId, executiveId],
+      );
+      const simLeadId = (simRes.body.outcome as { leadId: string }).leadId;
+      const ffBookingRes = await query<{ id: string }>(
+        `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key)
+         VALUES ($1, $2, 'confirmed', $3)
+         RETURNING id`,
+        [simLeadId, ffSlotRes.rows[0]!.id, `idemp_ff_${Date.now()}`],
+      );
+      const ffBookingId = ffBookingRes.rows[0]!.id;
+
+      await query(
+        `INSERT INTO reminders (booking_id, kind, scheduled_at, status)
+         VALUES ($1, '24h', NOW() + INTERVAL '24 hours', 'pending')`,
+        [ffBookingId],
+      );
+
       const ffRes = await request(app)
         .post('/api/demo/fast-forward-reminders')
         .set('Authorization', salesHeadAuthHeader)
         .set('X-Requested-With', 'XMLHttpRequest')
-        .send({});
+        .send({ bookingId: ffBookingId });
 
       expect(ffRes.status).toBe(200);
       expect(ffRes.body.success).toBe(true);
+      expect(ffRes.body.bookingId).toBe(ffBookingId);
 
       // 3. Run reminders now
       const runRes = await request(app)

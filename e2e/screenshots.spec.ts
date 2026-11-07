@@ -47,11 +47,12 @@ test.describe('TDD Screenshot Captures', () => {
     await phonePage.waitForSelector('#contact-name', { timeout: 15000 });
     await phonePage.locator('#contact-name').fill('राकेश पटेल');
     await phonePage.locator('#contact-phone').fill('9825123456');
+    await expect(phonePage.locator('#contact-phone')).toHaveValue('9825123456');
     const consent = phonePage.locator('#dpdp-consent');
-    if (!(await consent.isChecked())) {
-      await consent.check();
-    }
-    await phonePage.locator('button:has-text("Continue to Select Slots")').click();
+    await expect(consent).toBeChecked();
+    const continueBtn = phonePage.locator('button:has-text("Continue to Select Slots")');
+    await expect(continueBtn).toBeEnabled({ timeout: 10000 });
+    await continueBtn.click();
     await phonePage.waitForSelector('[aria-label="Available Site Visit Slots"]', { timeout: 15000 });
     const slotButtons = phonePage.locator('[aria-label="Available time slots"] button');
     await expect(slotButtons.first()).toBeVisible({ timeout: 10000 });
