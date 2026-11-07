@@ -64,6 +64,7 @@ export async function runAgentLoop(params: AgentLoopParams): Promise<AgentLoopRe
   const maxRounds = 4;
   let finalReply: SendReplyArgs | null = null;
   let handoffTriggered = false;
+  let plainTextRetried = false;
 
   try {
     for (let round = 1; round <= maxRounds; round++) {
@@ -218,16 +219,33 @@ export async function runAgentLoop(params: AgentLoopParams): Promise<AgentLoopRe
           };
         }
       } else if (response.text) {
-        // Plain text response without tool call
+        // Plain text response without tool call - re-ask once for send_reply, else reject
+        if (!plainTextRetried) {
+          plainTextRetried = true;
+          logger.warn(
+            { conversationId, round },
+            'Plain text response received from LLM without send_reply tool call; re-asking once',
+          );
+          messages.push({
+            role: 'assistant',
+            content: response.text,
+          });
+          messages.push({
+            role: 'user',
+            content:
+              'System instruction: You must formulate your response by calling the send_reply tool with cited_fact_ids, confidence, and language. Do not output plain text.',
+          });
+          continue;
+        }
+
+        // Plain text still returned on retry -> treat as invalid and fallback
+        logger.warn(
+          { conversationId },
+          'Plain text response repeated on retry; rejecting and triggering fallback',
+        );
         return {
-          success: true,
-          reply: {
-            text: response.text,
-            cited_fact_ids: [],
-            confidence: 0.85,
-            language,
-          },
-          isHandoff: handoffTriggered,
+          success: false,
+          reason: 'plain_text_rejected',
         };
       }
     }

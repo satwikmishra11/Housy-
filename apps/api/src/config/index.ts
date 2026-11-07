@@ -63,6 +63,7 @@ export function getDevelopmentDefaults(nodeEnv: string = process.env.NODE_ENV ||
     LLM_DAILY_MESSAGE_CAP: '1000',
     DEMO_MODE: 'true',
     INTERNAL_API_KEY: DEV_INTERNAL_CRON_DEFAULT,
+    VERIFY_REPLIES: 'false',
   };
 }
 
@@ -90,6 +91,7 @@ const EnvSchema = z.object({
   LLM_DAILY_MESSAGE_CAP: z.coerce.number().default(1000),
   DEMO_MODE: booleanSchema.default(true),
   INTERNAL_API_KEY: z.string().min(1, 'INTERNAL_API_KEY is required'),
+  VERIFY_REPLIES: booleanSchema.default(false),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
