@@ -22,6 +22,26 @@ export const LLMHealthSchema = z.object({
 
 export type LLMHealth = z.infer<typeof LLMHealthSchema>;
 
+export const JobRunItemSchema = z.object({
+  id: z.string().uuid().optional(),
+  job: z.string(),
+  startedAt: z.string(),
+  finishedAt: z.string(),
+  ok: z.boolean(),
+  counts: z.record(z.unknown()).default({}),
+  error: z.string().nullable().optional(),
+  durationMs: z.number().optional(),
+});
+export type JobRunItem = z.infer<typeof JobRunItemSchema>;
+
+export const JobsHealthSchema = z.object({
+  remindersStatus: z.enum(['ok', 'overdue', 'never_run']),
+  remindersLastRunAt: z.string().nullable().optional(),
+  remindersOverdue: z.boolean(),
+  recentRuns: z.array(JobRunItemSchema).default([]),
+});
+export type JobsHealth = z.infer<typeof JobsHealthSchema>;
+
 export const HealthCheckResponseSchema = z.object({
   status: z.enum(['ok', 'degraded', 'error']),
   timestamp: z.string().datetime(),
@@ -30,6 +50,7 @@ export const HealthCheckResponseSchema = z.object({
   version: z.string(),
   database: DatabaseHealthSchema,
   llm: LLMHealthSchema.optional(),
+  jobs: JobsHealthSchema.optional(),
 });
 
 export type HealthCheckResponse = z.infer<typeof HealthCheckResponseSchema>;

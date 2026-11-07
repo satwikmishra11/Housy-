@@ -106,6 +106,35 @@ export class ChatSessionRepository {
       [sessionId, responseAt.toISOString()],
     );
   }
+
+  /**
+   * Cleans up stale anonymous chat sessions that have been inactive for over 24 hours
+   * without converting to a lead. Marks sessions 'abandoned' and associated conversations 'closed'.
+   */
+  async cleanupStaleSessions(hours = 24): Promise<{ cleanedCount: number }> {
+    const res = await query<{ count: string }>(
+      `WITH stale AS (
+         UPDATE chat_sessions
+         SET status = 'abandoned', updated_at = NOW()
+         WHERE status = 'active'
+           AND lead_id IS NULL
+           AND updated_at < NOW() - ($1 || ' hours')::INTERVAL
+         RETURNING id
+       ),
+       closed_convs AS (
+         UPDATE conversations c
+         SET status = 'closed', updated_at = NOW()
+         FROM stale s
+         WHERE c.chat_session_id = s.id
+           AND c.status = 'ai'
+         RETURNING c.id
+       )
+       SELECT COUNT(*)::text as count FROM stale`,
+      [hours],
+    );
+    const count = parseInt(res.rows[0]?.count ?? '0', 10);
+    return { cleanedCount: count };
+  }
 }
 
 export const chatSessionRepository = new ChatSessionRepository();

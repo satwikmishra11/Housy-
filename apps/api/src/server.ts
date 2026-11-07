@@ -2,9 +2,8 @@ import { app } from './app.js';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { closePool } from './db/index.js';
-import { runSlotGeneration } from './jobs/slot-generator.job.js';
+import { jobsService } from './services/jobs.service.js';
 import { reminderJob } from './jobs/reminder.job.js';
-import { slotRepository } from './repositories/slot.repository.js';
 
 let server: ReturnType<typeof app.listen> | undefined;
 
@@ -19,13 +18,13 @@ if (!process.env.VERCEL && !process.env.VERCEL_ENV && !process.env.AWS_LAMBDA_FU
       `Housy API server running on port ${config.PORT}`,
     );
 
-    // Run initial slot generation on startup asynchronously
-    if (config.NODE_ENV !== 'test') {
-      runSlotGeneration(slotRepository, 21).catch((err) => {
-        logger.warn({ err }, 'Initial slot generation skipped/failed on startup');
-      });
+    // Run initial background jobs (slot top-up to 28 days, reminders, etc.) on startup asynchronously
+    jobsService.runAllJobs().catch((err) => {
+      logger.warn({ err }, 'Initial background jobs run skipped/failed on startup');
+    });
 
-      // Run reminder worker every minute
+    if (config.NODE_ENV !== 'test') {
+      // Run reminder worker every minute in daemonized environments
       const reminderInterval = setInterval(() => {
         reminderJob.execute().catch((err) => {
           logger.warn({ err }, 'Periodic reminder job execution error');

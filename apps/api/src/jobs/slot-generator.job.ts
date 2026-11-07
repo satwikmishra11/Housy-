@@ -5,7 +5,7 @@ import { logger } from '../utils/logger.js';
 
 export async function runSlotGeneration(
   slotRepo: SlotRepository = slotRepository,
-  days = 21,
+  days = 28,
   fromDate: Date | string = new Date(),
 ): Promise<number> {
   const rules = await slotRepo.getAvailabilityRules();
