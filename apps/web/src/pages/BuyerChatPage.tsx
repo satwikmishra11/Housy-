@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Send,
@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Sparkles,
   UserCheck,
+  Lock,
 } from 'lucide-react';
 import type { LeadSource, ChatLanguage } from '@housy/shared';
 import {
@@ -572,9 +573,13 @@ export const BuyerChatPage: React.FC = () => {
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           {/* Brand & Project Info */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-base shadow-sm select-none flex-shrink-0">
+            <Link
+              to="/"
+              className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-base shadow-sm select-none flex-shrink-0 hover:opacity-90 transition-opacity"
+              title="Return to Home"
+            >
               H
-            </div>
+            </Link>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-ink text-sm sm:text-base leading-none truncate">
@@ -599,7 +604,7 @@ export const BuyerChatPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Controls: Language Switcher & Persistent "Talk to a Person" Button */}
+          {/* Controls: Language Switcher, Staff Link & Persistent "Talk to a Person" Button */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Language Selector */}
             <div className="inline-flex rounded-lg border border-hairline bg-surface p-0.5">
@@ -618,6 +623,16 @@ export const BuyerChatPage: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Staff Portal Link */}
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink bg-surface border border-hairline hover:bg-background transition-colors"
+              title="Staff Workspace Sign In"
+            >
+              <Lock className="w-3.5 h-3.5 text-muted" />
+              <span className="hidden sm:inline">Staff</span>
+            </Link>
 
             {/* Always Visible "Talk to a person" Button */}
             <Button

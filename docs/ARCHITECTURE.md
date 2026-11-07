@@ -184,6 +184,15 @@ The client brief values clean, minimal, and premium design fitting ₹65L – �
 - **`BuyerLayout`**: Centered single-column container (`max-w-2xl`), top navigation bar with language switcher, and regulatory footer displaying GujRERA registration (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP privacy notice.
 - **`StaffLayout`**: Desktop persistent sidebar with developer branding, active role badge, navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Handoffs`), authenticated user profile, and responsive drawer navigation on mobile viewports.
 
+### Routing & Public Entrypoints
+- **`/` (Root Route)**: Evaluates user authentication and inbound attribution:
+  - Unauthenticated visitors without query parameters land on the **`LandingPage`**, featuring Company A's portfolio, dual entry portals (Buyer AI Chat vs. Staff Workspace), and 1-click demo logins.
+  - Inbound marketing traffic with attribution (`?src=portal|social|website|hoarding`) routes directly to **`BuyerChatPage`** to preserve acquisition conversions.
+  - Authenticated staff visiting `/` are automatically redirected to **`/leads`**.
+- **`/chat`**: Multilingual AI Residence Advisor chat page with top-bar navigation back to Home (`/`) and a direct link to Staff Sign In (`/login`).
+- **`/login`**: Staff Workspace portal with back-to-home navigation (`/`), demo account quick-fill buttons, and cross-navigation to the Buyer AI Chat (`/chat`).
+- **`/landing`**: Explicit direct route to the Landing Page.
+
 ### Three-State Data Rule
 Every list screen, dashboard tile, or data-fetching view strictly handles three distinct states:
 1. **Loading State**: Pulse skeletons mimicking the target layout.

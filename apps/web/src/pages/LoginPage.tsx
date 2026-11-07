@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/Card.js';
 import { Input } from '../components/Input.js';
 import { Button } from '../components/Button.js';
-import { Lock, Mail, Building2, Shield, User } from 'lucide-react';
+import { Lock, Mail, Building2, Shield, User, ArrowLeft, ArrowRight } from 'lucide-react';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.js';
 
 export const LoginPage: React.FC = () => {
@@ -17,7 +17,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/leads';
 
   // If already authenticated, redirect
   React.useEffect(() => {
@@ -57,13 +57,37 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col justify-between p-4 sm:p-6 antialiased">
       {/* Top Header */}
       <header className="flex items-center justify-between max-w-5xl mx-auto w-full py-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-base shadow-subtle">
-            H
-          </div>
-          <span className="font-semibold text-ink text-sm tracking-tight">Housy</span>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            title="Return to Home"
+          >
+            <div className="w-8 h-8 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-base shadow-subtle">
+              H
+            </div>
+            <span className="font-semibold text-ink text-sm tracking-tight">Housy</span>
+          </Link>
+          <span className="text-muted/40">·</span>
+          <Link
+            to="/"
+            className="text-xs text-muted hover:text-ink transition-colors inline-flex items-center gap-1"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Back to Home</span>
+          </Link>
         </div>
-        <LanguageSwitcher />
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/chat"
+            className="text-xs font-medium text-accent hover:underline inline-flex items-center gap-1"
+          >
+            <span>Buyer AI Chat</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <LanguageSwitcher />
+        </div>
       </header>
 
       {/* Main Form Container */}
@@ -153,6 +177,17 @@ export const LoginPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Direct Link to Buyer Chat */}
+          <div className="mt-4 text-center">
+            <p className="text-xs text-muted">
+              Looking for residences or scheduling a site tour?{' '}
+              <Link to="/chat" className="text-accent font-medium hover:underline inline-flex items-center gap-0.5">
+                <span>Chat with our AI Advisor</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
 

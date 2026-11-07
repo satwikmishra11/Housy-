@@ -58,3 +58,4 @@ notificationsRouter.post('/read-all', async (req: Request, res: Response, next: 
     next(err);
   }
 });
+

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HealthPage } from './pages/HealthPage.js';
 import { StyleguidePage } from './pages/StyleguidePage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { LandingPage } from './pages/LandingPage.js';
 import { LeadsPage } from './pages/LeadsPage.js';
 import { VisitsPage } from './pages/VisitsPage.js';
 import { VisitManagePage } from './pages/VisitManagePage.js';
@@ -31,7 +32,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const RootRoute: React.FC = () => {
+export const RootRoute: React.FC = () => {
   const [searchParams] = useSearchParams();
   const hasSrc = Boolean(searchParams.get('src'));
   const { user, isLoading } = useAuth();
@@ -40,13 +41,18 @@ const RootRoute: React.FC = () => {
     return <LoadingState message="Connecting..." />;
   }
 
-  // If navigated with attribution source or unauthenticated, show Buyer Chat
-  if (hasSrc || !user) {
+  // If navigated with attribution source (e.g. ?src=portal, ?src=meta, ?src=qr), route to Buyer Chat
+  if (hasSrc) {
     return <BuyerChatPage />;
   }
 
-  // Authenticated staff default to leads list
-  return <Navigate to="/leads" replace />;
+  // Authenticated staff default to leads workspace
+  if (user) {
+    return <Navigate to="/leads" replace />;
+  }
+
+  // Direct unauthenticated visits to root land on the Landing Page
+  return <LandingPage />;
 };
 
 export const App: React.FC = () => {
@@ -59,6 +65,7 @@ export const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<RootRoute />} />
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/chat" element={<BuyerChatPage />} />
               <Route
                 path="/health"
