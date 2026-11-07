@@ -367,3 +367,39 @@ Housy adheres to a defense-in-depth, zero-trust security architecture across cli
   8. SQL injection strings across all search parameters safely handled via parameterized queries.
   9. Brute-force login attempts locked out with `429 Too Many Requests`.
   10. Stale JWT roles dynamically blocked when the database role is demoted or deactivated.
+
+---
+
+## 14. Buyer Experience & Staff Operational Workspaces
+
+### 1. Buyer Showcase Landing & Portfolio Presentation (`/projects/:slug`)
+- **Branded Elevation Art**: High-fidelity architectural elevation heroes rendered entirely via SVG and CSS gradients, eliminating stock photography.
+- **Price Range Integrity**: Prices displayed exclusively as ranges derived directly from verified entries in the project fact sheet, avoiding speculative figures.
+- **Regulatory Transparency & Accessibility**: Permanent display of Gujarat RERA registration numbers, location links via Google Maps, amenities grids, and sticky "Chat with our advisor" / "Book a visit" triggers that persist inbound attribution (`?src`).
+- **Trilingual Localization (`en`, `hi`, `gu`)**: Full localization across buyer chat, quick reply chips, slot pickers, and visit management pages. The language state remains synchronized across components, ensuring prompt recommendations and UI copy match the user's selected language.
+- **Static Pages & Error Resilience**: Public `/privacy` notice adhering to DPDP 2023 specifications, `/terms` of service, responsive `NotFoundPage` (404), and top-level React `ErrorBoundary`.
+
+### 2. Executive "Today" Workspace (`/today`)
+A dedicated priority-driven operational workspace tailored for sales executives:
+1. **Visits Scheduled Today**: Physical site tours booked for the current date in Asia/Kolkata timezone, complete with buyer contact details and direct phone call triggers.
+2. **Visits Awaiting Outcome**: Completed visits requiring outcome logging (`visited`, `deal_closed`, `lost`, `no_show`) with one-click action buttons.
+3. **New Handoffs Queue**: Live buyer handoffs awaiting executive claim, with one-click "Accept Handoff" action.
+4. **Unanswered Inquiries (>2h SLA)**: High-priority leads awaiting first response exceeding 2 hours, with one-click deep link to the lead detail drawer.
+
+### 3. Lead Detail Drawer & Intelligent Next Best Action (`LeadDetailDrawer.tsx`)
+- **Deterministic Next Best Action Engine**: Recommends immediate operational tasks based on lead stage, DPDP consent, and visit status (e.g. "Record Visit Outcome", "Confirm Appointment", "Initiate First Outreach", "Secure Consent").
+- **Direct Status Management**: Allows staff to adjust lead lifecycle stage (`new`, `contacted`, `qualified`, `visit_booked`, `visited`, `negotiating`, `won`, `lost`, `disqualified`) via `PATCH /api/leads/:id/status` with centralized audit logging.
+- **DPDP Consent Badge**: Explicit visual indicator of buyer consent state (`opted_in`, `pending`, `withdrawn`).
+- **Persistent Staff Notes History**: Reverse-chronological feed of staff notes backed by the `lead_notes` table (`POST /api/leads/:id/notes`), recording author identity, timestamp, and note content.
+- **Multi-Touchpoint Attribution Timeline**: Comprehensive chronological ledger showing first touch, channel transitions, chat sessions, handoffs, and booking events.
+
+### 4. Sales Head "Daily Review" Cockpit (`/daily-review` & `/dashboard`)
+- **Four Critical Review Queues**: Unreviewed flagged chats, unanswered buyer questions with direct links to the Fact Sheet Editor, unaccepted handoff escalations exceeding 15 minutes, and unreached leads exceeding the 48-hour SLA.
+- **One-Click RFC 4180 CSV Export**: Dedicated endpoint `GET /api/admin/daily-review/export-csv` streaming fully compliant CSV exports with proper escaping and quote delimiters.
+- **Cockpit Summary Banner**: Real-time KPI banner on the primary Sales Dashboard alerting leadership to outstanding operational items.
+
+### 5. Automated Accessibility Standards & Verification
+- **Axe-Core Automated Testing (`e2e/accessibility.spec.ts`)**: Full WCAG 2.1 AA audit suite executing across Mobile (375x667), Tablet (768x1024), and Desktop (1280x800) viewports.
+- **WCAG 2.5.3 (Label in Name)**: Button accessible names strictly incorporate all visible text labels.
+- **Responsive Discernible Link Names**: Responsive links with icon-only mobile presentations maintain explicit `aria-label` attributes.
+- **Live Regions & Error Boundaries**: Screen reader live regions announce incoming assistant responses, ensuring full accessibility for assistive technology users.
