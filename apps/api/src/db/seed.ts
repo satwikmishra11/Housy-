@@ -72,20 +72,20 @@ export async function runSeed(): Promise<void> {
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   const userRows = [
-    { name: 'Harshil Mehta', email: 'harshil.mehta@example.com', role: 'sales_head', phone: '+919000000001' },
-    { name: 'Amit Shah', email: 'amit.shah@example.com', role: 'executive', phone: '+919000000002' },
-    { name: 'Priya Patel', email: 'priya.patel@example.com', role: 'executive', phone: '+919000000003' },
-    { name: 'Rohan Desai', email: 'rohan.desai@example.com', role: 'executive', phone: '+919000000004' },
-    { name: 'Sneha Trivedi', email: 'sneha.trivedi@example.com', role: 'executive', phone: '+919000000005' },
-    { name: 'Darshan Dave', email: 'darshan.dave@example.com', role: 'executive', phone: '+919000000006' },
+    { name: 'Harshil Mehta', email: 'harshil.mehta@example.com', role: 'sales_head', phone: '+919000000001', languages: ['en', 'hi', 'gu'] },
+    { name: 'Amit Shah', email: 'amit.shah@example.com', role: 'executive', phone: '+919000000002', languages: ['en', 'hi', 'gu'] },
+    { name: 'Priya Patel', email: 'priya.patel@example.com', role: 'executive', phone: '+919000000003', languages: ['en', 'gu'] },
+    { name: 'Rohan Desai', email: 'rohan.desai@example.com', role: 'executive', phone: '+919000000004', languages: ['en', 'hi'] },
+    { name: 'Sneha Trivedi', email: 'sneha.trivedi@example.com', role: 'executive', phone: '+919000000005', languages: ['en', 'hi', 'gu'] },
+    { name: 'Darshan Dave', email: 'darshan.dave@example.com', role: 'executive', phone: '+919000000006', languages: ['en', 'gu'] },
   ];
 
   const userMap = new Map<string, string>();
   for (const u of userRows) {
     const res = await query<{ id: string }>(
-      `INSERT INTO users (name, email, password_hash, role, phone, active)
-       VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
-      [u.name, u.email, passwordHash, u.role, u.phone],
+      `INSERT INTO users (name, email, password_hash, role, phone, languages, active)
+       VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
+      [u.name, u.email, passwordHash, u.role, u.phone, u.languages],
     );
     userMap.set(u.email, res.rows[0]!.id);
   }

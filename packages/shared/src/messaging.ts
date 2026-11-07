@@ -45,6 +45,9 @@ export type HandoffSentiment = z.infer<typeof HandoffSentimentSchema>;
 export const HandoffStatusSchema = z.enum(['new', 'accepted', 'done']);
 export type HandoffStatus = z.infer<typeof HandoffStatusSchema>;
 
+export const HandoffPrioritySchema = z.enum(['normal', 'high', 'urgent']);
+export type HandoffPriority = z.infer<typeof HandoffPrioritySchema>;
+
 /**
  * Strict JSON schema for AI-generated buyer lead handoff summaries.
  */
@@ -73,6 +76,8 @@ export const HandoffItemSchema = z.object({
   executiveId: z.string().uuid(),
   executiveName: z.string(),
   executivePhone: z.string().nullable().optional(),
+  priority: HandoffPrioritySchema.default('normal'),
+  isEscalated: z.boolean().default(false),
   reason: z.string(),
   summary: HandoffSummarySchema,
   status: HandoffStatusSchema,
@@ -89,7 +94,40 @@ export const HandoffListResponseSchema = z.object({
 export type HandoffListResponse = z.infer<typeof HandoffListResponseSchema>;
 
 // ==========================================
-// 3. FLAGGED CONVERSATION REVIEW SCHEMAS
+// 3. STAFF NOTIFICATION SCHEMAS
+// ==========================================
+
+export const NotificationTypeSchema = z.enum([
+  'handoff',
+  'escalation',
+  'visit_awaiting_outcome',
+  'system',
+]);
+export type NotificationType = z.infer<typeof NotificationTypeSchema>;
+
+export const StaffNotificationSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  type: NotificationTypeSchema,
+  title: z.string(),
+  message: z.string(),
+  link: z.string().nullable().optional(),
+  isRead: z.boolean(),
+  metadata: z.record(z.unknown()).default({}),
+  createdAt: z.string(),
+  readAt: z.string().nullable().optional(),
+});
+export type StaffNotification = z.infer<typeof StaffNotificationSchema>;
+
+export const NotificationListResponseSchema = z.object({
+  success: z.boolean(),
+  notifications: z.array(StaffNotificationSchema),
+  unreadCount: z.number().int().nonnegative(),
+});
+export type NotificationListResponse = z.infer<typeof NotificationListResponseSchema>;
+
+// ==========================================
+// 4. FLAGGED CONVERSATION REVIEW SCHEMAS
 // ==========================================
 
 export const FlaggedConversationItemSchema = z.object({
