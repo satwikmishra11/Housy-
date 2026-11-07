@@ -15,9 +15,11 @@ import { DashboardPage } from './pages/DashboardPage.js';
 import { BuyerChatPage } from './pages/BuyerChatPage.js';
 import { HandoffsPage } from './pages/HandoffsPage.js';
 import { FlaggedChatsPage } from './pages/FlaggedChatsPage.js';
+import { DailyReviewPage } from './pages/DailyReviewPage.js';
 import { OutboxPage } from './pages/OutboxPage.js';
 import { DemoPage } from './pages/DemoPage.js';
 import { ProjectShowcasePage } from './pages/ProjectShowcasePage.js';
+import { ExecutiveTodayPage } from './pages/ExecutiveTodayPage.js';
 import { PrivacyPage } from './pages/PrivacyPage.js';
 import { TermsPage } from './pages/TermsPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
@@ -85,6 +87,14 @@ export const App: React.FC = () => {
                   }
                 />
                 <Route
+                  path="/today"
+                  element={
+                    <ProtectedRoute>
+                      <ExecutiveTodayPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/leads"
                   element={
                     <ProtectedRoute>
@@ -97,6 +107,14 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute>
                       <VisitsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/daily-review"
+                  element={
+                    <ProtectedRoute allowedRoles={['sales_head']}>
+                      <DailyReviewPage />
                     </ProtectedRoute>
                   }
                 />

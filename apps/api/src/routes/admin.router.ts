@@ -31,6 +31,7 @@ adminRouter.use('/blackout-dates', ...requireSalesHead);
 adminRouter.use('/admin/slots', ...requireSalesHead);
 adminRouter.use('/admin/executives', ...requireSalesHead);
 adminRouter.use('/admin/flagged-chats', ...requireSalesHead);
+adminRouter.use('/admin/daily-review', ...requireSalesHead);
 adminRouter.use('/ad-spend', ...requireSalesHead);
 
 const UuidParamSchema = z.object({
@@ -711,6 +712,233 @@ adminRouter.post(
         success: true,
         message: 'Flagged chat marked as reviewed',
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// 6. SALES HEAD DAILY REVIEW COCKPIT
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/admin/daily-review
+ * Sales Head daily cockpit items:
+ * 1. Unreviewed flagged chats
+ * 2. Unresolved unanswered questions (with direct link to fact editor)
+ * 3. Un-accepted handoffs past 15 min (escalations)
+ * 4. Unreached leads breaching 48h SLA
+ */
+adminRouter.get(
+  '/admin/daily-review',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // 1. Unreviewed flagged chats
+      const flaggedRes = await query<{
+        id: string;
+        lead_id: string;
+        lead_public_id: string;
+        lead_name: string;
+        language: string;
+        flag_reasons: string[];
+        created_at: string;
+      }>(
+        `SELECT c.id, c.lead_id, l.public_id AS lead_public_id, l.name AS lead_name,
+                c.language, c.flag_reasons, c.created_at::text
+         FROM conversations c
+         JOIN leads l ON c.lead_id = l.id
+         WHERE c.flagged = true AND c.reviewed_at IS NULL
+         ORDER BY c.created_at DESC`,
+      );
+
+      // 2. Unanswered buyer questions
+      const unansweredRes = await query<{
+        id: string;
+        question: string;
+        buyer_language: string;
+        project_name: string | null;
+        created_at: string;
+        status: string;
+      }>(
+        `SELECT q.id, q.question, q.buyer_language, p.name AS project_name, q.created_at::text, q.status
+         FROM unanswered_questions q
+         LEFT JOIN projects p ON q.project_id = p.id
+         WHERE q.status = 'unresolved'
+         ORDER BY q.created_at DESC`,
+      );
+
+      // 3. Un-accepted handoffs past 15 minutes (escalated)
+      const handoffsRes = await query<{
+        id: string;
+        conversation_id: string;
+        lead_id: string;
+        lead_name: string;
+        executive_name: string | null;
+        reason: string;
+        priority: string;
+        created_at: string;
+        minutes_waiting: number;
+      }>(
+        `SELECT h.id, h.conversation_id, l.id AS lead_id, l.name AS lead_name,
+                u.name AS executive_name, h.reason, h.priority, h.created_at::text,
+                ROUND(EXTRACT(EPOCH FROM (NOW() - h.created_at)) / 60)::int AS minutes_waiting
+         FROM handoffs h
+         JOIN leads l ON h.lead_id = l.id
+         LEFT JOIN users u ON h.executive_id = u.id
+         WHERE h.status = 'new'
+           AND (h.is_escalated = true OR h.created_at < NOW() - INTERVAL '15 minutes')
+         ORDER BY h.created_at ASC`,
+      );
+
+      // 4. Unreached leads breaching 48h SLA
+      const unreachedRes = await query<{
+        id: string;
+        public_id: string;
+        name: string;
+        phone_e164: string | null;
+        source: string;
+        project_name: string | null;
+        first_touch_at: string;
+        days_breached: number;
+      }>(
+        `SELECT l.id, l.public_id, l.name, l.phone_e164, l.source,
+                p.name AS project_name, l.first_touch_at::text,
+                ROUND(EXTRACT(EPOCH FROM (NOW() - l.first_touch_at)) / 86400)::int AS days_breached
+         FROM leads l
+         LEFT JOIN projects p ON l.project_id = p.id
+         WHERE l.first_response_at IS NULL
+           AND l.first_touch_at < NOW() - INTERVAL '48 hours'
+           AND l.consent_status != 'withdrawn'
+         ORDER BY l.first_touch_at ASC`,
+      );
+
+      const flaggedChats = flaggedRes.rows.map((r) => ({
+        id: r.id,
+        leadId: r.lead_id,
+        leadPublicId: r.lead_public_id,
+        leadName: r.lead_name,
+        language: r.language,
+        flagReasons: r.flag_reasons,
+        createdAt: r.created_at,
+      }));
+
+      const unansweredQuestions = unansweredRes.rows.map((r) => ({
+        id: r.id,
+        question: r.question,
+        buyerLanguage: r.buyer_language,
+        projectName: r.project_name,
+        createdAt: r.created_at,
+        status: r.status,
+      }));
+
+      const escalatedHandoffs = handoffsRes.rows.map((r) => ({
+        id: r.id,
+        conversationId: r.conversation_id,
+        leadId: r.lead_id,
+        leadName: r.lead_name,
+        executiveName: r.executive_name,
+        reason: r.reason,
+        priority: r.priority,
+        createdAt: r.created_at,
+        minutesWaiting: Number(r.minutes_waiting),
+      }));
+
+      const unreachedLeads = unreachedRes.rows.map((r) => ({
+        id: r.id,
+        publicId: r.public_id,
+        name: r.name,
+        phoneE164: r.phone_e164,
+        source: r.source,
+        projectName: r.project_name,
+        firstTouchAt: r.first_touch_at,
+        daysBreached: Number(r.days_breached),
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: {
+          flaggedChats,
+          unansweredQuestions,
+          escalatedHandoffs,
+          unreachedLeads,
+          counts: {
+            flaggedChats: flaggedChats.length,
+            unansweredQuestions: unansweredQuestions.length,
+            escalatedHandoffs: escalatedHandoffs.length,
+            unreachedLeads: unreachedLeads.length,
+          },
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /api/admin/daily-review/export-csv
+ * 1-click RFC 4180 CSV export of daily review queue.
+ */
+adminRouter.get(
+  '/admin/daily-review/export-csv',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const escapeCsv = (val: unknown): string => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const [flaggedRes, unansweredRes, handoffsRes, unreachedRes] = await Promise.all([
+        query<{ id: string; lead_name: string; language: string; flag_reasons: string[]; created_at: string }>(
+          `SELECT c.id, l.name AS lead_name, c.language, c.flag_reasons, c.created_at::text
+           FROM conversations c JOIN leads l ON c.lead_id = l.id
+           WHERE c.flagged = true AND c.reviewed_at IS NULL ORDER BY c.created_at DESC`,
+        ),
+        query<{ id: string; question: string; buyer_language: string; project_name: string | null; created_at: string }>(
+          `SELECT q.id, q.question, q.buyer_language, p.name AS project_name, q.created_at::text
+           FROM unanswered_questions q LEFT JOIN projects p ON q.project_id = p.id
+           WHERE q.status = 'unresolved' ORDER BY q.created_at DESC`,
+        ),
+        query<{ id: string; lead_name: string; executive_name: string | null; reason: string; priority: string; created_at: string; minutes_waiting: number }>(
+          `SELECT h.id, l.name AS lead_name, u.name AS executive_name, h.reason, h.priority, h.created_at::text,
+                  ROUND(EXTRACT(EPOCH FROM (NOW() - h.created_at)) / 60)::int AS minutes_waiting
+           FROM handoffs h JOIN leads l ON h.lead_id = l.id LEFT JOIN users u ON h.executive_id = u.id
+           WHERE h.status = 'new' AND (h.is_escalated = true OR h.created_at < NOW() - INTERVAL '15 minutes')
+           ORDER BY h.created_at ASC`,
+        ),
+        query<{ public_id: string; name: string; phone_e164: string | null; source: string; project_name: string | null; first_touch_at: string; days_breached: number }>(
+          `SELECT l.public_id, l.name, l.phone_e164, l.source, p.name AS project_name, l.first_touch_at::text,
+                  ROUND(EXTRACT(EPOCH FROM (NOW() - l.first_touch_at)) / 86400)::int AS days_breached
+           FROM leads l LEFT JOIN projects p ON l.project_id = p.id
+           WHERE l.first_response_at IS NULL AND l.first_touch_at < NOW() - INTERVAL '48 hours' AND l.consent_status != 'withdrawn'
+           ORDER BY l.first_touch_at ASC`,
+        ),
+      ]);
+
+      const header = ['Category', 'Identifier', 'Subject / Lead Name', 'Channel / Context', 'Reason / Question', 'Overdue / Waiting', 'Created At'];
+      const rows: string[][] = [header];
+
+      for (const f of flaggedRes.rows) {
+        rows.push(['Flagged Chat', f.id, f.lead_name, f.language.toUpperCase(), (f.flag_reasons || []).join(', '), 'Pending Review', f.created_at]);
+      }
+      for (const q of unansweredRes.rows) {
+        rows.push(['Unanswered Question', q.id, q.project_name || 'General Inquiry', q.buyer_language.toUpperCase(), q.question, 'Pending Fact Entry', q.created_at]);
+      }
+      for (const h of handoffsRes.rows) {
+        rows.push(['Escalated Handoff', h.id, h.lead_name, h.executive_name ? `Assigned: ${h.executive_name}` : 'Unassigned', `${h.reason} (${h.priority})`, `${h.minutes_waiting} mins`, h.created_at]);
+      }
+      for (const l of unreachedRes.rows) {
+        rows.push(['Unreached Lead', l.public_id, l.name, `${l.source} (${l.phone_e164 || 'No phone'})`, l.project_name || 'General', `${l.days_breached} days`, l.first_touch_at]);
+      }
+
+      const csvContent = rows.map((r) => r.map(escapeCsv).join(',')).join('\r\n');
+      const today = new Date().toISOString().slice(0, 10);
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="daily-review-${today}.csv"`);
+      res.status(200).send(csvContent);
     } catch (err) {
       next(err);
     }

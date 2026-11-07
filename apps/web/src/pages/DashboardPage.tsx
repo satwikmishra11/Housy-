@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   CalendarCheck,
   Settings,
+  FileText,
+  ArrowRight,
 } from 'lucide-react';
 import { StaffLayout } from '../layouts/StaffLayout.js';
 import { PageHeader } from '../components/PageHeader.js';
@@ -36,6 +38,8 @@ import { useAuth } from '../context/AuthContext.js';
 import {
   fetchDashboardMetrics,
   downloadDashboardCsv,
+  fetchDailyReviewSummary,
+  downloadDailyReviewCsv,
   fetchProjects,
   type ProjectItem,
 } from '../lib/api.js';
@@ -119,6 +123,30 @@ export const DashboardPage: React.FC = () => {
 
   const isSalesHead = user?.role === 'sales_head';
 
+  const { data: dailyReview } = useQuery({
+    queryKey: ['sales-head-daily-review'],
+    queryFn: fetchDailyReviewSummary,
+    enabled: isSalesHead,
+    staleTime: 30000,
+  });
+
+  const handleDailyReviewCsvExport = async (): Promise<void> => {
+    try {
+      await downloadDailyReviewCsv();
+      showToast({
+        type: 'success',
+        title: 'Daily Review CSV Exported',
+        message: 'Daily review queue downloaded successfully.',
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'CSV Export Failed',
+        message: err instanceof Error ? err.message : 'Unknown export error',
+      });
+    }
+  };
+
   return (
     <StaffLayout userRole={user?.role} userName={user?.name}>
       <div className="space-y-6">
@@ -167,6 +195,78 @@ export const DashboardPage: React.FC = () => {
             </div>
           }
         />
+
+        {/* Sales Head Daily Review Cockpit Banner */}
+        {isSalesHead && dailyReview && (
+          <Card className="p-4 border-hairline bg-surface/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-ink flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-accent" /> Daily Review Queue
+                </span>
+                <Badge
+                  variant={
+                    dailyReview.counts.flaggedChats + dailyReview.counts.escalatedHandoffs > 0
+                      ? 'warning'
+                      : 'neutral'
+                  }
+                >
+                  {dailyReview.counts.flaggedChats +
+                    dailyReview.counts.unansweredQuestions +
+                    dailyReview.counts.escalatedHandoffs +
+                    dailyReview.counts.unreachedLeads}{' '}
+                  items
+                </Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                <span>
+                  Flagged Chats: <strong className="text-ink">{dailyReview.counts.flaggedChats}</strong>
+                </span>
+                <span>
+                  Pending Q&A: <strong className="text-ink">{dailyReview.counts.unansweredQuestions}</strong>
+                </span>
+                <span>
+                  Escalations (&gt;15m):{' '}
+                  <strong
+                    className={
+                      dailyReview.counts.escalatedHandoffs > 0 ? 'text-danger font-semibold' : 'text-ink'
+                    }
+                  >
+                    {dailyReview.counts.escalatedHandoffs}
+                  </strong>
+                </span>
+                <span>
+                  Unreached (&gt;48h):{' '}
+                  <strong
+                    className={
+                      dailyReview.counts.unreachedLeads > 0 ? 'text-danger font-semibold' : 'text-ink'
+                    }
+                  >
+                    {dailyReview.counts.unreachedLeads}
+                  </strong>
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDailyReviewCsvExport}
+                leftIcon={<Download className="w-3.5 h-3.5" />}
+              >
+                Export Review CSV
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/daily-review')}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              >
+                Open Daily Review
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Filter Bar */}
         <Card padding="md" className="space-y-4">

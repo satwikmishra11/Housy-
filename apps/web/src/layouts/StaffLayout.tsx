@@ -83,9 +83,16 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
 
   const navItems = [
     { label: 'System Health', path: '/', icon: <Activity className="w-4 h-4" /> },
+    { label: 'Today', path: '/today', icon: <Clock className="w-4 h-4" /> },
     { label: 'Unified Leads', path: '/leads', icon: <Users className="w-4 h-4" /> },
     { label: 'Handoffs', path: '/handoffs', icon: <UserCheck className="w-4 h-4" /> },
     { label: 'Site Visits', path: '/visits', icon: <Calendar className="w-4 h-4" /> },
+    {
+      label: 'Daily Review',
+      path: '/daily-review',
+      icon: <FileText className="w-4 h-4" />,
+      adminOnly: true,
+    },
     {
       label: 'Flagged Chats',
       path: '/flagged-chats',

@@ -51,9 +51,21 @@ import {
   type StaffNotification,
   type ProjectDetail,
   type ProjectDetailResponse,
+  type LeadNote,
+  type ExecutiveTodaySummary,
+  type DailyReviewSummary,
+  type LeadStatus,
 } from '@housy/shared';
 
-export type { StaffNotification, NotificationListResponse, ProjectDetail, ProjectDetailResponse };
+export type {
+  StaffNotification,
+  NotificationListResponse,
+  ProjectDetail,
+  ProjectDetailResponse,
+  LeadNote,
+  ExecutiveTodaySummary,
+  DailyReviewSummary,
+};
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
 
@@ -303,6 +315,74 @@ export async function keepSeparateLead(leadId: string): Promise<void> {
   await apiFetch(`/api/leads/${leadId}/keep-separate`, {
     method: 'POST',
   });
+}
+
+export async function fetchLeadNotes(leadId: string): Promise<LeadNote[]> {
+  const res = await apiFetch<{ success: boolean; data: LeadNote[] }>(`/api/leads/${leadId}/notes`);
+  return res.data;
+}
+
+export async function createLeadNote(leadId: string, note: string): Promise<LeadNote> {
+  const res = await apiFetch<{ success: boolean; data: LeadNote }>(`/api/leads/${leadId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  });
+  return res.data;
+}
+
+export async function updateLeadStatus(
+  leadId: string,
+  status: LeadStatus,
+): Promise<{ id: string; status: LeadStatus }> {
+  const res = await apiFetch<{ success: boolean; data: { id: string; status: LeadStatus } }>(
+    `/api/leads/${leadId}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    },
+  );
+  return res.data;
+}
+
+export async function fetchExecutiveTodaySummary(
+  executiveId?: string,
+): Promise<ExecutiveTodaySummary> {
+  const query = executiveId ? `?executiveId=${encodeURIComponent(executiveId)}` : '';
+  const res = await apiFetch<{ success: boolean; data: ExecutiveTodaySummary }>(
+    `/api/executive/today${query}`,
+  );
+  return res.data;
+}
+
+export async function fetchDailyReviewSummary(): Promise<DailyReviewSummary> {
+  const res = await apiFetch<{ success: boolean; data: DailyReviewSummary }>(
+    '/api/admin/daily-review',
+  );
+  return res.data;
+}
+
+export async function downloadDailyReviewCsv(): Promise<void> {
+  const url = resolveApiUrl('/api/admin/daily-review/export-csv');
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      'X-Requested-With': CSRF_HEADER_VALUE,
+    },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to download daily review CSV');
+  }
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = downloadUrl;
+  const today = new Date().toISOString().slice(0, 10);
+  a.download = `daily-review-${today}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(downloadUrl);
+  document.body.removeChild(a);
 }
 
 export interface PreviewCsvResult {
