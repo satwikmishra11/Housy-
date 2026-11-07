@@ -235,3 +235,4 @@ Automated evaluation suites run 48 test cases across 6 dimensions:
 - **Multilingual Adherence**: 100% compliance across English, Hindi, and Gujarati.
 - **Deterministic Booking**: 100% executed through slot picking APIs rather than prose.
 - **SLA Under Load**: Median response latency 1.1s (well below 2-minute SLA).
+

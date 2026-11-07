@@ -197,3 +197,4 @@ When hosted on free-tier container infrastructure (such as Render or Railway idl
   - Immutable record of all administrative changes: actor user ID, action, entity type, entity ID, JSON diff, and client IP.
 - **LLM Cost & Telemetry Tracking (`llm_calls`)**:
   - Records model, latency in milliseconds, token counts (input/output), cost in USD, and fact citation density.
+

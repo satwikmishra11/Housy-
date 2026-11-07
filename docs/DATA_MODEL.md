@@ -145,3 +145,4 @@ ON leads (source, first_touch_at);
 3. `003_add_unanswered_questions.cjs`: Adds `unanswered_questions` table with resolution workflows.
 4. `004_add_idempotency_keys.cjs`: Adds idempotency indexes across touchpoints and bookings.
 5. `005_performance_indexes.cjs`: Adds targeted covering and partial indexes for dashboard aggregations and SLA tracking.
+
