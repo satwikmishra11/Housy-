@@ -20,6 +20,7 @@ export interface DueReminderRow extends QueryResultRow {
   rera_number: string;
   project_address: string;
   executive_name: string;
+  executive_phone: string | null;
 }
 
 export class ReminderService {
@@ -46,7 +47,7 @@ export class ReminderService {
               l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
               l.consent_status, l.opted_out_at,
               p.name AS project_name, p.rera_number, p.address AS project_address,
-              u.name AS executive_name
+              u.name AS executive_name, u.phone AS executive_phone
        FROM reminders r
        JOIN visit_bookings vb ON r.booking_id = vb.id
        JOIN visit_slots vs ON vb.slot_id = vs.id
@@ -117,6 +118,7 @@ export class ReminderService {
         projectName: r.project_name,
         startsAt: istTimeStr,
         executiveName: r.executive_name,
+        executivePhone: r.executive_phone || '+91 90000 00002',
         reraNumber: r.rera_number,
       };
 

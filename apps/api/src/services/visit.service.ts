@@ -221,15 +221,16 @@ export class VisitService {
         `SELECT name, rera_number FROM projects WHERE id = $1`,
         [projectId],
       );
-      const execRes = await client.query<{ name: string }>(
-        `SELECT name FROM users WHERE id = $1`,
+      const execRes = await client.query<{ name: string; phone: string | null }>(
+        `SELECT name, phone FROM users WHERE id = $1`,
         [slot.executive_id],
       );
       const projectName = projRes.rows[0]?.name || 'The Palm Residences';
       const reraNumber = projRes.rows[0]?.rera_number || 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126';
-      const executiveName = execRes.rows[0]?.name || 'Dedicated Sales Executive';
+      const executiveName = execRes.rows[0]?.name || 'Harshil Mehta';
+      const executivePhone = execRes.rows[0]?.phone || '+91 90000 00002';
 
-      const confirmationBody = `Your private residence tour for ${projectName} is confirmed for ${formatTimeInKolkata(startsAt)} with your dedicated host ${executiveName}. Sales Gallery: SG Highway, Ahmedabad. Manage your visit: /visit/${token}. RERA Reg: ${reraNumber}`;
+      const confirmationBody = `Your private residence tour for ${projectName} is confirmed for ${formatTimeInKolkata(startsAt)} with your dedicated host ${executiveName} (${executivePhone}). Sales Gallery: SG Highway, Ahmedabad. Manage your visit: /visit/${token}. RERA Reg: ${reraNumber}`;
 
       await client.query(
         `INSERT INTO outbound_messages (lead_id, channel, template_key, body, status, sent_at)

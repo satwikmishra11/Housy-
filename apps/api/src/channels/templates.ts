@@ -9,21 +9,21 @@ export interface MessageTemplate {
 export const TEMPLATES: Record<string, MessageTemplate> = {
   visit_confirmation: {
     key: 'visit_confirmation',
-    requiredVars: ['projectName', 'startsAt', 'executiveName', 'reraNumber', 'manageUrl'],
+    requiredVars: ['projectName', 'startsAt', 'executiveName', 'executivePhone', 'reraNumber', 'manageUrl'],
     render: (vars) =>
-      `Your private residence tour for ${vars.projectName} is confirmed for ${vars.startsAt} with your dedicated host ${vars.executiveName}. Sales Gallery: SG Highway, Ahmedabad. Manage your visit: ${vars.manageUrl}. RERA Reg: ${vars.reraNumber}`,
+      `Your private residence tour for ${vars.projectName} is confirmed for ${vars.startsAt} with your dedicated host ${vars.executiveName} (${vars.executivePhone}). Sales Gallery: SG Highway, Ahmedabad. Manage your visit: ${vars.manageUrl}. RERA Reg: ${vars.reraNumber}`,
   },
   reminder_24h: {
     key: 'reminder_24h',
-    requiredVars: ['projectName', 'startsAt', 'executiveName', 'reraNumber', 'manageUrl'],
+    requiredVars: ['projectName', 'startsAt', 'executiveName', 'executivePhone', 'reraNumber', 'manageUrl'],
     render: (vars) =>
-      `Reminder: Your private residence tour for ${vars.projectName} is scheduled for tomorrow at ${vars.startsAt} with ${vars.executiveName}. Sales Gallery: SG Highway, Ahmedabad. Need to reschedule? Visit: ${vars.manageUrl}. RERA Reg: ${vars.reraNumber}`,
+      `Reminder: Your private residence tour for ${vars.projectName} is scheduled for tomorrow at ${vars.startsAt} with ${vars.executiveName} (${vars.executivePhone}). Sales Gallery: SG Highway, Ahmedabad. Need to reschedule? Visit: ${vars.manageUrl}. RERA Reg: ${vars.reraNumber}`,
   },
   reminder_2h: {
     key: 'reminder_2h',
-    requiredVars: ['projectName', 'startsAt', 'executiveName', 'reraNumber', 'mapsUrl'],
+    requiredVars: ['projectName', 'startsAt', 'executiveName', 'executivePhone', 'reraNumber', 'mapsUrl'],
     render: (vars) =>
-      `Your private tour of ${vars.projectName} begins in 2 hours at ${vars.startsAt}. Your residence host ${vars.executiveName} will meet you at the Sales Gallery. Directions: ${vars.mapsUrl}. RERA Reg: ${vars.reraNumber}`,
+      `Your private tour of ${vars.projectName} begins in 2 hours at ${vars.startsAt}. Your residence host ${vars.executiveName} (${vars.executivePhone}) will meet you at the Sales Gallery. Directions: ${vars.mapsUrl}. RERA Reg: ${vars.reraNumber}`,
   },
   first_response_link: {
     key: 'first_response_link',

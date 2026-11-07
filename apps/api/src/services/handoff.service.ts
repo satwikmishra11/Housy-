@@ -10,6 +10,7 @@ import { NotFoundError, UnauthorizedError } from '../errors/AppError.js';
 import { handoffRepository, type HandoffRepository } from '../repositories/handoff.repository.js';
 import { leadRepository } from '../repositories/lead.repository.js';
 import { chatRepository } from '../repositories/chat.repository.js';
+import { notificationService } from './notification.service.js';
 import { llmService, type LLMService } from '../llm/llm.service.js';
 import { logger } from '../utils/logger.js';
 
@@ -131,12 +132,13 @@ export class HandoffService {
       summary,
     );
 
-    // 8. Generate buyer notification in the buyer's language
+    // 8. Generate buyer notification in the buyer's language with named executive and demo phone
     const lang: ChatLanguage = (lead.language as ChatLanguage) || 'en';
+    const execPhone = executive.phone || '+91 90000 00002';
     const localizedBuyerMessages: Record<ChatLanguage, string> = {
-      en: `${executive.name} from our sales team will contact you. I have connected you with our sales team.`,
-      hi: `${executive.name} हमारी सेल्स टीम से जल्द ही आपसे संपर्क करेंगे। मैंने आपकी बात हमारी सेल्स टीम से जोड़ दी है।`,
-      gu: `${executive.name} અમારી સેલ્સ ટીમમાંથી ટૂંક સમયમાં તમારો સંપર્ક કરશે. મેં તમને અમારી સેલ્સ ટીમ સાથે જોડી દીધા છે.`,
+      en: `${executive.name} (${execPhone}) from our sales team will contact you. I have connected you with our sales team.`,
+      hi: `${executive.name} (${execPhone}) हमारी सेल्स टीम से जल्द ही आपसे संपर्क करेंगे। मैंने आपकी बात हमारी सेल्स टीम से जोड़ दी है।`,
+      gu: `${executive.name} (${execPhone}) અમારી સેલ્સ ટીમમાંથી ટૂંક સમયમાં તમારો સંપર્ક કરશે. મેં તમને અમારી સેલ્સ ટીમ સાથે જોડી દીધા છે.`,
     };
     const buyerMessage = localizedBuyerMessages[lang] || localizedBuyerMessages.en;
 
@@ -152,8 +154,22 @@ export class HandoffService {
           handoffId,
           executiveId: executive.id,
           executiveName: executive.name,
+          executivePhone: execPhone,
         },
       );
+    }
+
+    // 9. Dispatch in-app notification & mirror to internal outbox
+    try {
+      await notificationService.notifyNewHandoff({
+        executiveId: executive.id,
+        leadId,
+        leadName: lead.name,
+        reason,
+        handoffId,
+      });
+    } catch (err) {
+      logger.error({ err, handoffId }, 'Failed to dispatch staff notification for handoff');
     }
 
     logger.info(
@@ -370,6 +386,38 @@ Output ONLY valid JSON.`;
       success: true,
       messageId,
     };
+  }
+
+  /**
+   * Take over live chat for a conversation.
+   */
+  async takeOverChat(
+    conversationId: string,
+    executiveId: string,
+  ): Promise<{ success: boolean; status: 'human' }> {
+    await this.handoffRepo.takeOverChat(conversationId, executiveId);
+    return { success: true, status: 'human' };
+  }
+
+  /**
+   * Hand conversation back to the AI assistant.
+   */
+  async handBackToAssistant(
+    conversationId: string,
+  ): Promise<{ success: boolean; status: 'ai' }> {
+    await this.handoffRepo.handBackToAssistant(conversationId);
+    return { success: true, status: 'ai' };
+  }
+
+  /**
+   * Escalates handoffs unaccepted for >15 minutes to Sales Head and dispatches notifications.
+   */
+  async escalateStaleHandoffs(): Promise<number> {
+    const escalated = await this.handoffRepo.escalateStaleHandoffs();
+    for (const item of escalated) {
+      await notificationService.notifySlaEscalation(item);
+    }
+    return escalated.length;
   }
 }
 

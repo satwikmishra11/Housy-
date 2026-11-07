@@ -11,6 +11,7 @@ import { outboxRouter } from './outbox.router.js';
 import { internalRouter } from './internal.router.js';
 import { demoRouter } from './demo.router.js';
 import { dashboardRouter } from './dashboard.router.js';
+import { notificationsRouter } from './notifications.router.js';
 
 export const apiRouter = Router();
 
@@ -40,6 +41,7 @@ apiRouter.use(outboxRouter);
 apiRouter.use(internalRouter);
 apiRouter.use(demoRouter);
 apiRouter.use(dashboardRouter);
+apiRouter.use('/notifications', notificationsRouter);
 
 
 

@@ -6,6 +6,7 @@ import {
   type ChatReply,
   type ChatBookPayload,
   type ChatHistoryItem,
+  type VisitDetail,
   normalizePhone,
 } from '@housy/shared';
 import { NotFoundError, ServiceUnavailableError } from '../errors/AppError.js';
@@ -14,6 +15,7 @@ import { chatRepository } from '../repositories/chat.repository.js';
 import { factService } from './fact.service.js';
 import { visitService } from './visit.service.js';
 import { handoffService } from './handoff.service.js';
+import { notificationService } from './notification.service.js';
 import { signBuyerSession } from '../auth/tokens.js';
 import {
   detectLanguage,
@@ -133,6 +135,39 @@ export class ChatService {
       'buyer',
       payload.message,
     );
+
+    // If conversation is taken over by a human executive, pause AI
+    if (conversation.status === 'human') {
+      if (lead.assigned_to) {
+        try {
+          await notificationService.notify({
+            userId: lead.assigned_to,
+            type: 'handoff',
+            title: 'New Buyer Message',
+            message: `${lead.name}: "${payload.message.slice(0, 80)}"`,
+            link: `/leads?id=${lead.id}`,
+            leadId: lead.id,
+          });
+        } catch {
+          // Non-blocking notification
+        }
+      }
+
+      const humanStatusMessages: Record<ChatLanguage, string> = {
+        en: 'Your message has been delivered to your sales executive, who will respond directly.',
+        hi: 'आपका संदेश आपके सेल्स एग्जीक्यूटिव तक पहुँचा दिया गया है, वे जल्द ही आपसे सीधे बात करेंगे।',
+        gu: 'તમારો સંદેશ તમારા સેલ્સ એક્ઝિક્યુટિવ સુધી પહોંચાડી દેવામાં આવ્યો છે, તેઓ ટૂંક સમયમાં તમારો સીધો સંપર્ક કરશે.',
+      };
+
+      return {
+        text: humanStatusMessages[targetLang] ?? humanStatusMessages.en,
+        language: targetLang,
+        confidence: 1.0,
+        citedFactIds: [],
+        conversationId: conversation.id,
+        isHandoff: true,
+      };
+    }
 
     // 2. Run Pre-Filter (detectIntent: cancel_visit | opt_out | human | negotiation | price_info | other)
     const preFilter = runPreFilter(payload.message, targetLang);
@@ -473,6 +508,9 @@ export class ChatService {
   async bookVisit(payload: ChatBookPayload): Promise<{
     success: boolean;
     bookingId?: string;
+    executiveName?: string;
+    executivePhone?: string;
+    manageToken?: string;
     message: string;
     uiAction?: 'collect_contact';
   }> {
@@ -540,10 +578,13 @@ export class ChatService {
     const minuteStr = minutes < 10 ? `0${minutes}` : String(minutes);
     const formattedTimeStr = `${formattedDate} at ${hour12}:${minuteStr} ${ampm}`;
 
+    const execName = booking.executiveName;
+    const execPhone = booking.executivePhone || '+91 90000 00002';
+
     const confirmationTemplates: Record<ChatLanguage, string> = {
-      en: `Your site visit has been confirmed for ${formattedTimeStr}. Our sales gallery team looks forward to welcoming you.`,
-      hi: `आपकी साइट विज़िट ${formattedTimeStr} के लिए सफलतापूर्वक सुनिश्चित हो गई है। हमारी टीम आपका स्वागत करने के लिए तत्पर है।`,
-      gu: `તમારી સાઇટ વિઝિટ ${formattedTimeStr} માટે સફળતાપૂર્વક કન્ફર્મ થઈ ગઈ છે. અમારી સેલ્સ ટીમ આપનું સ્વાગત કરવા માટે તત્પર છે.`,
+      en: `Your site visit has been confirmed for ${formattedTimeStr} with your host ${execName} (${execPhone}). Our sales gallery team looks forward to welcoming you.`,
+      hi: `आपकी साइट विज़िट ${formattedTimeStr} के लिए आपके होस्ट ${execName} (${execPhone}) के साथ सुनिश्चित हो गई है। हमारी टीम आपका स्वागत करने के लिए तत्पर है।`,
+      gu: `તમારી સાઇટ વિઝિટ ${formattedTimeStr} માટે તમારા હોસ્ટ ${execName} (${execPhone}) સાથે સફળતાપૂર્વક કન્ફર્મ થઈ ગઈ છે. અમારી ટીમ આપનું સ્વાગત કરવા માટે તત્પર છે.`,
     };
 
     const templateMessage =
@@ -554,7 +595,13 @@ export class ChatService {
       'assistant',
       templateMessage,
       [],
-      { bookingId: booking.id, startsAt: payload.startsAt },
+      {
+        bookingId: booking.id,
+        startsAt: payload.startsAt,
+        executiveName: execName,
+        executivePhone: execPhone,
+        manageToken: booking.token,
+      },
     );
 
     // Trigger handoff for site visit booking
@@ -567,7 +614,96 @@ export class ChatService {
     return {
       success: true,
       bookingId: booking.id,
+      executiveName: execName,
+      executivePhone: execPhone,
+      manageToken: booking.token,
       message: templateMessage,
+    };
+  }
+
+  /**
+   * Reschedules an appointment directly from chat.
+   */
+  async rescheduleVisitInChat(
+    conversationId: string,
+    bookingId: string,
+    newStartsAt: string,
+  ): Promise<{ success: boolean; message: string; visit: VisitDetail }> {
+    const conversation = await chatRepository.findConversationById(conversationId);
+    if (!conversation) {
+      throw new NotFoundError('Conversation not found');
+    }
+
+    const updated = await visitService.rescheduleVisit(bookingId, newStartsAt);
+    const dateObj = new Date(updated.startsAt);
+    const istTime = new Date(dateObj.getTime() + (5 * 60 + 30) * 60 * 1000);
+    const formattedDate = istTime.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    const hours = istTime.getUTCHours();
+    const minutes = istTime.getUTCMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    const minuteStr = minutes < 10 ? `0${minutes}` : String(minutes);
+    const formattedTimeStr = `${formattedDate} at ${hour12}:${minuteStr} ${ampm}`;
+
+    const execName = updated.executiveName;
+    const execPhone = updated.executivePhone || '+91 90000 00002';
+    const confirmationText = `Your site visit has been rescheduled to ${formattedTimeStr} with your host ${execName} (${execPhone}).`;
+
+    await chatRepository.insertMessage(
+      conversation.id,
+      'assistant',
+      confirmationText,
+      [],
+      {
+        bookingId: updated.id,
+        startsAt: updated.startsAt,
+        executiveName: execName,
+        executivePhone: execPhone,
+        manageToken: updated.token,
+        isRescheduled: true,
+      },
+    );
+
+    return {
+      success: true,
+      message: confirmationText,
+      visit: updated,
+    };
+  }
+
+  /**
+   * Cancels a visit booking directly from chat.
+   */
+  async cancelVisitInChat(
+    conversationId: string,
+    bookingId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const conversation = await chatRepository.findConversationById(conversationId);
+    if (!conversation) {
+      throw new NotFoundError('Conversation not found');
+    }
+
+    await visitService.cancelVisit(bookingId, 'Cancelled from buyer chat');
+    const cancellationText =
+      'Your site visit appointment has been cancelled. Please let me know if you would like to select another time.';
+
+    await chatRepository.insertMessage(
+      conversation.id,
+      'assistant',
+      cancellationText,
+      [],
+      { isCancelled: true },
+    );
+
+    return {
+      success: true,
+      message: cancellationText,
     };
   }
 

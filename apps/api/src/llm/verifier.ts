@@ -125,3 +125,4 @@ or
     return { supported: false, unsupportedClaims: ['Verifier evaluation failed'] };
   }
 }
+
