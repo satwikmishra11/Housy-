@@ -60,6 +60,8 @@ erDiagram
 | `ad_spend` | `UUID` | `month` (`DATE`), `source`, `amount_inr` | Monthly acquisition marketing spend tracking (₹30 Lakh/month across 4 sources). |
 | `audit_log` | `UUID` | `actor_id` (FK users, nullable), `action`, `entity_type`, `entity_id`, `changes` (`jsonb`), `ip_address` | Immutable administrative audit log tracking data modifications. |
 | `llm_calls` | `UUID` | `conversation_id`, `prompt_tokens`, `completion_tokens`, `cost_usd`, `latency_ms`, `model`, `grounded_facts_count` | AI telemetry tracking token usage, latency, and fact citation density. |
+| `handoff_events` | `UUID` | `handoff_id` (FK handoffs), `event_type` (`created`, `trigger_appended`), `reason`, `metadata` (`jsonb`), `created_at` | Append-only event history tracking repeated escalation triggers for a conversation. |
+| `staff_notifications` | `UUID` | `user_id` (FK users), `type` (`handoff`, `escalation`, `visit_awaiting_outcome`, `system`), `title`, `message`, `link`, `is_read`, `created_at` | In-app staff notifications powering the notification bell and mirrored to the outbox. |
 
 ---
 
@@ -88,6 +90,15 @@ Double-booking is eliminated at the database engine level via three interlocking
    WHERE status = 'confirmed';
    ```
    Prevents a single buyer from holding multiple conflicting active site visit appointments simultaneously.
+
+### One Open Handoff Per Conversation Invariant
+To prevent multiple redundant handoffs for the same chat conversation while preserving full audit history:
+```sql
+CREATE UNIQUE INDEX idx_handoffs_open_conversation
+ON handoffs (conversation_id)
+WHERE status IN ('new', 'accepted');
+```
+Later triggers on the conversation do not insert new handoffs; they append to `handoff_events` and elevate priority (`normal` -> `high` -> `urgent`).
 
 ### Idempotency Constraints
 - `lead_touchpoints(source, external_id)`: Unique index preventing duplicate touchpoint ingestion from external webhook replays.
@@ -143,6 +154,7 @@ ON leads (source, first_touch_at);
 1. `001_initial_schema.cjs`: Installs the `uuid-ossp` and `pg_trgm` extensions.
 2. `002_create_core_schema.cjs`: Creates the 19 core relational entities, enums, sequences, and foreign key relationships.
 3. `003_add_unanswered_questions.cjs`: Adds `unanswered_questions` table with resolution workflows.
-4. `004_add_idempotency_keys.cjs`: Adds idempotency indexes across touchpoints and bookings.
-5. `005_performance_indexes.cjs`: Adds targeted covering and partial indexes for dashboard aggregations and SLA tracking.
+4. `004_create_unanswered_questions.cjs`: Adds `unanswered_questions` table with resolution workflows.
+5. `005_add_dashboard_and_list_indexes.cjs`: Adds targeted covering and partial indexes for dashboard aggregations and SLA tracking.
+6. `006_handoff_events_languages_notifications.cjs`: Adds `users.languages text[]`, `handoffs.priority`, `handoffs.is_escalated`, partial unique index `idx_handoffs_open_conversation`, `handoff_events` table, `staff_notifications` table, and adds `internal` value to `channel_type` enum.
 

@@ -117,7 +117,13 @@ The platform deploys as a single unified Vercel project with two independent ser
 - **Idempotency**: Executes `INSERT INTO visit_slots (...) ON CONFLICT (executive_id, starts_at) DO NOTHING`.
 - **Triggers**: Executed on application startup, nightly, and immediately when an admin modifies availability rules or blackout dates.
 
-### 3. Execution Topology (Cron Options)
+### 3. Handoff SLA Escalation Routine (`HandoffEscalationJob`)
+- **Schedule**: Evaluates for unaccepted buyer handoffs in status `new` older than 15 minutes (`created_at <= NOW() - INTERVAL '15 minutes'`).
+- **Escalation**: Flags `is_escalated = true` and elevates priority to `urgent`.
+- **Alerting**: Creates a high-priority notification for the Sales Head in `staff_notifications` and mirrors the dispatch to `outbound_messages` with `channel = 'internal'`.
+- **HTTP Trigger**: `POST /api/internal/run-escalations` authenticated via `X-Internal-Key` header or query parameter `?key=`.
+
+### 4. Execution Topology (Cron Options)
 - **Long-Running Server Daemon**: `server.ts` runs an in-process interval (`setInterval(..., 60000)`) in containerized environments (Docker, Render, Railway).
 - **Serverless HTTP Cron Trigger**: `POST /api/internal/run-reminders` authenticated via `X-Internal-Key` header or query parameter `?key=`, suitable for external schedulers (e.g. GitHub Actions, AWS EventBridge, cron-job.org).
 
