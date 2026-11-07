@@ -34,6 +34,10 @@ export default defineConfig({
         PORT: '3001',
         NODE_ENV: 'test',
         LLM_PROVIDER: 'mock',
+        RATE_LIMIT_LOGIN_MAX: '1000',
+        RATE_LIMIT_LOGIN_WINDOW_MS: '60000',
+        RATE_LIMIT_GENERAL_MAX: '5000',
+        RATE_LIMIT_CHAT_MAX: '1000',
       },
     },
     {
