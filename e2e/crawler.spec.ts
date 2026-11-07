@@ -59,7 +59,7 @@ test.describe('Automated UI Screen & Control Crawler', () => {
     await expect(page.locator('button:has-text("EN")')).toHaveAttribute('aria-pressed', 'true');
 
     // Test Human Request Button in chat header
-    await page.locator('button[aria-label="Talk to a human sales executive"]').click();
+    await page.locator('button[aria-label*="Talk to a person"]').or(page.locator('button:has-text("Talk to a person")')).click();
     await expect(page.locator('text=sales team will contact you').or(page.locator('text=escalated')).first()).toBeVisible({ timeout: 15000 });
 
     // 2. Crawl Staff Login & Demo Switchers
