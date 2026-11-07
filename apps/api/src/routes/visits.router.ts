@@ -193,6 +193,32 @@ visitsRouter.post(
 );
 
 /**
+ * POST /api/visits/manage/:token/re-consent
+ * Public buyer endpoint to re-opt-in to communications and reminders.
+ */
+visitsRouter.post(
+  '/visits/manage/:token/re-consent',
+  validateRequest({ params: TokenParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params['token'] as string;
+      const payload = await verifyMagicLinkToken(token);
+      if (!payload || payload.purpose !== 'manage_visit') {
+        throw new UnauthorizedError('Invalid or expired magic link token');
+      }
+
+      await chatRepository.reConsentLead(payload.leadId, 'manage_visit');
+      res.status(200).json({
+        success: true,
+        message: 'You have been re-subscribed to automated appointment updates and reminders.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
  * GET /api/visits/my
  * Staff endpoint to list upcoming visits and visits awaiting outcome.
  */

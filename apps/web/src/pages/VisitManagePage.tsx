@@ -19,6 +19,7 @@ import {
   rescheduleVisitSlot,
   cancelVisitBooking,
   optOutVisitBooking,
+  reConsentVisitBooking,
   type ApiError,
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
@@ -150,6 +151,27 @@ export const VisitManagePage: React.FC = () => {
         type: 'error',
         title: 'Opt-Out Failed',
         message: err.message || 'Unable to process opt-out request.',
+      });
+    },
+  });
+
+  // Re-consent mutation
+  const reConsentMutation = useMutation({
+    mutationFn: () => reConsentVisitBooking(token!),
+    onSuccess: () => {
+      setHasOptedOut(false);
+      queryClient.invalidateQueries({ queryKey: ['visit-manage', token] });
+      showToast({
+        type: 'success',
+        title: 'Consent Restored',
+        message: 'You have been re-subscribed to automated appointment updates and reminders.',
+      });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Re-Consent Failed',
+        message: err.message || 'Unable to process re-consent request.',
       });
     },
   });
@@ -501,11 +523,21 @@ export const VisitManagePage: React.FC = () => {
             />
           </div>
         </Modal>
-        {/* DPDP 2023 Opt-Out Section */}
+        {/* DPDP 2023 Opt-Out & Re-consent Section */}
         <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row items-center justify-between text-xs text-muted gap-2">
-          <span>DPDP Act 2023: You can revoke messaging consent at any time.</span>
+          <span>DPDP Act 2023: You can revoke or restore messaging consent at any time.</span>
           {hasOptedOut ? (
-            <span className="text-accent font-medium">Unsubscribed from automated updates</span>
+            <div className="flex items-center gap-2">
+              <span className="text-accent font-medium">Unsubscribed from automated updates</span>
+              <button
+                type="button"
+                onClick={() => reConsentMutation.mutate()}
+                disabled={reConsentMutation.isPending}
+                className="text-primary hover:underline font-medium focus:outline-none"
+              >
+                {reConsentMutation.isPending ? 'Restoring...' : 'Re-consent'}
+              </button>
+            </div>
           ) : (
             <button
               type="button"

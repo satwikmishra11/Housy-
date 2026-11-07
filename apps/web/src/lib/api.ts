@@ -919,6 +919,18 @@ export async function optOutVisitBooking(token: string): Promise<{
   );
 }
 
+export async function reConsentVisitBooking(token: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/visits/manage/${encodeURIComponent(token)}/re-consent`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
 export async function optOutLead(leadId: string): Promise<{
   success: boolean;
   message: string;

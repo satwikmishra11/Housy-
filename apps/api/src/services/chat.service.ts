@@ -21,7 +21,9 @@ import {
   getLocalizedFallback,
   verifyPostChecks,
 } from '../llm/guardrails.js';
+import { verifyReplyClaims } from '../llm/verifier.js';
 import { runAgentLoop } from '../llm/agent-loop.js';
+import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
 export class ChatService {
@@ -132,26 +134,28 @@ export class ChatService {
       payload.message,
     );
 
-    // 2. Check Opt-Out Status
-    if (lead.opted_out_at) {
-      const optOutReply: ChatReply = {
-        text: 'You have unsubscribed from automated messages. A human representative will assist you if needed.',
-        language: targetLang,
-        confidence: 1.0,
-        citedFactIds: [],
-        conversationId: conversation.id,
-      };
-      await chatRepository.insertMessage(
-        conversation.id,
-        'assistant',
-        optOutReply.text,
-      );
-      return optOutReply;
-    }
-
-    // 3. Run Pre-Filter
+    // 2. Run Pre-Filter (detectIntent: cancel_visit | opt_out | human | negotiation | price_info | other)
     const preFilter = runPreFilter(payload.message, targetLang);
     if (preFilter.triggered) {
+      if (preFilter.type === 'cancel_visit') {
+        const reply: ChatReply = {
+          text: preFilter.responseText!,
+          language: preFilter.language ?? targetLang,
+          confidence: 1.0,
+          citedFactIds: [],
+          conversationId: conversation.id,
+          flagReasons: ['cancel_visit_requested'],
+        };
+        await chatRepository.insertMessage(
+          conversation.id,
+          'assistant',
+          reply.text,
+          [],
+          { flagReasons: ['cancel_visit_requested'] },
+        );
+        return reply;
+      }
+
       if (preFilter.type === 'opt_out') {
         await chatRepository.optOutLead(lead.id);
         const reply: ChatReply = {
@@ -185,6 +189,14 @@ export class ChatService {
           isHandoff: true,
           flagReasons: ['human_requested'],
         };
+        // Persist human escalation reply (Requirement F)
+        await chatRepository.insertMessage(
+          conversation.id,
+          'assistant',
+          reply.text,
+          [],
+          { isHandoff: true, flagReasons: ['human_requested'] },
+        );
         return reply;
       }
 
@@ -210,11 +222,51 @@ export class ChatService {
       }
     }
 
-    // 4. Retrieve Active Fact Sheet
+    // 3. Retrieve Active Fact Sheet
     const activeFacts = await factService.listFacts({
       status: 'active',
       projectId: lead.project_id ?? undefined,
     });
+
+    // 4. Strict Price-Info routing: if buyer enquired for pricing, require authorized price fact
+    if (preFilter.intent === 'price_info') {
+      const hasPriceFact = activeFacts.some(
+        (f) =>
+          f.category === 'pricing' ||
+          /\b(price|pricing|cost|rate|rates|lakh|lac|crore|cr|₹)\b/i.test(`${f.title} ${f.value}`),
+      );
+
+      if (!hasPriceFact) {
+        const fallbackText = getLocalizedFallback(targetLang);
+        await chatRepository.recordUnansweredQuestion(
+          conversation.id,
+          payload.message,
+          targetLang,
+        );
+        await chatRepository.flagConversation(conversation.id, ['missing_fact', 'no_price_fact']);
+        await handoffService.createHandoff(
+          lead.id,
+          'Buyer price enquiry but no authorized price-range fact exists',
+          { conversationId: conversation.id },
+        );
+        await chatRepository.insertMessage(
+          conversation.id,
+          'assistant',
+          fallbackText,
+          [],
+          { isFallback: true, reason: 'no_price_fact' },
+        );
+        return {
+          text: fallbackText,
+          language: targetLang,
+          confidence: 0.5,
+          citedFactIds: [],
+          conversationId: conversation.id,
+          isHandoff: true,
+          flagReasons: ['missing_fact', 'no_price_fact'],
+        };
+      }
+    }
 
     // 5. Retrieve conversation history
     const messageHistory = await chatRepository.getMessages(conversation.id);
@@ -321,7 +373,50 @@ export class ChatService {
       };
     }
 
-    // 9. Persist successful reply
+    // 9. Independent claim verification behind VERIFY_REPLIES=true
+    if (config.VERIFY_REPLIES || process.env.VERIFY_REPLIES === 'true') {
+      const verifierResult = await verifyReplyClaims({
+        replyText: reply.text,
+        citedFacts: activeFacts.filter((f) => reply.cited_fact_ids.includes(f.id)),
+        conversationId: conversation.id,
+      });
+
+      if (!verifierResult.supported) {
+        const fallbackText = getLocalizedFallback(targetLang);
+        await chatRepository.recordUnansweredQuestion(
+          conversation.id,
+          payload.message,
+          targetLang,
+        );
+        await chatRepository.flagConversation(conversation.id, [
+          'unsupported_claim',
+          'grounding_failed',
+        ]);
+        await handoffService.createHandoff(
+          lead.id,
+          `Claim verification rejected: ${verifierResult.unsupportedClaims.join(', ')}`,
+          { conversationId: conversation.id },
+        );
+        await chatRepository.insertMessage(
+          conversation.id,
+          'assistant',
+          fallbackText,
+          [],
+          { isFallback: true, verifierClaims: verifierResult.unsupportedClaims },
+        );
+        return {
+          text: fallbackText,
+          language: targetLang,
+          confidence: 0.5,
+          citedFactIds: [],
+          conversationId: conversation.id,
+          isHandoff: true,
+          flagReasons: ['unsupported_claim', 'grounding_failed'],
+        };
+      }
+    }
+
+    // 10. Persist successful reply
     await chatRepository.insertMessage(
       conversation.id,
       'assistant',
@@ -415,18 +510,9 @@ export class ChatService {
       });
     }
 
-    // Record consent if explicitly granted
+    // Record consent if explicitly granted (restores consent and clears opt-out if previously opted out)
     if (payload.consent === true) {
-      await chatRepository.recordConsent(
-        lead.id,
-        'site_visit_booking',
-        true,
-        'v1.0',
-        'web_chat',
-      );
-      await chatRepository.updateLeadProfile(lead.id, {
-        consentStatus: 'granted',
-      });
+      await chatRepository.reConsentLead(lead.id, 'web_chat');
     }
 
     // Execute booking via visitService

@@ -290,6 +290,26 @@ export class ChatRepository {
   }
 
   /**
+   * Re-opt-in a lead who previously opted out, clearing opted_out_at and setting consent to granted.
+   */
+  async reConsentLead(leadId: string, channel: string = 'web_chat'): Promise<void> {
+    await query(
+      `UPDATE leads
+       SET opted_out_at = NULL,
+           consent_status = 'granted',
+           last_activity_at = NOW()
+       WHERE id = $1`,
+      [leadId],
+    );
+
+    await query(
+      `INSERT INTO consents (lead_id, purpose, granted, notice_version, channel)
+       VALUES ($1, 'communication', true, 'dpdp_v1', $2)`,
+      [leadId, channel],
+    );
+  }
+
+  /**
    * Set first response timestamp if not already set.
    */
   async setFirstResponseAt(leadId: string): Promise<void> {
