@@ -182,6 +182,14 @@ visitsRouter.post(
       }
 
       await chatRepository.optOutLead(payload.leadId);
+
+      // Audit log the buyer opt-out request
+      await query(
+        `INSERT INTO audit_log (actor_id, action, entity, entity_id, diff, at)
+         VALUES (NULL, 'opt_out', 'lead', $1, $2, NOW())`,
+        [payload.leadId, JSON.stringify({ reason: 'Buyer self-service magic link opt-out' })],
+      );
+
       res.status(200).json({
         success: true,
         message: 'You have been unsubscribed and all appointment reminders are cancelled.',

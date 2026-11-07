@@ -442,14 +442,21 @@ export class ChatService {
         lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
         conversation.lead_id = lead.id;
       }
-      const fallbackText = getLocalizedFallback(targetLang);
+      const isBudget = loopResult.reason?.includes('budget');
+      const fallbackText = isBudget
+        ? targetLang === 'hi'
+          ? 'इस बातचीत सत्र के लिए अधिकतम संदेश सीमा पूरी हो गई है। हमारी बिक्री टीम के एक प्रतिनिधि को आपको सीधे सहायता प्रदान करने के लिए सूचित कर दिया गया है।'
+          : targetLang === 'gu'
+            ? 'આ વાતચીત સત્ર માટે મહત્તમ સંદેશ મર્યાદા પૂરી થઈ ગઈ છે. અમારા વેચાણ પ્રતિનિધિને તમારી સીધી સહાય માટે જાણ કરવામાં આવી છે.'
+            : 'You have reached the maximum message limit for this conversation session. A sales executive has been notified to assist you directly.'
+        : getLocalizedFallback(targetLang);
       await chatRepository.recordUnansweredQuestion(
         conversation.id,
         payload.message,
         targetLang,
       );
       await chatRepository.flagConversation(conversation.id, [
-        'missing_fact',
+        isBudget ? 'llm_budget_reached' : 'missing_fact',
         loopResult.reason,
       ]);
       await handoffService.createHandoff(

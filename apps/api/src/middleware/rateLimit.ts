@@ -53,6 +53,23 @@ export const loginRateLimiter = rateLimit({
 });
 
 /**
+ * Dedicated rate limiter for /chat/start to prevent conversation creation abuse.
+ * Limit: 10 starts per hour per IP.
+ */
+export const chatStartRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test' && !process.env.ENFORCE_RATE_LIMIT,
+  validate: { keyGeneratorIpFallback: false },
+  keyGenerator: (req: Request): string => req.ip || req.socket.remoteAddress || 'unknown-ip',
+  handler: createRateLimitHandler(
+    'Chat start rate limit exceeded. You may only initiate up to 10 chat sessions per hour.',
+  ),
+});
+
+/**
  * Chat assistant rate limiter applied per IP and per buyer session.
  */
 export const chatRateLimiter = rateLimit({

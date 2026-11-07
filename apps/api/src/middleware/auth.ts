@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { UnauthorizedError, ForbiddenError } from '../errors/index.js';
 import { verifyStaffToken } from '../auth/tokens.js';
+import { query } from '../db/index.js';
 import type { UserRole } from '@housy/shared';
 
 /**
@@ -44,20 +45,36 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
  * Middleware factory requiring the authenticated staff member to possess one of the allowed roles.
  */
 export function requireRole(...allowedRoles: UserRole[]) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       return next(new UnauthorizedError('Authentication required'));
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(
-        new ForbiddenError(
-          `Insufficient permissions: required role '${allowedRoles.join("' or '")}', found '${req.user.role}'`,
-        ),
+    try {
+      const res = await query<{ role: UserRole; active: boolean }>(
+        `SELECT role, active FROM users WHERE id = $1`,
+        [req.user.id],
       );
-    }
 
-    next();
+      if (res.rows.length === 0 || !res.rows[0]?.active) {
+        return next(new ForbiddenError('User account not found or deactivated'));
+      }
+
+      const freshRole = res.rows[0].role;
+      req.user.role = freshRole;
+
+      if (!allowedRoles.includes(freshRole)) {
+        return next(
+          new ForbiddenError(
+            `Insufficient permissions: required role '${allowedRoles.join("' or '")}', found '${freshRole}'`,
+          ),
+        );
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }
 

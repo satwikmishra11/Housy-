@@ -135,6 +135,34 @@ export class ChatSessionRepository {
     const count = parseInt(res.rows[0]?.count ?? '0', 10);
     return { cleanedCount: count };
   }
+
+  /**
+   * Data retention: Anonymizes chat sessions older than specified days (default 90).
+   * Redacts any residual conversation messages and marks session status as 'anonymized'.
+   */
+  async anonymizeOldSessions(retentionDays = 90): Promise<{ anonymizedCount: number }> {
+    const res = await query<{ count: string }>(
+      `WITH anonymized_sessions AS (
+         UPDATE chat_sessions
+         SET status = 'anonymized', updated_at = NOW()
+         WHERE created_at < NOW() - ($1 || ' days')::INTERVAL
+           AND status != 'anonymized'
+         RETURNING id
+       ),
+       anonymized_messages AS (
+         UPDATE messages m
+         SET content = '[DATA_RETENTION_ANONYMIZED]'
+         FROM conversations c
+         JOIN anonymized_sessions a ON c.chat_session_id = a.id
+         WHERE m.conversation_id = c.id
+         RETURNING m.id
+       )
+       SELECT COUNT(*)::text as count FROM anonymized_sessions`,
+      [retentionDays],
+    );
+    const count = parseInt(res.rows[0]?.count ?? '0', 10);
+    return { anonymizedCount: count };
+  }
 }
 
 export const chatSessionRepository = new ChatSessionRepository();

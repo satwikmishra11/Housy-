@@ -209,6 +209,24 @@ export class LLMService {
       throw new Error(`LLM daily message cap of ${config.LLM_DAILY_MESSAGE_CAP} reached`);
     }
 
+    // 2. Check per-conversation call budget (max 30 calls per conversation)
+    const CONVERSATION_BUDGET = 30;
+    if (conversationId) {
+      const convCalls = await llmCallRepository.getCallCountForConversation(conversationId);
+      if (convCalls >= CONVERSATION_BUDGET) {
+        await llmCallRepository.logCall({
+          conversationId,
+          provider: this.providerName,
+          model: this.modelName,
+          latencyMs: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          outcome: 'budget_exceeded',
+        });
+        throw new Error(`LLM conversation call budget of ${CONVERSATION_BUDGET} reached`);
+      }
+    }
+
     const timeoutMs = config.LLM_TIMEOUT_MS;
     let attempt = 0;
     let lastError: unknown;

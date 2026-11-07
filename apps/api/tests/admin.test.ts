@@ -25,7 +25,7 @@ describe("Sales Head Admin Area: Fact Sheet, Slot Rules, Spend & RBAC", () => {
       email: string;
       role: 'executive' | 'sales_head';
       phone: string | null;
-    }>(`SELECT id, name, email, role, phone FROM users ORDER BY email`);
+    }>(`SELECT id, name, email, role, phone FROM users WHERE active = true ORDER BY email`);
 
     const headDb = usersRes.rows.find((u) => u.role === 'sales_head')!;
     salesHeadUser = { ...headDb };

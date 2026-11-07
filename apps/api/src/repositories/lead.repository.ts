@@ -589,6 +589,26 @@ export class LeadRepository {
     }
     return row ?? null;
   }
+
+  /**
+   * Permanently deletes a lead and associated records under DPDP right to erasure.
+   */
+  async deleteLead(id: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`DELETE FROM lead_touchpoints WHERE lead_id = $1`, [id]);
+      await client.query(`DELETE FROM consent_records WHERE lead_id = $1`, [id]);
+      await client.query(`UPDATE conversations SET lead_id = NULL WHERE lead_id = $1`, [id]);
+      await client.query(`DELETE FROM leads WHERE id = $1`, [id]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export const leadRepository = new LeadRepository();

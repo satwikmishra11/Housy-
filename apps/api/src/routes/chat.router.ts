@@ -11,7 +11,7 @@ import {
   type ChatHistoryQuery,
 } from '@housy/shared';
 import { validateBody, validateQuery } from '../middleware/validate.js';
-import { chatRateLimiter } from '../middleware/rateLimit.js';
+import { chatRateLimiter, chatStartRateLimiter } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { chatService } from '../services/chat.service.js';
 import { handoffService } from '../services/handoff.service.js';
@@ -73,7 +73,7 @@ async function assertBuyerConversationAccess(
  */
 chatRouter.post(
   '/start',
-  chatRateLimiter,
+  chatStartRateLimiter,
   validateBody(ChatStartPayloadSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

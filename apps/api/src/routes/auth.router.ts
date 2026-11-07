@@ -19,7 +19,8 @@ export function createAuthRouter(service: AuthService = authService): Router {
     validateRequest({ body: LoginRequestSchema }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const result = await service.login(req.body);
+        const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
+        const result = await service.login(req.body, clientIp);
 
         res.cookie('staff_token', result.token, {
           httpOnly: true,
@@ -43,12 +44,19 @@ export function createAuthRouter(service: AuthService = authService): Router {
 
   /**
    * POST /api/auth/logout
-   * Clears staff authentication cookie.
+   * Clears staff authentication cookie and buyer session.
    */
   router.post(
     '/auth/logout',
     (_req: Request, res: Response): void => {
       res.clearCookie('staff_token', {
+        httpOnly: true,
+        secure: config.COOKIE_SECURE,
+        sameSite: config.COOKIE_SAME_SITE,
+        path: '/',
+      });
+
+      res.clearCookie('buyer_session', {
         httpOnly: true,
         secure: config.COOKIE_SECURE,
         sameSite: config.COOKIE_SAME_SITE,

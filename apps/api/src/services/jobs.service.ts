@@ -22,6 +22,7 @@ export interface RunAllJobsResult {
     slot_top_up: JobExecutionOutput;
     handoff_escalation: JobExecutionOutput;
     stale_session_cleanup: JobExecutionOutput;
+    data_retention: JobExecutionOutput;
   };
 }
 
@@ -34,14 +35,20 @@ export class JobsService {
   async runAllJobs(): Promise<RunAllJobsResult> {
     const timestamp = new Date().toISOString();
 
-    const [reminders, slot_top_up, handoff_escalation, stale_session_cleanup] = await Promise.all([
+    const [reminders, slot_top_up, handoff_escalation, stale_session_cleanup, data_retention] = await Promise.all([
       this.runRemindersJob(),
       this.runSlotTopUpJob(),
       this.runHandoffEscalationJob(),
       this.runStaleSessionCleanupJob(),
+      this.runDataRetentionJob(),
     ]);
 
-    const allOk = reminders.ok && slot_top_up.ok && handoff_escalation.ok && stale_session_cleanup.ok;
+    const allOk =
+      reminders.ok &&
+      slot_top_up.ok &&
+      handoff_escalation.ok &&
+      stale_session_cleanup.ok &&
+      data_retention.ok;
 
     return {
       success: allOk,
@@ -51,6 +58,7 @@ export class JobsService {
         slot_top_up,
         handoff_escalation,
         stale_session_cleanup,
+        data_retention,
       },
     };
   }
@@ -242,6 +250,57 @@ export class JobsService {
 
       await jobRunRepository.createRun({
         job: 'stale_session_cleanup',
+        startedAt,
+        finishedAt,
+        ok: false,
+        counts: {},
+        error: errorMessage,
+      });
+
+      return {
+        ok: false,
+        durationMs,
+        counts: {},
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * 5. Data retention routine (anonymizes chat sessions older than 90 days).
+   */
+  async runDataRetentionJob(retentionDays = 90): Promise<JobExecutionOutput> {
+    const startedAt = new Date();
+    const start = performance.now();
+    try {
+      const res = await chatSessionRepository.anonymizeOldSessions(retentionDays);
+      const finishedAt = new Date();
+      const durationMs = Math.round(performance.now() - start);
+      const counts = { anonymizedCount: res.anonymizedCount };
+
+      await jobRunRepository.createRun({
+        job: 'data_retention',
+        startedAt,
+        finishedAt,
+        ok: true,
+        counts,
+        error: null,
+      });
+
+      return {
+        ok: true,
+        durationMs,
+        counts,
+      };
+    } catch (err) {
+      const finishedAt = new Date();
+      const durationMs = Math.round(performance.now() - start);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      logger.error({ err, job: 'data_retention' }, 'Internal jobs runner: data_retention error');
+
+      await jobRunRepository.createRun({
+        job: 'data_retention',
         startedAt,
         finishedAt,
         ok: false,

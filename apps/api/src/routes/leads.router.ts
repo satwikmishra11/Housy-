@@ -6,6 +6,7 @@ import {
   CsvCommitPayloadSchema,
   LeadSourceSchema,
 } from '@housy/shared';
+import { query } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import { assertLeadOwnership } from '../middleware/ownership.js';
@@ -355,9 +356,53 @@ leadsRouter.post(
       const leadId = req.params['id'] as string;
       await assertLeadOwnership(leadId, req.user!);
       await chatRepository.optOutLead(leadId);
+
+      // Audit log the opt-out request
+      await query(
+        `INSERT INTO audit_log (actor_id, action, entity, entity_id, diff, at)
+         VALUES ($1, 'opt_out', 'lead', $2, $3, NOW())`,
+        [req.user!.id, leadId, JSON.stringify({ reason: 'Staff recorded DPDP opt-out' })],
+      );
+
       res.status(200).json({
         success: true,
         message: 'Lead has been opted out and pending visit reminders have been cancelled.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * DELETE /api/leads/:id
+ * Authorized DPDP deletion/erasure request. Deletes lead and writes audit_log record.
+ */
+leadsRouter.delete(
+  '/leads/:id',
+  requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const leadId = req.params['id'] as string;
+      await assertLeadOwnership(leadId, req.user!);
+
+      await leadRepository.deleteLead(leadId);
+
+      // Audit log the deletion request
+      await query(
+        `INSERT INTO audit_log (actor_id, action, entity, entity_id, diff, at)
+         VALUES ($1, 'delete', 'lead', $2, $3, NOW())`,
+        [
+          req.user!.id,
+          leadId,
+          JSON.stringify({ reason: 'DPDP right to erasure', requestedBy: req.user!.email }),
+        ],
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Lead permanently erased under DPDP right to be forgotten.',
       });
     } catch (err) {
       next(err);

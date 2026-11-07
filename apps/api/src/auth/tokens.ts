@@ -31,7 +31,12 @@ export async function verifyStaffToken(token: string): Promise<AuthUser | null> 
   try {
     const { payload } = await jwtVerify(token, getJwtSecretKey(), {
       algorithms: ['HS256'],
+      clockTolerance: 0,
     });
+
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      return null;
+    }
 
     const parsed = AuthUserSchema.safeParse(payload['user']);
     if (!parsed.success) {

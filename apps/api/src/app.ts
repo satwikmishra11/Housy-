@@ -20,15 +20,17 @@ export function createApp(): Express {
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 
-  // 2. Strict CORS allowlist from configuration (supports exact origins and wildcards like https://*.vercel.app)
-  const allowedOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
+  // 2. Strict CORS allowlist from configuration (exact origins; wildcard previews only when ALLOW_PREVIEW_ORIGINS=true)
+  const allowedOrigins = config.CORS_ORIGIN.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   const isOriginAllowed = (origin: string): boolean => {
-    if (
-      process.env.VERCEL &&
-      (origin.endsWith('.vercel.app') || origin === 'https://vercel.live' || origin.endsWith('.vercel.dev'))
-    ) {
-      return true;
+    // Only permit preview wildcards if explicitly opted-in via ALLOW_PREVIEW_ORIGINS=true
+    if (config.ALLOW_PREVIEW_ORIGINS) {
+      if (origin.endsWith('.vercel.app') || origin === 'https://vercel.live' || origin.endsWith('.vercel.dev')) {
+        return true;
+      }
     }
     return allowedOrigins.some((pattern) => {
       if (pattern === '*' || pattern === origin) return true;
@@ -40,25 +42,45 @@ export function createApp(): Express {
     });
   };
 
-  // 3. Security headers via Helmet with Content Security Policy
+  const connectSources = ["'self'", ...allowedOrigins];
+  if (config.ALLOW_PREVIEW_ORIGINS) {
+    connectSources.push('https://*.vercel.app', 'https://vercel.live');
+  }
+
+  // 3. Security headers via Helmet with hardened Content Security Policy and Production HSTS
   app.use(
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-          connectSrc: ["'self'", ...allowedOrigins, 'https://*.vercel.app', 'https://vercel.live'],
+          connectSrc: connectSources,
           fontSrc: ["'self'", 'data:', 'https:'],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
           frameAncestors: ["'none'"],
         },
       },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      hsts:
+        config.NODE_ENV === 'production'
+          ? {
+              maxAge: 31536000,
+              includeSubDomains: true,
+              preload: true,
+            }
+          : false,
       crossOriginEmbedderPolicy: false,
     }),
   );
+
+  // Permissions-Policy header
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   app.use(
     cors({
@@ -74,7 +96,7 @@ export function createApp(): Express {
   );
 
   // Diagnostic ping route accessible prior to any stateful middleware
-  app.get(['/ping', '/api/ping'], (_req, res) => {
+  app.get('/api/ping', (_req, res) => {
     res.json({ status: 'ok', service: 'housy-api', timestamp: new Date().toISOString() });
   });
 
@@ -92,9 +114,8 @@ export function createApp(): Express {
   app.use(authenticateStaff);
   app.use(csrfProtection);
 
-  // 7. Mount API router (both with /api prefix and root for reverse proxies)
+  // 7. Mount API router strictly at /api
   app.use('/api', apiRouter);
-  app.use('/', apiRouter);
 
   // 8. Fallback 404 handler for unknown routes
   app.use((_req, _res, next) => {

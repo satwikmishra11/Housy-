@@ -43,6 +43,19 @@ export class LlmCallRepository {
   }
 
   /**
+   * Return the count of LLM calls made for a specific conversation.
+   */
+  async getCallCountForConversation(conversationId: string): Promise<number> {
+    const res = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count
+       FROM llm_calls
+       WHERE conversation_id = $1`,
+      [conversationId],
+    );
+    return parseInt(res.rows[0]?.count ?? '0', 10);
+  }
+
+  /**
    * Return the ISO 8601 timestamp of the most recent successful LLM call, or null.
    */
   async getLastSuccessTime(): Promise<string | null> {

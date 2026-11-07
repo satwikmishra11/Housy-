@@ -56,7 +56,9 @@ export async function runAgentLoop(params: AgentLoopParams): Promise<AgentLoopRe
     },
   });
 
-  const messages: LLMMessage[] = messageHistory.map((m) => ({
+  // Send the model only the last 20 conversation turns to preserve context budget and prevent prompt flooding
+  const recentTurns = messageHistory.slice(-20);
+  const messages: LLMMessage[] = recentTurns.map((m) => ({
     role: m.role === 'buyer' ? 'user' : m.role === 'assistant' ? 'assistant' : 'system',
     content: m.content,
   }));

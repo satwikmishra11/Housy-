@@ -42,10 +42,11 @@ export const KNOWN_DEFAULT_SECRETS = new Set<string>([
 export function extractDatabaseName(connectionString: string): string {
   try {
     const parsed = new URL(connectionString);
-    return parsed.pathname.replace(/^\//, '').split('?')[0];
+    return parsed.pathname.replace(/^\//, '').split('?')[0] || '';
   } catch {
     const lastSlash = connectionString.lastIndexOf('/');
-    return (lastSlash !== -1 ? connectionString.slice(lastSlash + 1) : connectionString).split('?')[0];
+    const pathPart = lastSlash !== -1 ? connectionString.slice(lastSlash + 1) : connectionString;
+    return pathPart.split('?')[0] || '';
   }
 }
 
@@ -201,6 +202,10 @@ export function evaluateConfig(rawEnv: Record<string, string | undefined>): Conf
   if (nodeEnv === 'test') {
     if (rawEnv['TEST_DATABASE_URL']) {
       effectiveEnv['DATABASE_URL'] = rawEnv['TEST_DATABASE_URL'];
+    } else {
+      effectiveEnv['DATABASE_URL'] =
+        process.env.TEST_DATABASE_URL ||
+        'postgres://housy_user:housy_password@localhost:5432/housy_test';
     }
     const testDbUrl = String(effectiveEnv['DATABASE_URL'] || '');
     if (testDbUrl) {
