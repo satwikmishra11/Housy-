@@ -46,6 +46,37 @@ export interface LLMProvider {
   chat(params: LLMChatParams): Promise<LLMChatResult>;
 }
 
+export type LLMErrorKind =
+  | 'auth'
+  | 'rate_limit'
+  | 'timeout'
+  | 'invalid_model'
+  | 'bad_request'
+  | 'server';
+
+export class LLMError extends Error {
+  public readonly kind: LLMErrorKind;
+  public readonly statusCode?: number;
+
+  constructor(message: string, kind: LLMErrorKind, statusCode?: number) {
+    super(message);
+    this.name = 'LLMError';
+    this.kind = kind;
+    this.statusCode = statusCode;
+    Error.captureStackTrace?.(this, this.constructor);
+  }
+}
+
+export function redactApiKey(text: string, keys: (string | undefined)[]): string {
+  let redacted = text;
+  for (const k of keys) {
+    if (k && k.length >= 6) {
+      redacted = redacted.replaceAll(k, '[REDACTED_API_KEY]');
+    }
+  }
+  return redacted;
+}
+
 // Backwards-compatible aliases
 export type ChatMessage = LLMMessage;
 export type ToolDefinition = LLMToolDefinition;

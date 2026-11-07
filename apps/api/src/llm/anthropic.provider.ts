@@ -1,9 +1,26 @@
-import type { LLMProvider, LLMChatParams, LLMChatResult, LLMToolCall } from './llm.types.js';
+import {
+  type LLMProvider,
+  type LLMChatParams,
+  type LLMChatResult,
+  type LLMToolCall,
+  type LLMErrorKind,
+  LLMError,
+  redactApiKey,
+} from './llm.types.js';
 import { logger } from '../utils/logger.js';
 
 export interface AnthropicProviderOptions {
   apiKey?: string;
   model?: string;
+}
+
+function mapStatusToErrorKind(status: number): LLMErrorKind {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status === 404) return 'invalid_model';
+  if (status === 400) return 'bad_request';
+  if (status === 408 || status === 504) return 'timeout';
+  return 'server';
 }
 
 export class AnthropicProvider implements LLMProvider {
@@ -21,7 +38,7 @@ export class AnthropicProvider implements LLMProvider {
 
   async chat(params: LLMChatParams): Promise<LLMChatResult> {
     if (!this.apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is not configured');
+      throw new LLMError('ANTHROPIC_API_KEY is not configured', 'auth');
     }
 
     const messages = this.formatMessages(params.messages);
@@ -43,22 +60,36 @@ export class AnthropicProvider implements LLMProvider {
 
     if (tools && tools.length > 0) {
       body.tools = tools;
+      // Force tool use per engineering guidelines
+      body.tool_choice = { type: 'any' };
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(body),
-      signal: params.signal,
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(body),
+        signal: params.signal,
+      });
+    } catch (err: unknown) {
+      if (err instanceof LLMError) throw err;
+      const error = err as Error;
+      if (error.name === 'AbortError') {
+        throw new LLMError('Anthropic request timed out or was aborted', 'timeout');
+      }
+      throw new LLMError(`Anthropic network failure: ${redactApiKey(error.message, [this.apiKey])}`, 'server');
+    }
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`Anthropic API error (${response.status}): ${errText}`);
+      const safeErrText = redactApiKey(errText, [this.apiKey]);
+      const kind = mapStatusToErrorKind(response.status);
+      throw new LLMError(`Anthropic API error (${response.status}): ${safeErrText}`, kind, response.status);
     }
 
     interface AnthropicContentBlock {

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { load } from 'js-yaml';
 import { chatService } from '../src/services/chat.service.js';
-import { llmService, mockProvider } from '../src/llm/index.js';
+import { llmService } from '../src/llm/index.js';
+import { mockProvider } from '../src/llm/mock.provider.js';
 import { query, closePool } from '../src/db/index.js';
 import type { ChatLanguage } from '@housy/shared';
 

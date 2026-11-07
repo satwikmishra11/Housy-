@@ -1,9 +1,58 @@
-import type { LLMProvider, LLMChatParams, LLMChatResult, LLMToolCall } from './llm.types.js';
+import {
+  type LLMProvider,
+  type LLMChatParams,
+  type LLMChatResult,
+  type LLMToolCall,
+  type LLMErrorKind,
+  LLMError,
+  redactApiKey,
+} from './llm.types.js';
 import { logger } from '../utils/logger.js';
 
 export interface GeminiProviderOptions {
   apiKey?: string;
   model?: string;
+}
+
+function mapStatusToErrorKind(status: number): LLMErrorKind {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status === 404) return 'invalid_model';
+  if (status === 400) return 'bad_request';
+  if (status === 408 || status === 504) return 'timeout';
+  return 'server';
+}
+
+/**
+ * Sanitizes JSON schemas for Gemini OpenAPI specification.
+ * Strips $schema, additionalProperties, and other unsupported keywords recursively.
+ */
+export function sanitizeSchemaForGemini(schema: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === '$schema' || key === 'additionalProperties') {
+      continue;
+    }
+
+    if (key === 'properties' && value && typeof value === 'object') {
+      const sanitizedProps: Record<string, unknown> = {};
+      for (const [propKey, propVal] of Object.entries(value as Record<string, unknown>)) {
+        if (propVal && typeof propVal === 'object') {
+          sanitizedProps[propKey] = sanitizeSchemaForGemini(propVal as Record<string, unknown>);
+        } else {
+          sanitizedProps[propKey] = propVal;
+        }
+      }
+      result[key] = sanitizedProps;
+    } else if (key === 'items' && value && typeof value === 'object') {
+      result[key] = sanitizeSchemaForGemini(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
 }
 
 export class GeminiProvider implements LLMProvider {
@@ -21,7 +70,7 @@ export class GeminiProvider implements LLMProvider {
 
   async chat(params: LLMChatParams): Promise<LLMChatResult> {
     if (!this.apiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+      throw new LLMError('GEMINI_API_KEY is not configured', 'auth');
     }
 
     const contents = this.formatContents(params.messages);
@@ -41,28 +90,46 @@ export class GeminiProvider implements LLMProvider {
           functionDeclarations: params.tools.map((t) => ({
             name: t.name,
             description: t.description,
-            parameters: t.parameters,
+            parameters: sanitizeSchemaForGemini(t.parameters),
           })),
         },
       ];
+      // Force tool use
+      body.toolConfig = {
+        functionCallingConfig: {
+          mode: 'ANY',
+          allowedFunctionNames: params.tools.map((t) => t.name),
+        },
+      };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      this.model,
-    )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: params.signal,
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-goog-api-key': this.apiKey,
+        },
+        body: JSON.stringify(body),
+        signal: params.signal,
+      });
+    } catch (err: unknown) {
+      if (err instanceof LLMError) throw err;
+      const error = err as Error;
+      if (error.name === 'AbortError') {
+        throw new LLMError('Gemini request timed out or was aborted', 'timeout');
+      }
+      throw new LLMError(`Gemini network failure: ${redactApiKey(error.message, [this.apiKey])}`, 'server');
+    }
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`Gemini API error (${response.status}): ${errText}`);
+      const safeErrText = redactApiKey(errText, [this.apiKey]);
+      const kind = mapStatusToErrorKind(response.status);
+      throw new LLMError(`Gemini API error (${response.status}): ${safeErrText}`, kind, response.status);
     }
 
     interface GeminiPart {

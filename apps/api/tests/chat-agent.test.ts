@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../src/app.js';
 import { query } from '../src/db/index.js';
-import { llmService, mockProvider } from '../src/llm/index.js';
+import { llmService } from '../src/llm/index.js';
+import { mockProvider } from '../src/llm/mock.provider.js';
 import { factService } from '../src/services/fact.service.js';
 import type { Fact } from '@housy/shared';
 
