@@ -232,10 +232,10 @@ describe('Configuration & Strict Boolean Parsing', () => {
       }
     });
 
-    it('refuses to run tests when DATABASE_URL does not end in _test in test mode', () => {
+    it('refuses to run tests when TEST_DATABASE_URL does not end in _test in test mode', () => {
       const result = evaluateConfig({
         NODE_ENV: 'test',
-        DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+        TEST_DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
       });
 
       expect(result.success).toBe(false);

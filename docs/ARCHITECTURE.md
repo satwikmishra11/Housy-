@@ -311,3 +311,59 @@ A single HTTPS webhook invoked by an external scheduler (e.g. cron-job.org) ever
    - **Stale Session Cleanup (`stale_session_cleanup`)**: Identifies anonymous chat sessions older than 24 hours without lead conversion, reconciling status to `abandoned` and closing inactive conversations.
 3. **Audit Trail (`job_runs`)**: Every routine execution logs an immutable record with job identifier, start/finish timestamps in UTC, boolean success flag, JSON execution counts, and sanitized error messages with zero stack trace leakage.
 4. **10-Minute Health SLA**: The health check endpoint (`GET /api/health`) and the diagnostics page (`/health`) evaluate reminder execution freshness. If reminders have not completed a successful run within the last 10 minutes, the health chip transitions to **RED** (`Overdue (>10m)`), alerting operators to external cron interruptions.
+
+---
+
+## 13. Security Architecture, Boundary Hardening & Defensive Invariants
+
+Housy adheres to a defense-in-depth, zero-trust security architecture across client boundaries, network transport, authentication, privacy, and automated verification:
+
+### 1. Exact CORS Origin Allowlist
+- Inbound HTTP cross-origin requests are checked against an exact origin allowlist defined via `CORS_ORIGIN` (e.g. `https://housy.in`, `http://localhost:5173`).
+- Blanket wildcard allowances for `*.vercel.app` and `vercel.live` have been eliminated.
+- Dynamic preview environments are supported only when `ALLOW_PREVIEW_ORIGINS=true` is explicitly configured. Disallowed cross-origin requests with credentials are terminated with HTTP `403 Forbidden`.
+
+### 2. Cookie-Authenticated CSRF Protection
+- Mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) carrying ambient cookie credentials (`staff_token`) strictly require a custom client-side header (`X-Requested-With`, `X-CSRF-Token`, or `X-Housy-Client`).
+- Blanket path bypasses (such as substring `/book` matches) and unverified header checks have been removed.
+- Public anonymous chat routes (`/api/chat/start`, `/api/chat/message`, `/api/chat/book`, `/api/chat/contact`, `/api/chat/human`, `/api/chat/escalate`), magic links (`/api/visits/manage/*`), and API key routes (`/api/internal/*`, `/api/ingest/*`) are strictly scoped.
+
+### 3. Strict API Routing & Content Security Policy (CSP)
+- The entire API router is mounted strictly at `/api`, preventing unintended routing overlap with frontend assets.
+- Production HTTP response headers enforce:
+  - **Content-Security-Policy (CSP)**: `default-src 'self'`, `script-src 'self'` (dropping `'unsafe-inline'`), `style-src 'self' 'unsafe-inline'`, `img-src 'self' data: https:`, `connect-src 'self' https:`, `frame-ancestors 'none'`, and `object-src 'none'`.
+  - **HTTP Strict Transport Security (HSTS)**: `max-age=31536000; includeSubDomains; preload` in production.
+  - **Referrer-Policy**: `strict-origin-when-cross-origin`.
+  - **Permissions-Policy**: `camera=(), microphone=(), geolocation=()`.
+  - Equivalent security headers are mirrored in `apps/web/vercel.json` for frontend assets.
+
+### 4. Chat Abuse & Cost Defense
+- **Session Initiation Rate Limiting**: `/api/chat/start` is rate-limited to 10 chat session creations per hour per IP.
+- **Message Length Limitation**: Inbound chat messages are capped at 1,000 characters via Zod validation, preventing memory exhaustion.
+- **Context Window Truncation**: The AI assistant pipeline sends only the most recent 20 turns (`messageHistory.slice(-20)`) to the LLM, preventing context window inflation and high token costs.
+- **Per-Conversation LLM Call Budget**: Each conversation is limited to at most 30 LLM calls. If the budget is exhausted, the conversation automatically initiates an executive handoff.
+
+### 5. Authentication, RBAC & Brute-Force Lockout
+- **Per-Account+IP Brute-Force Lockout**: Five consecutive failed login attempts for a specific email + IP address combination lock out the user for 15 minutes with HTTP `429 Too Many Requests`.
+- **JWT Clock Expiry**: Staff JWTs enforce explicit expiration (`exp`) with `clockTolerance: 0`.
+- **Secure Cookie Clearing**: `POST /api/auth/logout` explicitly clears both `staff_token` and `buyer_session` cookies.
+- **Dynamic Role Re-Verification**: Sensitive administrative endpoints query the database (`SELECT role, active FROM users WHERE id = $1`) to confirm the user has not been deactivated or demoted since token issuance.
+
+### 6. DPDP 2023 Privacy, PII Redaction & Data Retention
+- **Structured PII Redaction**: Pino logging configuration redacts passwords, phone numbers, emails, visitor names, and buyer message text from server logs.
+- **Automated Data Retention Job (`data_retention`)**: Background routines purge or anonymize chat sessions and conversations older than 90 days.
+- **Audit Logging**: Deletion requests (`DELETE /api/leads/:id`) and opt-out actions (`POST /api/leads/:id/opt-out`) are logged to the `audit_log` table with timestamp and actor attribution.
+
+### 7. Test Database Isolation & Automated Attack Suite
+- **Test Database Isolation**: Tests enforce `TEST_DATABASE_URL` and throw fatal errors unless the database name ends in `_test`.
+- **Comprehensive Attack Suite (`apps/api/tests/security-attacks.test.ts`)**: Automated test suite executing realistic adversarial attacks:
+  1. Forged JWTs signed with unauthorized secrets rejected with `401 Unauthorized`.
+  2. Expired JWTs rejected with `401 Unauthorized`.
+  3. Mutating cookie requests without custom headers rejected with `403 Forbidden`.
+  4. Disallowed cross-origin requests rejected with `403 Forbidden`.
+  5. Cross-executive lead reading blocked with `403 Forbidden`.
+  6. Cross-conversation buyer token replay blocked with `403 Forbidden`.
+  7. Oversized payloads (>1,000 chars) rejected with `400 Bad Request`.
+  8. SQL injection strings across all search parameters safely handled via parameterized queries.
+  9. Brute-force login attempts locked out with `429 Too Many Requests`.
+  10. Stale JWT roles dynamically blocked when the database role is demoted or deactivated.
