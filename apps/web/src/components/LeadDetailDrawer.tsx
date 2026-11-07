@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './Modal.js';
 import { Button } from './Button.js';
@@ -14,6 +14,8 @@ import {
   takeOverChat,
   handBackToAssistant,
   sendStaffMessage,
+  updateLeadStatus,
+  createLeadNote,
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
 import {
@@ -26,11 +28,14 @@ import {
   Calendar,
   UserCheck,
   ShieldAlert,
+  ShieldCheck,
   XCircle,
   Bot,
   Send,
+  Sparkles,
+  FileText,
 } from 'lucide-react';
-import type { LeadDetail } from '@housy/shared';
+import type { LeadDetail, LeadStatus } from '@housy/shared';
 
 export interface LeadDetailDrawerProps {
   leadId: string | null;
@@ -38,6 +43,87 @@ export interface LeadDetailDrawerProps {
   onClose: () => void;
   onLeadUpdated?: () => void;
 }
+
+interface NextBestAction {
+  title: string;
+  description: string;
+  tag: string;
+  variant: 'accent' | 'warning' | 'danger' | 'success' | 'neutral';
+}
+
+function computeNextBestAction(lead: LeadDetail): NextBestAction {
+  if (lead.consentStatus === 'withdrawn') {
+    return {
+      title: 'Do Not Contact (DPDP Withdrawn)',
+      description: 'The buyer exercised their DPDP right to opt out. Automated reminders are cancelled. Do not reach out unless consent is re-granted.',
+      tag: 'Compliance',
+      variant: 'danger',
+    };
+  }
+  if (lead.possibleDuplicateOf) {
+    return {
+      title: 'Resolve Possible Duplicate',
+      description: `Potential duplicate record detected (${lead.possibleDuplicateName || lead.possibleDuplicateOf}). Merge or mark as separate to unify touchpoint history.`,
+      tag: 'Data Quality',
+      variant: 'warning',
+    };
+  }
+  if (lead.status === 'new') {
+    return {
+      title: 'Reach Out via Phone / WhatsApp',
+      description: `New ${lead.wants} inquiry from ${lead.source.replace('_', ' ')}. Introduce Aaranya Realty and understand specific floor/direction preferences within 15-min SLA.`,
+      tag: 'SLA Priority',
+      variant: 'warning',
+    };
+  }
+  if (lead.status === 'engaged' && lead.bookings.length === 0) {
+    return {
+      title: 'Propose Weekend Site Visit',
+      description: `Buyer is engaged for ${lead.projectName || 'project'}. Share available Saturday/Sunday afternoon slots to convert interest to an in-person visit.`,
+      tag: 'Next Step',
+      variant: 'accent',
+    };
+  }
+  if (lead.status === 'visit_booked') {
+    return {
+      title: 'Send Directions & Gate Pass',
+      description: 'Site visit booked. Send Google Maps location, clubhouse entry code, and ensure dedicated sales executive is available on site.',
+      tag: 'Site Visit',
+      variant: 'success',
+    };
+  }
+  if (lead.status === 'visited') {
+    return {
+      title: 'Send Pricing Breakdown & Proposal',
+      description: 'Site visit completed. Follow up with unit floor plans, construction-linked payment schedule (CLP), and limited-period developer unit reservation.',
+      tag: 'Closing',
+      variant: 'accent',
+    };
+  }
+  if (lead.status === 'no_show') {
+    return {
+      title: 'Reschedule Missed Site Visit',
+      description: 'Buyer was unable to attend the scheduled visit. Send polite follow-up message offering flexible reschedule slots.',
+      tag: 'Re-engagement',
+      variant: 'warning',
+    };
+  }
+  return {
+    title: 'Nurture Lead with Project Updates',
+    description: 'Keep buyer engaged with construction progress milestones and new tower releases.',
+    tag: 'Nurture',
+    variant: 'neutral',
+  };
+}
+
+const STATUS_OPTIONS: Array<{ value: LeadStatus; label: string }> = [
+  { value: 'new', label: 'New' },
+  { value: 'engaged', label: 'Engaged' },
+  { value: 'visit_booked', label: 'Visit Booked' },
+  { value: 'visited', label: 'Visited' },
+  { value: 'no_show', label: 'No-Show' },
+  { value: 'lost', label: 'Lost' },
+];
 
 export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   leadId,
@@ -50,6 +136,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   const [activeTab, setActiveTab] = useState('timeline');
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [targetLeadId, setTargetLeadId] = useState('');
+  const [newNoteText, setNewNoteText] = useState('');
 
   const {
     data: lead,
@@ -103,6 +190,47 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         type: 'error',
         title: 'Merge Failed',
         message: err instanceof Error ? err.message : 'Failed to merge leads',
+      });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (newStatus: LeadStatus) => updateLeadStatus(leadId!, newStatus),
+    onSuccess: (_, newStatus) => {
+      showToast({
+        type: 'success',
+        title: 'Status Updated',
+        message: `Lead status updated to ${newStatus.replace('_', ' ')}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+      onLeadUpdated?.();
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: err.message || 'Could not update status',
+      });
+    },
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: (text: string) => createLeadNote(leadId!, text),
+    onSuccess: () => {
+      setNewNoteText('');
+      showToast({
+        type: 'success',
+        title: 'Note Added',
+        message: 'Timestamped staff note recorded.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Failed to Add Note',
+        message: err.message || 'Could not save note',
       });
     },
   });
@@ -172,13 +300,119 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     },
   });
 
+  // Source Timeline compilation
+  const timelineEvents = useMemo(() => {
+    if (!lead) return [];
+
+    interface TimelineEvent {
+      id: string;
+      kind: 'ingest' | 'touchpoint' | 'chat' | 'booking' | 'handoff' | 'note';
+      title: string;
+      subtitle: string;
+      timestamp: string;
+      badgeText: string;
+      badgeVariant: 'neutral' | 'accent' | 'warning' | 'success' | 'danger';
+    }
+
+    const events: TimelineEvent[] = [];
+
+    // Ingest event
+    events.push({
+      id: `ingest-${lead.id}`,
+      kind: 'ingest',
+      title: `Lead Ingested from ${lead.source.replace('_', ' ').toUpperCase()}`,
+      subtitle: `Initial inquiry for ${lead.wants} at ${lead.projectName || 'Unassigned Project'}`,
+      timestamp: lead.firstTouchAt,
+      badgeText: lead.source,
+      badgeVariant: 'accent',
+    });
+
+    // Touchpoints
+    for (const tp of lead.touchpoints) {
+      events.push({
+        id: `tp-${tp.id}`,
+        kind: 'touchpoint',
+        title: `Touchpoint via ${tp.channel.toUpperCase()}`,
+        subtitle: `Source: ${tp.source}${tp.externalId ? ` (ID: ${tp.externalId})` : ''}`,
+        timestamp: tp.occurredAt,
+        badgeText: tp.channel,
+        badgeVariant: 'neutral',
+      });
+    }
+
+    // Conversations
+    for (const c of lead.conversations) {
+      events.push({
+        id: `conv-${c.id}`,
+        kind: 'chat',
+        title: `AI Chat Session (${c.language.toUpperCase()})`,
+        subtitle: `${c.messagesCount} messages exchanged${c.flagged ? ` - Flagged: ${c.flagReasons.join(', ')}` : ''}`,
+        timestamp: c.createdAt,
+        badgeText: c.status === 'human' ? 'Human Takeover' : 'AI Assistant',
+        badgeVariant: c.status === 'human' ? 'warning' : 'neutral',
+      });
+    }
+
+    // Bookings
+    for (const b of lead.bookings) {
+      events.push({
+        id: `booking-${b.id}`,
+        kind: 'booking',
+        title: `Site Visit Booked: ${b.projectName}`,
+        subtitle: `Assigned Executive: ${b.executiveName} (Slot: ${formatInKolkataTime(b.startsAt)})`,
+        timestamp: b.startsAt,
+        badgeText: b.status.toUpperCase(),
+        badgeVariant: b.status === 'confirmed' || b.status === 'completed' ? 'success' : 'neutral',
+      });
+    }
+
+    // Handoffs
+    for (const h of lead.handoffs) {
+      events.push({
+        id: `handoff-${h.id}`,
+        kind: 'handoff',
+        title: `Sales Handoff: ${h.reason}`,
+        subtitle: `Assigned to ${h.executiveName}`,
+        timestamp: h.createdAt,
+        badgeText: h.status.toUpperCase(),
+        badgeVariant: 'warning',
+      });
+    }
+
+    // Staff Notes
+    for (const n of lead.notes || []) {
+      events.push({
+        id: `note-${n.id}`,
+        kind: 'note',
+        title: `Note by ${n.authorName}`,
+        subtitle: n.note,
+        timestamp: n.createdAt,
+        badgeText: 'Staff Note',
+        badgeVariant: 'neutral',
+      });
+    }
+
+    // Sort descending by timestamp
+    return events.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, [lead]);
+
   if (!isOpen) return null;
+
+  const nextBestAction = lead ? computeNextBestAction(lead) : null;
+  const leadNotes = lead?.notes || [];
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} maxWidth="xl" title={lead ? `${lead.name} (${lead.publicId})` : 'Lead Details'}>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        maxWidth="xl"
+        title={lead ? `${lead.name} (${lead.publicId})` : 'Lead Details'}
+      >
         {isLoading && (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4" aria-busy="true">
             <Skeleton height="60px" />
             <Skeleton height="120px" />
             <Skeleton height="200px" />
@@ -209,7 +443,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       Possible Duplicate Detected
                     </h4>
                     <p className="text-xs text-ink-muted">
-                      Similar name found on this project ({lead.possibleDuplicateName || lead.possibleDuplicateOf}).
+                      Similar name found on this project (
+                      {lead.possibleDuplicateName || lead.possibleDuplicateOf}).
                     </p>
                   </div>
                 </div>
@@ -240,24 +475,82 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             )}
 
-            {/* 2. Lead Profile Card */}
+            {/* 2. Next Best Action Card */}
+            {nextBestAction && (
+              <div
+                className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                  nextBestAction.variant === 'danger'
+                    ? 'bg-danger/10 border-danger/30 text-danger'
+                    : nextBestAction.variant === 'warning'
+                      ? 'bg-warning/10 border-warning/30 text-ink'
+                      : nextBestAction.variant === 'success'
+                        ? 'bg-success/10 border-success/30 text-ink'
+                        : 'bg-accent/10 border-accent/30 text-ink'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 shadow-sm border border-hairline mt-0.5">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-ink">{nextBestAction.title}</span>
+                      <Badge variant={nextBestAction.variant}>{nextBestAction.tag}</Badge>
+                    </div>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">
+                      {nextBestAction.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Lead Profile Card with DPDP Consent & Status Dropdown */}
             <div className="bg-surface-alt border border-hairline rounded-token p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-xs text-ink-muted">{lead.publicId}</span>
-                  <Badge variant={lead.status === 'visit_booked' ? 'success' : 'neutral'}>
-                    {lead.status.replace('_', ' ')}
-                  </Badge>
-                  {lead.consentStatus === 'withdrawn' && (
+
+                  {/* DPDP Consent Badge */}
+                  {lead.consentStatus === 'granted' ? (
+                    <Badge variant="success">
+                      <ShieldCheck className="w-3 h-3 mr-1 inline" /> DPDP Consented
+                    </Badge>
+                  ) : lead.consentStatus === 'withdrawn' ? (
                     <Badge variant="danger">
-                      <ShieldAlert className="w-3 h-3 mr-1 inline" /> Cannot Contact
+                      <ShieldAlert className="w-3 h-3 mr-1 inline" /> Opted Out
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning">
+                      <ShieldAlert className="w-3 h-3 mr-1 inline" /> Consent Pending
                     </Badge>
                   )}
                 </div>
+
                 <h3 className="font-serif text-xl font-bold text-ink-base">{lead.name}</h3>
                 <div className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <Home className="w-3.5 h-3.5 text-accent" />
-                  <span>{lead.projectName || 'Unassigned Project'} ({lead.wants})</span>
+                  <span>
+                    {lead.projectName || 'Unassigned Project'} ({lead.wants})
+                  </span>
+                </div>
+
+                {/* Status Changer */}
+                <div className="pt-2 flex items-center gap-2">
+                  <span className="text-xs font-medium text-ink-muted">Status:</span>
+                  <select
+                    value={lead.status}
+                    onChange={(e) => updateStatusMutation.mutate(e.target.value as LeadStatus)}
+                    disabled={updateStatusMutation.isPending}
+                    aria-label="Lead Status"
+                    className="text-xs font-semibold px-2 py-1 rounded bg-surface border border-hairline text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -277,50 +570,55 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
 
               <div className="space-y-1 text-xs text-ink-muted border-t md:border-t-0 md:border-l border-hairline pt-3 md:pt-0 md:pl-4">
-                <div>Source: <span className="text-ink-base font-medium">{lead.source}</span></div>
-                <div>First Touch: <span className="text-ink-base">{formatInKolkataTime(lead.firstTouchAt)}</span></div>
-                <div>Last Active: <span className="text-ink-base">{formatInKolkataTime(lead.lastActivityAt)}</span></div>
-                <div>Touchpoints: <span className="text-ink-base font-semibold">{lead.touchpointsCount}</span></div>
+                <div>
+                  Source: <span className="text-ink-base font-medium">{lead.source}</span>
+                </div>
+                <div>
+                  First Touch:{' '}
+                  <span className="text-ink-base">{formatInKolkataTime(lead.firstTouchAt)}</span>
+                </div>
+                <div>
+                  Last Active:{' '}
+                  <span className="text-ink-base">{formatInKolkataTime(lead.lastActivityAt)}</span>
+                </div>
+                <div>
+                  Touchpoints:{' '}
+                  <span className="text-ink-base font-semibold">{lead.touchpointsCount}</span>
+                </div>
               </div>
             </div>
 
-            {/* 3. Detail Tabs */}
+            {/* 4. Detail Tabs */}
             <Tabs
               activeTab={activeTab}
               onChange={setActiveTab}
               tabs={[
-                { id: 'timeline', label: `Touchpoints (${lead.touchpoints.length})` },
+                { id: 'timeline', label: `Source Timeline (${timelineEvents.length})` },
+                { id: 'notes', label: `Staff Notes (${leadNotes.length})` },
                 { id: 'conversations', label: `Conversations (${lead.conversations.length})` },
                 { id: 'visits', label: `Site Visits (${lead.bookings.length})` },
                 { id: 'handoffs', label: `Handoffs (${lead.handoffs.length})` },
               ]}
             />
 
+            {/* 5. Source Timeline Tab */}
             {activeTab === 'timeline' && (
               <div className="space-y-3 pt-3">
-                {lead.touchpoints.length === 0 ? (
-                  <p className="text-xs text-ink-muted">No touchpoints recorded.</p>
+                {timelineEvents.length === 0 ? (
+                  <p className="text-xs text-ink-muted">No timeline events recorded.</p>
                 ) : (
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-hairline">
-                    {lead.touchpoints.map((tp) => (
-                      <div key={tp.id} className="relative text-xs space-y-1">
+                    {timelineEvents.map((ev) => (
+                      <div key={ev.id} className="relative text-xs space-y-1">
                         <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-accent ring-4 ring-surface" />
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-ink-base capitalize">
-                            {tp.source.replace('_', ' ')}
-                          </span>
-                          <Badge variant="neutral">
-                            {tp.channel}
-                          </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-ink-base">{ev.title}</span>
+                          <Badge variant={ev.badgeVariant}>{ev.badgeText}</Badge>
                           <span className="text-ink-muted font-mono text-[11px]">
-                            {formatInKolkataTime(tp.occurredAt)}
+                            {formatInKolkataTime(ev.timestamp)}
                           </span>
                         </div>
-                        {tp.externalId && (
-                          <p className="text-ink-muted font-mono text-[11px]">
-                            External ID: {tp.externalId}
-                          </p>
-                        )}
+                        <p className="text-ink-muted text-xs leading-relaxed">{ev.subtitle}</p>
                       </div>
                     ))}
                   </div>
@@ -328,6 +626,68 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             )}
 
+            {/* 6. Timestamped Notes Tab */}
+            {activeTab === 'notes' && (
+              <div className="space-y-4 pt-3">
+                {/* Note input form */}
+                <div className="p-3 bg-surface border border-hairline rounded-token space-y-2">
+                  <label htmlFor="lead-note-textarea" className="text-xs font-medium text-ink-base block">Add Executive Note</label>
+                  <textarea
+                    id="lead-note-textarea"
+                    rows={2}
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Record notes on buyer preferences, family requirements, or next follow-up date..."
+                    className="w-full px-3 py-2 text-xs bg-background border border-hairline rounded-lg focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        if (newNoteText.trim()) {
+                          addNoteMutation.mutate(newNoteText.trim());
+                        }
+                      }}
+                      disabled={!newNoteText.trim() || addNoteMutation.isPending}
+                      isLoading={addNoteMutation.isPending}
+                      leftIcon={<FileText className="w-3.5 h-3.5" />}
+                    >
+                      Save Note
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Notes History */}
+                {leadNotes.length === 0 ? (
+                  <p className="text-xs text-ink-muted text-center py-4">
+                    No notes recorded yet. Add call notes or visit observations above.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {leadNotes.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-3 bg-surface-alt border border-hairline rounded-token space-y-1 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-semibold text-ink-base">
+                            <UserCheck className="w-3.5 h-3.5 text-accent" />
+                            <span>{n.authorName}</span>
+                          </div>
+                          <span className="text-ink-muted font-mono text-[11px]">
+                            {formatInKolkataTime(n.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-ink-base text-xs leading-relaxed pt-1">{n.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 7. Conversations Tab */}
             {activeTab === 'conversations' && (
               <div className="space-y-3 pt-3">
                 {lead.conversations.length === 0 ? (
@@ -348,7 +708,11 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                             <span className="font-medium text-ink-base">
                               {isHumanMode ? 'Human Sales Executive (Live)' : 'AI Sales Assistant'}
                             </span>
-                            <Badge variant={isHumanMode ? 'warning' : c.flagged ? 'warning' : 'neutral'}>
+                            <Badge
+                              variant={
+                                isHumanMode ? 'warning' : c.flagged ? 'warning' : 'neutral'
+                              }
+                            >
                               {isHumanMode ? 'Live Takeover' : c.language.toUpperCase()}
                             </Badge>
                           </div>
@@ -371,7 +735,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handBackMutation.mutate(c.id)}
-                                isLoading={handBackMutation.isPending && handBackMutation.variables === c.id}
+                                isLoading={
+                                  handBackMutation.isPending &&
+                                  handBackMutation.variables === c.id
+                                }
                                 leftIcon={<Bot className="w-3.5 h-3.5 text-accent" />}
                               >
                                 Hand Back to Assistant
@@ -381,7 +748,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => takeOverMutation.mutate(c.id)}
-                                isLoading={takeOverMutation.isPending && takeOverMutation.variables === c.id}
+                                isLoading={
+                                  takeOverMutation.isPending &&
+                                  takeOverMutation.variables === c.id
+                                }
                                 leftIcon={<UserCheck className="w-3.5 h-3.5" />}
                               >
                                 Take Over Chat
@@ -431,6 +801,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             )}
 
+            {/* 8. Visits Tab */}
             {activeTab === 'visits' && (
               <div className="space-y-3 pt-3">
                 {lead.bookings.length === 0 ? (
@@ -461,6 +832,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             )}
 
+            {/* 9. Handoffs Tab */}
             {activeTab === 'handoffs' && (
               <div className="space-y-3 pt-3">
                 {lead.handoffs.length === 0 ? (
@@ -475,9 +847,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                         <span className="font-semibold text-ink-base">
                           Handed off to {h.executiveName}
                         </span>
-                        <Badge variant="warning">
-                          {h.status}
-                        </Badge>
+                        <Badge variant="warning">{h.status}</Badge>
                       </div>
                       <p className="text-ink-muted">Reason: {h.reason}</p>
                       <span className="text-ink-muted text-[11px] block">
@@ -489,7 +859,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             )}
 
-            {/* 4. Action bar */}
+            {/* 10. Action bar */}
             <div className="flex justify-between items-center pt-4 border-t border-hairline">
               <Button
                 variant="outline"
