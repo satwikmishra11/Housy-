@@ -47,7 +47,11 @@ import {
   type DemoSimulateLeadPayload,
   type DashboardFilterQuery,
   type SalesDashboardData,
+  type NotificationListResponse,
+  type StaffNotification,
 } from '@housy/shared';
+
+export type { StaffNotification, NotificationListResponse };
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
 
@@ -730,12 +734,18 @@ export async function sendChatMessage(payload: ChatMessagePayload): Promise<Chat
 export async function bookChatVisit(payload: ChatBookPayload): Promise<{
   success: boolean;
   bookingId?: string;
+  executiveName?: string;
+  executivePhone?: string;
+  manageToken?: string;
   message: string;
   uiAction?: 'collect_contact';
 }> {
   return apiFetch<{
     success: boolean;
     bookingId?: string;
+    executiveName?: string;
+    executivePhone?: string;
+    manageToken?: string;
     message: string;
     uiAction?: 'collect_contact';
   }>('/api/chat/book', {
@@ -745,10 +755,88 @@ export async function bookChatVisit(payload: ChatBookPayload): Promise<{
 }
 
 export async function fetchChatHistory(conversationId: string): Promise<ChatHistoryItem[]> {
-  const res = await apiFetch<{ data: ChatHistoryItem[] }>(
+  const res = await apiFetch<{ data: ChatHistoryItem[]; status?: 'ai' | 'human' | 'closed' }>(
     `/api/chat/history?conversationId=${encodeURIComponent(conversationId)}`,
   );
   return res.data;
+}
+
+export async function fetchChatConversation(conversationId: string): Promise<{
+  data: ChatHistoryItem[];
+  status: 'ai' | 'human' | 'closed';
+}> {
+  const res = await apiFetch<{ data: ChatHistoryItem[]; status?: 'ai' | 'human' | 'closed' }>(
+    `/api/chat/history?conversationId=${encodeURIComponent(conversationId)}`,
+  );
+  return {
+    data: res.data,
+    status: res.status ?? 'ai',
+  };
+}
+
+export async function rescheduleChatVisit(
+  conversationId: string,
+  bookingId: string,
+  newStartsAt: string,
+): Promise<{ success: boolean; message: string; visit: VisitDetail }> {
+  return apiFetch<{ success: boolean; message: string; visit: VisitDetail }>('/api/chat/reschedule', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId, bookingId, newStartsAt }),
+  });
+}
+
+export async function cancelChatVisit(
+  conversationId: string,
+  bookingId: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>('/api/chat/cancel-visit', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId, bookingId }),
+  });
+}
+
+export async function takeOverChat(conversationId: string): Promise<{ success: boolean; status: 'human' }> {
+  return apiFetch<{ success: boolean; status: 'human' }>('/api/chat/takeover', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId }),
+  });
+}
+
+export async function handBackToAssistant(conversationId: string): Promise<{ success: boolean; status: 'ai' }> {
+  return apiFetch<{ success: boolean; status: 'ai' }>('/api/chat/handback', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId }),
+  });
+}
+
+export async function sendStaffMessage(
+  conversationId: string,
+  message: string,
+): Promise<{ success: boolean; messageId: string }> {
+  return apiFetch<{ success: boolean; messageId: string }>('/api/chat/staff-message', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId, message }),
+  });
+}
+
+// ==========================================
+// STAFF NOTIFICATIONS API CLIENT
+// ==========================================
+
+export async function fetchNotifications(): Promise<NotificationListResponse> {
+  return apiFetch<NotificationListResponse>('/api/notifications');
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await apiFetch(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: 'PATCH',
+  });
+}
+
+export async function markAllNotificationsRead(): Promise<{ markedCount: number }> {
+  return apiFetch<{ markedCount: number }>('/api/notifications/read-all', {
+    method: 'POST',
+  });
 }
 
 // ==========================================

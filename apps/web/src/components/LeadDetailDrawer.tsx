@@ -11,6 +11,9 @@ import {
   fetchLeadDetails,
   mergeLeads,
   keepSeparateLead,
+  takeOverChat,
+  handBackToAssistant,
+  sendStaffMessage,
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
 import {
@@ -24,6 +27,8 @@ import {
   UserCheck,
   ShieldAlert,
   XCircle,
+  Bot,
+  Send,
 } from 'lucide-react';
 import type { LeadDetail } from '@housy/shared';
 
@@ -98,6 +103,71 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         type: 'error',
         title: 'Merge Failed',
         message: err instanceof Error ? err.message : 'Failed to merge leads',
+      });
+    },
+  });
+
+  const [drawerReplyMessage, setDrawerReplyMessage] = useState<Record<string, string>>({});
+
+  const takeOverMutation = useMutation({
+    mutationFn: (convId: string) => takeOverChat(convId),
+    onSuccess: () => {
+      showToast({
+        type: 'success',
+        title: 'Chat Taken Over',
+        message: 'AI assistant is now paused for this buyer.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      onLeadUpdated?.();
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Takeover Failed',
+        message: err.message || 'Unable to take over chat',
+      });
+    },
+  });
+
+  const handBackMutation = useMutation({
+    mutationFn: (convId: string) => handBackToAssistant(convId),
+    onSuccess: () => {
+      showToast({
+        type: 'success',
+        title: 'Handed Back to Assistant',
+        message: 'AI assistant has resumed for this buyer.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      onLeadUpdated?.();
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Hand Back Failed',
+        message: err.message || 'Unable to hand back to assistant',
+      });
+    },
+  });
+
+  const sendStaffMessageMutation = useMutation({
+    mutationFn: ({ convId, message }: { convId: string; message: string }) =>
+      sendStaffMessage(convId, message),
+    onSuccess: (_, vars) => {
+      setDrawerReplyMessage((prev) => ({ ...prev, [vars.convId]: '' }));
+      showToast({
+        type: 'success',
+        title: 'Message Sent',
+        message: 'Your message has been delivered to the buyer.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Send Failed',
+        message: err.message || 'Unable to send message',
       });
     },
   });
@@ -263,35 +333,100 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 {lead.conversations.length === 0 ? (
                   <p className="text-xs text-ink-muted">No chat conversations recorded.</p>
                 ) : (
-                  lead.conversations.map((c) => (
-                    <div
-                      key={c.id}
-                      className="p-3 bg-surface-alt border border-hairline rounded-token space-y-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4 text-accent" />
-                          <span className="font-medium text-ink-base">
-                            {c.status === 'ai' ? 'AI Sales Assistant' : 'Human Sales Exec'}
+                  lead.conversations.map((c) => {
+                    const isHumanMode = c.status === 'human';
+                    const currentReply = drawerReplyMessage[c.id] || '';
+
+                    return (
+                      <div
+                        key={c.id}
+                        className="p-3 bg-surface-alt border border-hairline rounded-token space-y-3 text-xs"
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-accent" />
+                            <span className="font-medium text-ink-base">
+                              {isHumanMode ? 'Human Sales Executive (Live)' : 'AI Sales Assistant'}
+                            </span>
+                            <Badge variant={isHumanMode ? 'warning' : c.flagged ? 'warning' : 'neutral'}>
+                              {isHumanMode ? 'Live Takeover' : c.language.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <span className="text-ink-muted">
+                            {formatInKolkataTime(c.createdAt)}
                           </span>
-                          <Badge variant={c.flagged ? 'warning' : 'neutral'}>
-                            {c.language.toUpperCase()}
-                          </Badge>
                         </div>
-                        <span className="text-ink-muted">
-                          {formatInKolkataTime(c.createdAt)}
-                        </span>
-                      </div>
-                      <div className="text-ink-muted">
-                        {c.messagesCount} messages exchanged.
-                        {c.flagged && (
-                          <span className="text-warning ml-2 font-medium">
-                            Flagged for Sales Head review ({c.flagReasons.join(', ')})
+                        <div className="text-ink-muted flex items-center justify-between flex-wrap gap-2">
+                          <span>
+                            {c.messagesCount} messages exchanged.
+                            {c.flagged && (
+                              <span className="text-warning ml-2 font-medium">
+                                Flagged ({c.flagReasons.join(', ')})
+                              </span>
+                            )}
                           </span>
+                          <div>
+                            {isHumanMode ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handBackMutation.mutate(c.id)}
+                                isLoading={handBackMutation.isPending && handBackMutation.variables === c.id}
+                                leftIcon={<Bot className="w-3.5 h-3.5 text-accent" />}
+                              >
+                                Hand Back to Assistant
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => takeOverMutation.mutate(c.id)}
+                                isLoading={takeOverMutation.isPending && takeOverMutation.variables === c.id}
+                                leftIcon={<UserCheck className="w-3.5 h-3.5" />}
+                              >
+                                Take Over Chat
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* If in human mode, executive can send a message directly from drawer */}
+                        {isHumanMode && (
+                          <div className="pt-2 border-t border-hairline flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={currentReply}
+                              onChange={(e) =>
+                                setDrawerReplyMessage((prev) => ({
+                                  ...prev,
+                                  [c.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Type message to buyer..."
+                              className="flex-1 px-3 py-1.5 text-xs bg-background border border-hairline rounded-lg focus:outline-none focus:ring-1 focus:ring-accent"
+                            />
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => {
+                                if (currentReply.trim()) {
+                                  sendStaffMessageMutation.mutate({
+                                    convId: c.id,
+                                    message: currentReply.trim(),
+                                  });
+                                }
+                              }}
+                              disabled={!currentReply.trim() || sendStaffMessageMutation.isPending}
+                              isLoading={sendStaffMessageMutation.isPending}
+                              leftIcon={<Send className="w-3.5 h-3.5" />}
+                            >
+                              Send
+                            </Button>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

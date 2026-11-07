@@ -18,20 +18,33 @@ export interface BookingConfirmationCardProps {
   startsAt: string;
   projectName?: string;
   executiveName?: string;
+  executivePhone?: string;
   address?: string;
   manageToken?: string;
   className?: string;
+  onReschedule?: () => void;
+  onCancel?: () => void;
 }
 
 export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = ({
   bookingId,
   startsAt,
   projectName = 'The Palm Residences (Project 1)',
-  executiveName = 'Dedicated Sales Executive',
+  executiveName = 'Priya Patel',
+  executivePhone = '+91 90000 00003',
   address = 'Sales Gallery, SG Highway, Ahmedabad, Gujarat 380054',
   manageToken,
   className = '',
+  onReschedule,
+  onCancel,
 }) => {
+  // Enforce named executive: eliminate generic placeholder
+  const resolvedExecutiveName =
+    !executiveName || executiveName === 'Dedicated Sales Executive'
+      ? 'Priya Patel'
+      : executiveName;
+  const resolvedExecutivePhone = executivePhone || '+91 90000 00003';
+
   const formattedTime = formatInKolkataTime(startsAt, {
     weekday: 'long',
     day: 'numeric',
@@ -49,7 +62,7 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
     downloadIcsCalendar(
       {
         title: `Private Site Visit: ${projectName}`,
-        description: `Your private appointment with ${executiveName} at Company A Sales Gallery.\nAppointment ID: ${bookingId}\nRERA Reg: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`,
+        description: `Your private appointment with ${resolvedExecutiveName} (${resolvedExecutivePhone}) at Company A Sales Gallery.\nAppointment ID: ${bookingId}\nHost Contact: ${resolvedExecutivePhone}\nRERA Reg: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`,
         location: address,
         startsAt: startDate.toISOString(),
         endsAt: endDate.toISOString(),
@@ -105,7 +118,8 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
         <div className="flex items-center gap-2.5">
           <UserCheck className="w-4 h-4 text-accent flex-shrink-0" />
           <span>
-            <strong className="text-ink">Host:</strong> {executiveName}
+            <strong className="text-ink">Host:</strong> {resolvedExecutiveName}{' '}
+            <span className="text-muted font-mono">({resolvedExecutivePhone})</span>
           </span>
         </div>
 
@@ -149,14 +163,34 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
         </a>
       </div>
 
-      {manageToken && (
-        <div className="mt-3 text-center">
-          <a
-            href={`/visit/${manageToken}`}
-            className="text-[11px] text-accent underline underline-offset-2 hover:text-accent-hover font-medium"
-          >
-            Manage or reschedule this appointment
-          </a>
+      {(onReschedule || onCancel || manageToken) && (
+        <div className="mt-3 pt-2.5 border-t border-hairline/60 flex items-center justify-between gap-2">
+          {onReschedule && (
+            <button
+              type="button"
+              onClick={onReschedule}
+              className="text-[11px] text-accent hover:underline font-medium"
+            >
+              Reschedule visit
+            </button>
+          )}
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-[11px] text-red-600 hover:underline font-medium ml-auto"
+            >
+              Cancel visit
+            </button>
+          )}
+          {manageToken && !onReschedule && !onCancel && (
+            <a
+              href={`/visit/${manageToken}`}
+              className="text-[11px] text-accent underline underline-offset-2 hover:text-accent-hover font-medium w-full text-center"
+            >
+              Manage or reschedule this appointment
+            </a>
+          )}
         </div>
       )}
     </div>

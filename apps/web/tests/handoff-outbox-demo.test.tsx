@@ -52,6 +52,8 @@ describe('Human Handoff, Flagged Review, Outbox & Demo Controls Frontend Views',
     conversationId: 'ffffffff-0000-1111-2222-333333333333',
     executiveId: 'exec-1111-2222-3333-444444444444',
     executiveName: 'Amit Shah',
+    priority: 'normal',
+    isEscalated: false,
     reason: 'Buyer requested human',
     summary: {
       name: 'Rajesh Sharma',

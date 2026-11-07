@@ -15,6 +15,8 @@ import {
   fetchHandoffTranscript,
   acceptHandoff,
   postHandoffMessage,
+  takeOverChat,
+  handBackToAssistant,
 } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
 import {
@@ -24,6 +26,7 @@ import {
   Send,
   Eye,
   Calendar,
+  Bot,
 } from 'lucide-react';
 import type { HandoffItem, HandoffStatus, ChatHistoryItem } from '@housy/shared';
 
@@ -103,6 +106,52 @@ export const HandoffsPage: React.FC = () => {
         type: 'error',
         title: 'Send Failed',
         message: err.message || 'Unable to post message',
+      });
+    },
+  });
+
+  const [activeTakeoverConvs, setActiveTakeoverConvs] = useState<Set<string>>(new Set());
+
+  const takeOverMutation = useMutation({
+    mutationFn: (conversationId: string) => takeOverChat(conversationId),
+    onSuccess: (_, convId) => {
+      setActiveTakeoverConvs((prev) => new Set(prev).add(convId));
+      showToast({
+        type: 'success',
+        title: 'Chat Taken Over',
+        message: 'AI assistant is now paused. You have live control of this conversation.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['handoffs'] });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Takeover Failed',
+        message: err.message || 'Unable to take over chat',
+      });
+    },
+  });
+
+  const handBackMutation = useMutation({
+    mutationFn: (conversationId: string) => handBackToAssistant(conversationId),
+    onSuccess: (_, convId) => {
+      setActiveTakeoverConvs((prev) => {
+        const next = new Set(prev);
+        next.delete(convId);
+        return next;
+      });
+      showToast({
+        type: 'success',
+        title: 'Handed Back to Assistant',
+        message: 'AI assistant has resumed handling buyer inquiries.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['handoffs'] });
+    },
+    onError: (err: Error) => {
+      showToast({
+        type: 'error',
+        title: 'Hand Back Failed',
+        message: err.message || 'Unable to hand back to assistant',
       });
     },
   });
@@ -194,7 +243,7 @@ export const HandoffsPage: React.FC = () => {
                   {/* Card Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-lg text-ink">{handoff.leadName}</h3>
                         <span className="text-xs font-mono text-muted">({handoff.leadPublicId})</span>
                         <Badge
@@ -209,8 +258,21 @@ export const HandoffsPage: React.FC = () => {
                         >
                           {handoff.status}
                         </Badge>
+                        {handoff.priority && handoff.priority !== 'normal' && (
+                          <Badge
+                            variant={handoff.priority === 'urgent' ? 'danger' : 'warning'}
+                            className="capitalize text-xs font-semibold"
+                          >
+                            {handoff.priority}
+                          </Badge>
+                        )}
+                        {handoff.isEscalated && (
+                          <Badge variant="danger" className="text-xs font-semibold animate-pulse">
+                            SLA Escalated
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-xs text-muted mt-1 flex items-center gap-2">
+                      <p className="text-xs text-muted mt-1 flex items-center gap-2 flex-wrap">
                         <span>Reason: <strong className="text-ink">{handoff.reason}</strong></span>
                         <span>•</span>
                         <span>Assigned to: <strong className="text-ink">{handoff.executiveName}</strong></span>
@@ -219,7 +281,7 @@ export const HandoffsPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isNew && (
                         <Button
                           variant="primary"
@@ -229,6 +291,29 @@ export const HandoffsPage: React.FC = () => {
                           leftIcon={<UserCheck className="w-4 h-4" />}
                         >
                           Accept Handoff
+                        </Button>
+                      )}
+                      {activeTakeoverConvs.has(handoff.conversationId) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handBackMutation.mutate(handoff.conversationId)}
+                          isLoading={handBackMutation.isPending && handBackMutation.variables === handoff.conversationId}
+                          leftIcon={<Bot className="w-4 h-4 text-accent" />}
+                          data-testid="hand-back-btn"
+                        >
+                          Hand Back to AI
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => takeOverMutation.mutate(handoff.conversationId)}
+                          isLoading={takeOverMutation.isPending && takeOverMutation.variables === handoff.conversationId}
+                          leftIcon={<UserCheck className="w-4 h-4" />}
+                          data-testid="take-over-chat-btn"
+                        >
+                          Take Over Chat
                         </Button>
                       )}
                       {telUrl && (

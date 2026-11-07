@@ -8,6 +8,7 @@ import {
   Headphones,
   AlertCircle,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
 import type { LeadSource, ChatLanguage } from '@housy/shared';
 import {
@@ -15,6 +16,8 @@ import {
   sendChatMessage,
   bookChatVisit,
   fetchChatHistory,
+  rescheduleChatVisit,
+  cancelChatVisit,
   fetchProjects,
   type ProjectItem,
   type ApiError,
@@ -37,8 +40,20 @@ interface UiChatMessage {
   uiAction?: 'show_slots' | 'collect_contact';
   bookingId?: string;
   startsAt?: string;
+  executiveName?: string;
+  executivePhone?: string;
+  manageToken?: string;
+  meta?: Record<string, unknown>;
   isHandoff?: boolean;
   flagReasons?: string[];
+}
+
+interface ActiveBookingState {
+  bookingId: string;
+  startsAt: string;
+  executiveName?: string;
+  executivePhone?: string;
+  manageToken?: string;
 }
 
 export const BuyerChatPage: React.FC = () => {
@@ -76,7 +91,9 @@ export const BuyerChatPage: React.FC = () => {
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [activeQuickReplies, setActiveQuickReplies] = useState<string[]>([]);
   const [activeUiAction, setActiveUiAction] = useState<'show_slots' | 'collect_contact' | null>(null);
-  const [activeBooking, setActiveBooking] = useState<{ bookingId: string; startsAt: string } | null>(null);
+  const [activeBooking, setActiveBooking] = useState<ActiveBookingState | null>(null);
+  const [reschedulingBookingId, setReschedulingBookingId] = useState<string | null>(null);
+  const [conversationStatus, setConversationStatus] = useState<'ai' | 'human' | 'closed'>('ai');
 
   const [contactData, setContactData] = useState<CollectContactData | null>(null);
   const [isHandoff, setIsHandoff] = useState(false);
@@ -144,6 +161,9 @@ export const BuyerChatPage: React.FC = () => {
             const history = await fetchChatHistory(storedConvId);
             if (!isCancelled && history && history.length > 0) {
               setConversationId(storedConvId);
+              if (history.some((m) => m.role === 'executive')) {
+                setConversationStatus('human');
+              }
               const mapped: UiChatMessage[] = history.map((item) => ({
                 id: item.id,
                 role: item.role === 'buyer' ? 'user' : (item.role as UiChatMessage['role']),
@@ -153,6 +173,10 @@ export const BuyerChatPage: React.FC = () => {
                 uiAction: (item.meta?.['uiAction'] as 'show_slots' | 'collect_contact') || undefined,
                 bookingId: (item.meta?.['bookingId'] as string) || undefined,
                 startsAt: (item.meta?.['startsAt'] as string) || undefined,
+                executiveName: (item.meta?.['executiveName'] as string) || undefined,
+                executivePhone: (item.meta?.['executivePhone'] as string) || undefined,
+                manageToken: (item.meta?.['manageToken'] as string) || undefined,
+                meta: item.meta,
                 isHandoff: Boolean(item.meta?.['isHandoff']),
               }));
 
@@ -170,6 +194,9 @@ export const BuyerChatPage: React.FC = () => {
                 setActiveBooking({
                   bookingId: lastAssistant.bookingId,
                   startsAt: lastAssistant.startsAt,
+                  executiveName: lastAssistant.executiveName,
+                  executivePhone: lastAssistant.executivePhone,
+                  manageToken: lastAssistant.manageToken,
                 });
               }
 
@@ -226,14 +253,18 @@ export const BuyerChatPage: React.FC = () => {
     };
   }, []);
 
-  // When handed off to a human sales executive, poll conversation history every 5s for executive responses
+  // Poll conversation every 5s when in human takeover mode or handed off
   useEffect(() => {
-    if (!isHandoff || !conversationId) return;
+    if (!conversationId) return;
+    if (!isHandoff && conversationStatus !== 'human') return;
 
     const interval = setInterval(async () => {
       try {
         const history = await fetchChatHistory(conversationId);
         if (history && history.length > 0) {
+          if (history.some((m) => m.role === 'executive')) {
+            setConversationStatus('human');
+          }
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
             const newItems: UiChatMessage[] = [];
@@ -241,9 +272,10 @@ export const BuyerChatPage: React.FC = () => {
               if (!existingIds.has(h.id)) {
                 newItems.push({
                   id: h.id,
-                  role: h.role === 'buyer' ? 'user' : 'assistant',
+                  role: h.role === 'buyer' ? 'user' : (h.role as UiChatMessage['role']),
                   content: h.content,
                   createdAt: h.createdAt,
+                  meta: h.meta,
                 });
               }
             }
@@ -259,7 +291,7 @@ export const BuyerChatPage: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isHandoff, conversationId]);
+  }, [isHandoff, conversationStatus, conversationId]);
 
   // Language switch handler
   const handleLanguageChange = async (code: SupportedLanguageCode) => {
@@ -373,9 +405,78 @@ export const BuyerChatPage: React.FC = () => {
     ]);
   };
 
-  // Submit Slot Booking
+  // Reschedule existing visit inside chat
+  const handleChatRescheduleRequest = (bookingId: string) => {
+    setReschedulingBookingId(bookingId);
+    setActiveUiAction('show_slots');
+  };
+
+  // Cancel existing visit inside chat
+  const handleChatCancel = async (bookingId: string) => {
+    if (!conversationId) return;
+    try {
+      const res = await cancelChatVisit(conversationId, bookingId);
+      if (res.success) {
+        setActiveBooking(null);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sys_cancelled_${Date.now()}`,
+            role: 'system',
+            content: 'Your scheduled site visit has been cancelled. You can select a new slot whenever you are ready.',
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (err) {
+      setFallbackWarning(err instanceof Error ? err.message : 'Unable to cancel visit. Please retry.');
+    }
+  };
+
+  // Submit Slot Booking or Reschedule
   const handleBookSlot = async (startsAt: string) => {
     if (!conversationId) return;
+
+    if (reschedulingBookingId) {
+      setIsBookingVisit(true);
+      try {
+        const res = await rescheduleChatVisit(conversationId, reschedulingBookingId, startsAt);
+        setIsBookingVisit(false);
+        setReschedulingBookingId(null);
+        setActiveUiAction(null);
+        const resolvedPhone =
+          (res.visit?.executivePhone ?? activeBooking?.executivePhone) || undefined;
+        const resolvedToken =
+          (res.visit?.token ?? activeBooking?.manageToken) || undefined;
+
+        setActiveBooking({
+          bookingId: reschedulingBookingId,
+          startsAt,
+          executiveName: res.visit?.executiveName || activeBooking?.executiveName,
+          executivePhone: resolvedPhone,
+          manageToken: resolvedToken,
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst_reschedule_${Date.now()}`,
+            role: 'assistant',
+            content: res.message || 'Your site visit has been rescheduled successfully.',
+            createdAt: new Date().toISOString(),
+            bookingId: reschedulingBookingId,
+            startsAt,
+            executiveName: res.visit?.executiveName,
+            executivePhone: resolvedPhone,
+            manageToken: resolvedToken,
+          },
+        ]);
+      } catch (err) {
+        setIsBookingVisit(false);
+        setFallbackWarning(err instanceof Error ? err.message : 'Unable to reschedule visit slot. Please try another time.');
+      }
+      return;
+    }
 
     if (!contactData?.phone) {
       setActiveUiAction('collect_contact');
@@ -402,6 +503,9 @@ export const BuyerChatPage: React.FC = () => {
         setActiveBooking({
           bookingId: res.bookingId,
           startsAt,
+          executiveName: res.executiveName,
+          executivePhone: res.executivePhone,
+          manageToken: res.manageToken,
         });
 
         // Add assistant confirmation message
@@ -414,6 +518,9 @@ export const BuyerChatPage: React.FC = () => {
             createdAt: new Date().toISOString(),
             bookingId: res.bookingId,
             startsAt,
+            executiveName: res.executiveName,
+            executivePhone: res.executivePhone,
+            manageToken: res.manageToken,
           },
         ]);
       } else if (res.uiAction === 'collect_contact') {
@@ -474,9 +581,16 @@ export const BuyerChatPage: React.FC = () => {
                   {activeProject.name}
                 </span>
                 <span className="text-muted text-xs hidden sm:inline">·</span>
-                <span className="text-[11px] text-accent font-medium bg-accent-soft px-1.5 py-0.5 rounded-md hidden sm:inline-block">
-                  Verified Fact Sheet
-                </span>
+                {conversationStatus === 'human' ? (
+                  <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-md inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Agent
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-accent font-medium bg-accent-soft px-1.5 py-0.5 rounded-md hidden sm:inline-block">
+                    Verified Fact Sheet
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
                 <Building2 className="w-3 h-3 text-accent flex-shrink-0" />
@@ -511,12 +625,14 @@ export const BuyerChatPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={handleTalkToPerson}
-              disabled={isSending}
+              disabled={isSending || conversationStatus === 'human'}
               className="text-xs font-semibold px-2.5 py-1.5 text-accent border-accent/25 hover:bg-accent-soft"
               aria-label="Talk to a human sales executive"
             >
               <Headphones className="w-3.5 h-3.5 sm:mr-1.5 text-accent" />
-              <span className="hidden sm:inline">Talk to a person</span>
+              <span className="hidden sm:inline">
+                {conversationStatus === 'human' ? 'Connected' : 'Talk to a person'}
+              </span>
             </Button>
           </div>
         </div>
@@ -571,13 +687,15 @@ export const BuyerChatPage: React.FC = () => {
                   avatar={
                     msg.role === 'assistant' ? (
                       <Sparkles className="w-4 h-4 text-accent" />
+                    ) : msg.role === 'executive' ? (
+                      <UserCheck className="w-4 h-4 text-accent" />
                     ) : undefined
                   }
                   senderName={
                     msg.role === 'assistant'
                       ? 'Residence Advisor'
                       : msg.role === 'executive'
-                        ? 'Sales Executive'
+                        ? `${(msg.meta?.['executiveFirstName'] as string) || 'Executive'} · Sales team`
                         : undefined
                   }
                 />
@@ -589,6 +707,11 @@ export const BuyerChatPage: React.FC = () => {
                       bookingId={msg.bookingId}
                       startsAt={msg.startsAt}
                       projectName={activeProject.name}
+                      executiveName={msg.executiveName || activeBooking?.executiveName}
+                      executivePhone={msg.executivePhone || activeBooking?.executivePhone}
+                      manageToken={msg.manageToken || activeBooking?.manageToken}
+                      onReschedule={() => handleChatRescheduleRequest(msg.bookingId!)}
+                      onCancel={() => handleChatCancel(msg.bookingId!)}
                     />
                   </div>
                 )}
@@ -622,6 +745,11 @@ export const BuyerChatPage: React.FC = () => {
                   bookingId={activeBooking.bookingId}
                   startsAt={activeBooking.startsAt}
                   projectName={activeProject.name}
+                  executiveName={activeBooking.executiveName}
+                  executivePhone={activeBooking.executivePhone}
+                  manageToken={activeBooking.manageToken}
+                  onReschedule={() => handleChatRescheduleRequest(activeBooking.bookingId)}
+                  onCancel={() => handleChatCancel(activeBooking.bookingId)}
                 />
               </div>
             )}
@@ -667,12 +795,12 @@ export const BuyerChatPage: React.FC = () => {
       )}
 
       {/* 4. WARNING & STATUS NOTICES */}
-      {(fallbackWarning || rateLimitMessage || isHandoff) && (
+      {(fallbackWarning || rateLimitMessage || isHandoff || conversationStatus === 'human') && (
         <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 flex-shrink-0">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
             <span className="flex-1 leading-relaxed">
-              {rateLimitMessage || fallbackWarning}
+              {rateLimitMessage || fallbackWarning || (conversationStatus === 'human' ? 'You are speaking directly with a dedicated sales executive.' : null)}
             </span>
             {lastFailedMessage && !isSending && (
               <button
