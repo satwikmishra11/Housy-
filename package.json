@@ -32,7 +32,15 @@
     "db:migrate": "npm run migrate:up --workspace=@housy/api",
     "db:seed": "npm run db:seed --workspace=@housy/api",
     "db:seed:demo": "npm run db:seed:demo --workspace=@housy/api",
-    "db:reset": "npm run db:reset --workspace=@housy/api"
+    "db:reset": "npm run db:reset --workspace=@housy/api",
+    "db:test:reset": "npm run db:reset --workspace=@housy/api",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix"
+    ]
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -40,6 +48,8 @@
     "@playwright/test": "^1.65.0",
     "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.21.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.5.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.1"
