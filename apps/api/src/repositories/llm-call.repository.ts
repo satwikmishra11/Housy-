@@ -7,7 +7,7 @@ export interface LogLlmCallParams {
   latencyMs: number;
   inputTokens: number;
   outputTokens: number;
-  outcome: 'success' | 'error' | 'timeout' | 'cap_exceeded';
+  outcome: 'success' | 'error' | 'timeout' | 'cap_exceeded' | string;
 }
 
 export class LlmCallRepository {
@@ -40,6 +40,46 @@ export class LlmCallRepository {
        WHERE created_at >= CURRENT_DATE`,
     );
     return parseInt(res.rows[0]?.count ?? '0', 10);
+  }
+
+  /**
+   * Return the ISO 8601 timestamp of the most recent successful LLM call, or null.
+   */
+  async getLastSuccessTime(): Promise<string | null> {
+    try {
+      const res = await query<{ created_at: string | Date }>(
+        `SELECT created_at
+         FROM llm_calls
+         WHERE outcome = 'success'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      );
+      if (!res.rows[0]) return null;
+      const val = res.rows[0].created_at;
+      return val instanceof Date ? val.toISOString() : new Date(val).toISOString();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Return the error kind/outcome of the most recent failed LLM call, or null.
+   */
+  async getLastErrorKind(): Promise<string | null> {
+    try {
+      const res = await query<{ outcome: string }>(
+        `SELECT outcome
+         FROM llm_calls
+         WHERE outcome != 'success'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      );
+      if (!res.rows[0]) return null;
+      const outcome = res.rows[0].outcome;
+      return outcome.startsWith('error:') ? outcome.replace('error:', '') : outcome;
+    } catch {
+      return null;
+    }
   }
 }
 

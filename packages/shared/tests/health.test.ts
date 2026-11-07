@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HealthCheckResponseSchema, DatabaseHealthSchema } from '../src/health.js';
+import { HealthCheckResponseSchema, DatabaseHealthSchema, LLMHealthSchema } from '../src/health.js';
 import { ApiErrorResponseSchema } from '../src/errors.js';
 
 describe('Shared Schemas', () => {
@@ -13,6 +13,14 @@ describe('Shared Schemas', () => {
       database: {
         status: 'connected',
         latencyMs: 12,
+      },
+      llm: {
+        provider: 'gemini',
+        model: 'gemini-1.5-flash',
+        status: 'ok',
+        lastSuccessAt: new Date().toISOString(),
+        lastErrorKind: null,
+        probeLatencyMs: 340,
       },
     };
 
@@ -32,10 +40,35 @@ describe('Shared Schemas', () => {
         latencyMs: null,
         message: 'Connection timeout',
       },
+      llm: {
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        status: 'degraded',
+        lastSuccessAt: null,
+        lastErrorKind: 'rate_limit',
+        probeLatencyMs: 1200,
+      },
     };
 
     const parsed = HealthCheckResponseSchema.safeParse(payload);
     expect(parsed.success).toBe(true);
+  });
+
+  it('validates LLMHealthSchema with unconfigured and down states', () => {
+    const unconfigured = {
+      provider: 'gemini',
+      model: 'gemini-1.5-flash',
+      status: 'unconfigured',
+    };
+    expect(LLMHealthSchema.safeParse(unconfigured).success).toBe(true);
+
+    const down = {
+      provider: 'anthropic',
+      model: 'claude-3-5-sonnet-20241022',
+      status: 'down',
+      lastErrorKind: 'auth',
+    };
+    expect(LLMHealthSchema.safeParse(down).success).toBe(true);
   });
 
   it('rejects invalid health-check payload', () => {
@@ -72,4 +105,3 @@ describe('Shared Schemas', () => {
     expect(parsed.success).toBe(true);
   });
 });
-

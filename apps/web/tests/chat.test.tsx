@@ -483,13 +483,13 @@ describe('Buyer Chat UI & Inline Interactive Components', () => {
       fireEvent.click(screen.getByRole('button', { name: /Send message/i }));
 
       await waitFor(() => {
-        expect(
-          screen.getByText('A member of our team will confirm this with you shortly.'),
-        ).toBeInTheDocument();
-        expect(
-          screen.getByText('Our sales team has been notified and will assist you directly.'),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Network failure/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
       });
+      // Verifies no fabricated replies are inserted
+      expect(
+        screen.queryByText('A member of our team will confirm this with you shortly.'),
+      ).not.toBeInTheDocument();
     });
 
     it('renders and executes full interactive visit booking flow with inline cards', async () => {

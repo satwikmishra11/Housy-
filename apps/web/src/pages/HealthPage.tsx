@@ -14,6 +14,7 @@ import {
   Server,
   Layers,
   RefreshCw,
+  Cpu,
 } from 'lucide-react';
 
 export const HealthPage: React.FC = () => {
@@ -162,7 +163,7 @@ export const HealthPage: React.FC = () => {
             </div>
 
             {/* Diagnostic Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {/* Database Telemetry */}
               <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
@@ -192,6 +193,62 @@ export const HealthPage: React.FC = () => {
                 {health.database.message && (
                   <p className="mt-2 text-xs text-rose-600 bg-rose-50 p-2 rounded">
                     {health.database.message}
+                  </p>
+                )}
+              </div>
+
+              {/* LLM Engine Telemetry */}
+              <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    AI Engine
+                  </span>
+                  <Cpu className="w-4 h-4 text-stone-400" />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`inline-block w-2.5 h-2.5 rounded-full ${
+                      health.llm?.status === 'ok'
+                        ? 'bg-emerald-500'
+                        : health.llm?.status === 'degraded'
+                        ? 'bg-amber-500'
+                        : health.llm?.status === 'unconfigured'
+                        ? 'bg-stone-400'
+                        : 'bg-rose-500'
+                    }`}
+                  />
+                  <span className="text-lg font-semibold capitalize text-stone-900">
+                    {health.llm?.status ?? 'Unknown'}
+                  </span>
+                  {health.llm && (
+                    <span className="text-xs text-stone-500 font-mono">
+                      ({health.llm.provider})
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-stone-100 space-y-1 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Model</span>
+                    <span
+                      className="font-mono font-medium text-stone-800 truncate max-w-[120px]"
+                      title={health.llm?.model}
+                    >
+                      {health.llm?.model ?? 'None'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Probe Latency</span>
+                    <span className="font-mono font-medium text-stone-800">
+                      {health.llm?.probeLatencyMs !== null &&
+                      health.llm?.probeLatencyMs !== undefined
+                        ? `${health.llm.probeLatencyMs} ms`
+                        : 'Cached/Idle'}
+                    </span>
+                  </div>
+                </div>
+                {health.llm?.lastErrorKind && (
+                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 p-2 rounded truncate">
+                    Kind: <span className="font-mono font-semibold">{health.llm.lastErrorKind}</span>
                   </p>
                 )}
               </div>

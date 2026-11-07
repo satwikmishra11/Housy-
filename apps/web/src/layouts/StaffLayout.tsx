@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { QueryClient, QueryClientContext, useQuery } from '@tanstack/react-query';
+import { fetchHealth } from '../lib/api.js';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.js';
 import {
   Users,
@@ -29,6 +31,15 @@ export interface StaffLayoutProps {
   userName?: string;
 }
 
+const fallbackQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      enabled: false,
+    },
+  },
+});
+
 export const StaffLayout: React.FC<StaffLayoutProps> = ({
   children,
   userRole: propUserRole,
@@ -48,6 +59,18 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
 
   const effectiveUserRole = authContext?.user?.role || propUserRole || 'sales_head';
   const effectiveUserName = authContext?.user?.name || propUserName || 'Harshil Mehta';
+
+  const queryClient = React.useContext(QueryClientContext);
+  const { data: health } = useQuery(
+    {
+      queryKey: ['system-health'],
+      queryFn: fetchHealth,
+      refetchInterval: 30000,
+      staleTime: 15000,
+      enabled: Boolean(queryClient),
+    },
+    queryClient ?? fallbackQueryClient,
+  );
 
   const handleLogout = async (): Promise<void> => {
     if (authContext) {
@@ -112,7 +135,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       {/* Desktop Sidebar (>= md) */}
       <aside className="hidden md:flex flex-col w-64 border-r border-hairline bg-surface p-5 flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
         {/* Brand */}
-        <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="flex items-center gap-3 mb-4 px-2">
           <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-lg select-none shadow-subtle">
             H
           </div>
@@ -124,6 +147,40 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
             </p>
           </div>
         </div>
+
+        {/* Ambient AI Health Status Chip */}
+        {health?.llm && (
+          <div className="mb-6 px-2">
+            <NavLink
+              to="/"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                health.llm.status === 'ok'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  : health.llm.status === 'degraded'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                  : health.llm.status === 'unconfigured'
+                  ? 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+              }`}
+              title={`LLM Provider: ${health.llm.provider} (${health.llm.model}) · Status: ${health.llm.status}`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  health.llm.status === 'ok'
+                    ? 'bg-emerald-500'
+                    : health.llm.status === 'degraded'
+                    ? 'bg-amber-500'
+                    : health.llm.status === 'unconfigured'
+                    ? 'bg-stone-400'
+                    : 'bg-rose-500'
+                }`}
+              />
+              <span className="font-mono uppercase tracking-wider text-[10px] font-semibold">AI:</span>
+              <span>{health.llm.status}</span>
+              <span className="text-[10px] opacity-75">({health.llm.provider})</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-1.5" aria-label="Staff navigation">
@@ -199,6 +256,27 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {health?.llm && (
+            <NavLink
+              to="/"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                health.llm.status === 'ok'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : health.llm.status === 'degraded'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : health.llm.status === 'unconfigured'
+                  ? 'bg-stone-100 text-stone-700 border-stone-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  health.llm.status === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              />
+              AI: {health.llm.status}
+            </NavLink>
+          )}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="min-h-[44px] min-w-[44px] p-2 rounded-xl border border-hairline text-ink hover:bg-background flex items-center justify-center"
