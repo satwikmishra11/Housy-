@@ -15,6 +15,8 @@ import {
   Layers,
   RefreshCw,
   Cpu,
+  Bell,
+  XCircle,
 } from 'lucide-react';
 
 export const HealthPage: React.FC = () => {
@@ -163,7 +165,7 @@ export const HealthPage: React.FC = () => {
             </div>
 
             {/* Diagnostic Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Database Telemetry */}
               <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
@@ -253,6 +255,58 @@ export const HealthPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Visit Reminders SLA Telemetry */}
+              <div
+                className={`p-5 rounded-2xl border shadow-xs transition-all ${
+                  health.jobs?.remindersOverdue
+                    ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-200'
+                    : 'bg-white border-stone-200'
+                }`}
+                data-testid="reminders-health-card"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    Reminders SLA
+                  </span>
+                  <Bell
+                    className={`w-4 h-4 ${
+                      health.jobs?.remindersOverdue ? 'text-rose-600' : 'text-stone-400'
+                    }`}
+                  />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`inline-block w-2.5 h-2.5 rounded-full ${
+                      health.jobs?.remindersOverdue ? 'bg-rose-600 animate-pulse' : 'bg-emerald-500'
+                    }`}
+                  />
+                  <span
+                    className={`text-lg font-semibold capitalize ${
+                      health.jobs?.remindersOverdue ? 'text-rose-700' : 'text-stone-900'
+                    }`}
+                  >
+                    {health.jobs?.remindersOverdue ? 'Overdue (>10m)' : 'Active (<10m)'}
+                  </span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-stone-100 flex justify-between items-center text-xs">
+                  <span className="text-stone-500">Last Executed</span>
+                  <span
+                    className={`font-mono font-medium ${
+                      health.jobs?.remindersOverdue ? 'text-rose-700' : 'text-stone-800'
+                    }`}
+                  >
+                    {health.jobs?.remindersLastRunAt
+                      ? formatInKolkataTime(health.jobs.remindersLastRunAt)
+                      : 'Never'}
+                  </span>
+                </div>
+                {health.jobs?.remindersOverdue && (
+                  <p className="mt-2 text-xs text-rose-700 bg-rose-100/80 p-2 rounded">
+                    Reminders have not run for over 10 minutes. External cron required.
+                  </p>
+                )}
+              </div>
+
               {/* Server Runtime */}
               <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
@@ -288,6 +342,89 @@ export const HealthPage: React.FC = () => {
                   <span className="font-mono font-medium text-stone-700">UTC (ISO 8601)</span>
                 </div>
               </div>
+            </div>
+
+            {/* Background Jobs Telemetry & Run History */}
+            <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-stone-600" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-800">
+                    Background Jobs &amp; Cron Telemetry (POST /api/internal/run-jobs)
+                  </h3>
+                </div>
+                <span className="text-xs font-mono text-stone-500">
+                  SLA Threshold: 10m
+                </span>
+              </div>
+
+              {health.jobs?.remindersOverdue && (
+                <div
+                  className="p-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 flex items-start gap-3 mb-4"
+                  data-testid="reminders-overdue-banner"
+                >
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-sm">Site-Visit Reminders Stale / Overdue (&gt;10 min)</h4>
+                    <p className="text-xs text-rose-700 mt-1">
+                      Reminders have not executed within the required 10-minute threshold. The external cron provider (e.g. cron-job.org) targeting <code>POST /api/internal/run-jobs</code> with header <code>X-Internal-Key</code> may be unconfigured or failing.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {(!health.jobs?.recentRuns || health.jobs.recentRuns.length === 0) ? (
+                <div className="py-6 text-center text-xs text-stone-500 bg-stone-50 rounded-xl border border-dashed border-stone-200">
+                  No background job runs recorded yet. Execute <code>POST /api/internal/run-jobs</code> to initiate run telemetry.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left text-stone-700">
+                    <thead className="bg-stone-50 text-stone-500 font-semibold uppercase tracking-wider border-b border-stone-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Job Name</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Finished At (IST)</th>
+                        <th className="py-2.5 px-3">Duration</th>
+                        <th className="py-2.5 px-3">Counts</th>
+                        <th className="py-2.5 px-3">Error / Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {health.jobs.recentRuns.map((run, idx) => (
+                        <tr key={run.id ?? idx} className="hover:bg-stone-50/50">
+                          <td className="py-2.5 px-3 font-mono font-medium text-stone-900">
+                            {run.job}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {run.ok ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                                <CheckCircle2 className="w-3 h-3" /> OK
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800">
+                                <XCircle className="w-3 h-3" /> FAILED
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono">
+                            {formatInKolkataTime(run.finishedAt)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono">
+                            {run.durationMs ?? 0} ms
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-stone-600">
+                            {JSON.stringify(run.counts)}
+                          </td>
+                          <td className="py-2.5 px-3 text-rose-600 font-mono">
+                            {run.error ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Architecture Compliance Overview */}

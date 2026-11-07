@@ -5,11 +5,20 @@ import { createHealthRouter } from '../src/routes/health.router.js';
 import { HealthService } from '../src/services/health.service.js';
 import type { HealthRepository } from '../src/repositories/health.repository.js';
 import type { LlmCallRepository } from '../src/repositories/llm-call.repository.js';
+import type { JobRunRepository } from '../src/repositories/job-run.repository.js';
 import { HealthCheckResponseSchema } from '@housy/shared';
 import { app } from '../src/app.js';
 import { llmService } from '../src/llm/llm.service.js';
 
 describe('Health API', () => {
+  const defaultMockJobRuns: Partial<JobRunRepository> = {
+    getJobsHealth: vi.fn().mockResolvedValue({
+      remindersStatus: 'ok',
+      remindersOverdue: false,
+      recentRuns: [],
+    }),
+  };
+
   it('GET /api/health returns 200 with ok status and LLM telemetry when DB is connected', async () => {
     const mockRepo: HealthRepository = {
       pingDatabase: vi.fn().mockResolvedValue({
@@ -33,7 +42,13 @@ describe('Health API', () => {
     testApp.use(express.json());
     testApp.use(
       '/api',
-      createHealthRouter(new HealthService(mockRepo, mockLlmCalls as LlmCallRepository)),
+      createHealthRouter(
+        new HealthService(
+          mockRepo,
+          mockLlmCalls as LlmCallRepository,
+          defaultMockJobRuns as JobRunRepository,
+        ),
+      ),
     );
 
     const response = await request(testApp).get('/api/health');
@@ -68,7 +83,16 @@ describe('Health API', () => {
 
     const testApp = express();
     testApp.use(express.json());
-    testApp.use('/api', createHealthRouter(new HealthService(mockRepo)));
+    testApp.use(
+      '/api',
+      createHealthRouter(
+        new HealthService(
+          mockRepo,
+          undefined,
+          defaultMockJobRuns as JobRunRepository,
+        ),
+      ),
+    );
 
     const response = await request(testApp).get('/api/health');
 
@@ -93,7 +117,16 @@ describe('Health API', () => {
 
     const testApp = express();
     testApp.use(express.json());
-    testApp.use('/api', createHealthRouter(new HealthService(mockRepo)));
+    testApp.use(
+      '/api',
+      createHealthRouter(
+        new HealthService(
+          mockRepo,
+          undefined,
+          defaultMockJobRuns as JobRunRepository,
+        ),
+      ),
+    );
 
     const response = await request(testApp).get('/api/health');
 
@@ -124,7 +157,16 @@ describe('Health API', () => {
 
     const testApp = express();
     testApp.use(express.json());
-    testApp.use('/api', createHealthRouter(new HealthService(mockRepo)));
+    testApp.use(
+      '/api',
+      createHealthRouter(
+        new HealthService(
+          mockRepo,
+          undefined,
+          defaultMockJobRuns as JobRunRepository,
+        ),
+      ),
+    );
 
     const response = await request(testApp).get('/api/health');
 

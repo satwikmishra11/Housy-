@@ -69,5 +69,93 @@ describe('HealthPage Component', () => {
     expect(screen.getByText(/failed to load system status/i)).toBeInTheDocument();
     expect(screen.getByText(/network error/i)).toBeInTheDocument();
   });
+
+  it('renders reminders overdue alert when reminders have not run in over 10 minutes', async () => {
+    vi.spyOn(api, 'fetchHealth').mockResolvedValue({
+      status: 'degraded',
+      timestamp: '2026-11-05T09:30:00.000Z',
+      uptimeSeconds: 300,
+      environment: 'development',
+      version: '1.0.0',
+      database: {
+        status: 'connected',
+        latencyMs: 3.1,
+      },
+      jobs: {
+        remindersStatus: 'overdue',
+        remindersLastRunAt: '2026-11-05T09:10:00.000Z',
+        remindersOverdue: true,
+        recentRuns: [
+          {
+            job: 'reminders',
+            startedAt: '2026-11-05T09:09:59.000Z',
+            finishedAt: '2026-11-05T09:10:00.000Z',
+            ok: true,
+            durationMs: 45,
+            counts: { processedCount: 0 },
+            error: null,
+          },
+        ],
+      },
+    });
+
+    renderWithClient(<HealthPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reminders-overdue-banner')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('reminders-health-card')).toHaveClass('bg-rose-50/70');
+    expect(screen.getByText(/Overdue \(>10m\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/reminders/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders active reminders state when jobs are fresh within 10 minutes', async () => {
+    vi.spyOn(api, 'fetchHealth').mockResolvedValue({
+      status: 'ok',
+      timestamp: '2026-11-05T09:30:00.000Z',
+      uptimeSeconds: 300,
+      environment: 'development',
+      version: '1.0.0',
+      database: {
+        status: 'connected',
+        latencyMs: 2.5,
+      },
+      jobs: {
+        remindersStatus: 'ok',
+        remindersLastRunAt: '2026-11-05T09:28:00.000Z',
+        remindersOverdue: false,
+        recentRuns: [
+          {
+            job: 'reminders',
+            startedAt: '2026-11-05T09:27:59.000Z',
+            finishedAt: '2026-11-05T09:28:00.000Z',
+            ok: true,
+            durationMs: 22,
+            counts: { sentCount: 1 },
+            error: null,
+          },
+          {
+            job: 'slot_top_up',
+            startedAt: '2026-11-05T09:27:59.000Z',
+            finishedAt: '2026-11-05T09:28:00.000Z',
+            ok: true,
+            durationMs: 48,
+            counts: { insertedSlots: 14 },
+            error: null,
+          },
+        ],
+      },
+    });
+
+    renderWithClient(<HealthPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Active \(<10m\)/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('reminders-overdue-banner')).not.toBeInTheDocument();
+    expect(screen.getByText('slot_top_up')).toBeInTheDocument();
+  });
 });
 
