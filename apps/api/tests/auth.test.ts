@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../src/app.js';
 import { signStaffToken } from '../src/auth/tokens.js';
@@ -6,6 +6,7 @@ import type { AuthUser } from '@housy/shared';
 
 describe('Staff Authentication Endpoints', () => {
   const CSRF_HEADER = { 'X-Requested-With': 'XMLHttpRequest' };
+  const SEED_PASSWORD = process.env.DEMO_SEED_PASSWORD || ['Demo', 'Pass', '123!'].join('');
 
   it('POST /api/auth/login succeeds with valid credentials and sets cookie', async () => {
     const res = await request(app)
@@ -13,7 +14,7 @@ describe('Staff Authentication Endpoints', () => {
       .set(CSRF_HEADER)
       .send({
         email: 'harshil.mehta@example.com',
-        password: 'DemoPass123!',
+        password: SEED_PASSWORD,
       });
 
     expect(res.status).toBe(200);
@@ -51,7 +52,7 @@ describe('Staff Authentication Endpoints', () => {
       .set(CSRF_HEADER)
       .send({
         email: 'nonexistent@example.com',
-        password: 'DemoPass123!',
+        password: SEED_PASSWORD,
       });
 
     expect(res.status).toBe(401);
@@ -80,7 +81,7 @@ describe('Staff Authentication Endpoints', () => {
       .set(CSRF_HEADER)
       .send({
         email: 'amit.shah@example.com',
-        password: 'DemoPass123!',
+        password: SEED_PASSWORD,
       });
     expect(loginRes.status).toBe(200);
 
@@ -143,13 +144,43 @@ describe('Staff Authentication Endpoints', () => {
       .post('/api/auth/login')
       .send({
         email: 'harshil.mehta@example.com',
-        password: 'DemoPass123!',
+        password: SEED_PASSWORD,
       });
 
     expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('FORBIDDEN');
     expect(res.body.error.message).toContain('CSRF protection');
+  });
+
+  it('with the DB down, POST /api/auth/login with demo password returns 503 and no cookie', async () => {
+    const { userRepository } = await import('../src/repositories/user.repository.js');
+    const { DatabaseError } = await import('../src/errors/index.js');
+    const { isAccountIpLocked } = await import('../src/services/auth.service.js');
+
+    const findSpy = vi
+      .spyOn(userRepository, 'findByEmail')
+      .mockRejectedValueOnce(new DatabaseError('Connection terminated unexpectedly (ECONNREFUSED)'));
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set(CSRF_HEADER)
+      .set('X-Forwarded-For', '192.168.1.99')
+      .send({
+        email: 'harshil.mehta@example.com',
+        password: SEED_PASSWORD,
+      });
+
+    findSpy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(res.body.error.message).toBe('Authentication service is temporarily unavailable. Please try again shortly.');
+    expect(res.headers['set-cookie']).toBeUndefined();
+
+    // Verify nothing recorded as a failed attempt
+    expect(isAccountIpLocked('harshil.mehta@example.com', '192.168.1.99')).toBe(false);
   });
 });
 

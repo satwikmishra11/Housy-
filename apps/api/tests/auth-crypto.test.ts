@@ -21,7 +21,7 @@ describe('Auth Password Hashing & Tokens', () => {
   };
 
   it('hashes password with Argon2id and verifies successfully', async () => {
-    const rawPass = 'DemoPass123!';
+    const rawPass = 'SampleSecretPass!456';
     const hash = await hashPassword(rawPass);
 
     expect(hash).toContain('$argon2id$');

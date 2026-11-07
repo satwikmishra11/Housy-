@@ -1,7 +1,8 @@
 import { userRepository, type UserRepository } from '../repositories/user.repository.js';
 import { verifyPassword } from '../auth/password.js';
 import { signStaffToken } from '../auth/tokens.js';
-import { UnauthorizedError } from '../errors/index.js';
+import { UnauthorizedError, ServiceUnavailableError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
 import type { AuthUser, LoginRequest } from '@housy/shared';
 
 export interface LoginResult {
@@ -75,33 +76,8 @@ export class AuthService {
     try {
       user = await this.userRepo.findByEmail(credentials.email);
     } catch (err) {
-      // In serverless preview environments without a live PostgreSQL connection,
-      // allow documented demo accounts to authenticate successfully
-      const demoAccounts: Record<string, AuthUser> = {
-        'harshil.mehta@example.com': {
-          id: 'efc322d0-b511-4fc3-aadd-9ed0c2e09764',
-          name: 'Harshil Mehta',
-          email: 'harshil.mehta@example.com',
-          role: 'sales_head',
-          phone: '+919000000001',
-        },
-        'amit.shah@example.com': {
-          id: 'b1c322d0-b511-4fc3-aadd-9ed0c2e09765',
-          name: 'Amit Shah',
-          email: 'amit.shah@example.com',
-          role: 'executive',
-          phone: '+919000000002',
-        },
-      };
-
-      const demoUser = demoAccounts[normalizedEmail];
-      if (demoUser && credentials.password === 'DemoPass123!') {
-        clearFailedAttempts(normalizedEmail, ip);
-        const token = await signStaffToken(demoUser);
-        return { user: demoUser, token };
-      }
-      recordFailedAttempt(normalizedEmail, ip);
-      throw err;
+      logger.error({ err, email: normalizedEmail }, 'Database error during staff login');
+      throw new ServiceUnavailableError('Authentication service is temporarily unavailable. Please try again shortly.');
     }
 
     if (!user || !user.active) {
@@ -138,25 +114,8 @@ export class AuthService {
     try {
       user = await this.userRepo.findById(userId);
     } catch (err) {
-      if (userId === 'efc322d0-b511-4fc3-aadd-9ed0c2e09764') {
-        return {
-          id: 'efc322d0-b511-4fc3-aadd-9ed0c2e09764',
-          name: 'Harshil Mehta',
-          email: 'harshil.mehta@example.com',
-          role: 'sales_head',
-          phone: '+919000000001',
-        };
-      }
-      if (userId === 'b1c322d0-b511-4fc3-aadd-9ed0c2e09765') {
-        return {
-          id: 'b1c322d0-b511-4fc3-aadd-9ed0c2e09765',
-          name: 'Amit Shah',
-          email: 'amit.shah@example.com',
-          role: 'executive',
-          phone: '+919000000002',
-        };
-      }
-      throw err;
+      logger.error({ err, userId }, 'Database error during getMe');
+      throw new ServiceUnavailableError('Authentication service is temporarily unavailable. Please try again shortly.');
     }
 
     if (!user || !user.active) {

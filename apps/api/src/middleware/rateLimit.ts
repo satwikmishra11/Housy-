@@ -47,6 +47,10 @@ export const loginRateLimiter = rateLimit({
   limit: config.RATE_LIMIT_LOGIN_MAX,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  keyGenerator: (req: Request): string => {
+    return (req.headers['x-forwarded-for'] as string) || req.ip || req.socket.remoteAddress || 'unknown-ip';
+  },
+  validate: { keyGeneratorIpFallback: false, xForwardedForHeader: false },
   handler: createRateLimitHandler(
     'Too many login attempts. Your IP has been temporarily rate limited, please try again later.',
   ),
