@@ -294,3 +294,20 @@ Acquisition marketing spend (₹30 Lakh/month across portals, social, Google sea
 - **Cost per Completed Visit**: Calculated as $\frac{\text{Attributed Ad Spend}}{\text{Completed Site Visits}}$.
 - **Statistical Significance Threshold**: If an acquisition channel has fewer than 5 completed visits in the reporting period, the cost is displayed as `"—"` to avoid distorted outliers from small sample sizes.
 - **Explicit Spend Note**: Labeled with the exact allocation basis (`Ad Spend Allocation (₹30L/mo)`).
+
+---
+
+## 12. Automated Job Scheduling, Fault Isolation & Cron Health
+
+In cloud serverless topologies (such as Vercel multi-service), in-memory daemons (`setInterval`) freeze between requests, and free-tier platform crons execute too infrequently (once daily) to guarantee 2-hour pre-visit alerts. The system implements a robust automated operations architecture:
+
+### Unified Master Runner (`POST /api/internal/run-jobs`)
+A single HTTPS webhook invoked by an external scheduler (e.g. cron-job.org) every 5 minutes:
+1. **Timing-Safe Authentication**: Authenticated strictly via the `X-Internal-Key` HTTP header evaluated via `crypto.timingSafeEqual` in constant time. Disallows query parameter keys (`?key=`, `?apiKey=`) and staff cookie sessions, preventing credential leakage in proxy and server access logs.
+2. **Four Fault-Isolated Routines**:
+   - **Reminders (`reminders`)**: Processes pending due visit reminders (batch limit 100) using PostgreSQL row-level pessimistic locking (`FOR UPDATE SKIP LOCKED`). Confirms confirmed booking state and DPDP consent before dispatching. Strictly idempotent on repeat invocations.
+   - **Slot Top-Up (`slot_top_up`)**: Projects executive availability rules 28 days forward (increased from 21 days), preventing slot exhaustion during periods without admin intervention. Uses `ON CONFLICT (executive_id, starts_at) DO NOTHING`.
+   - **Handoff Escalation (`handoff_escalation`)**: Identifies unaccepted handoffs in `new` status older than 15 minutes, escalating priority to `urgent` and alerting the Sales Head.
+   - **Stale Session Cleanup (`stale_session_cleanup`)**: Identifies anonymous chat sessions older than 24 hours without lead conversion, reconciling status to `abandoned` and closing inactive conversations.
+3. **Audit Trail (`job_runs`)**: Every routine execution logs an immutable record with job identifier, start/finish timestamps in UTC, boolean success flag, JSON execution counts, and sanitized error messages with zero stack trace leakage.
+4. **10-Minute Health SLA**: The health check endpoint (`GET /api/health`) and the diagnostics page (`/health`) evaluate reminder execution freshness. If reminders have not completed a successful run within the last 10 minutes, the health chip transitions to **RED** (`Overdue (>10m)`), alerting operators to external cron interruptions.

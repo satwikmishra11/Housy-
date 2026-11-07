@@ -36,7 +36,7 @@ erDiagram
 
 ---
 
-## 2. Relational Entity Catalog (20 Tables)
+## 2. Relational Entity Catalog (21 Tables)
 
 | Entity | Primary Key | Key Attributes & Foreign Keys | Purpose |
 |---|---|---|---|
@@ -63,6 +63,7 @@ erDiagram
 | `llm_calls` | `UUID` | `conversation_id`, `prompt_tokens`, `completion_tokens`, `cost_usd`, `latency_ms`, `model`, `grounded_facts_count` | AI telemetry tracking token usage, latency, and fact citation density. |
 | `handoff_events` | `UUID` | `handoff_id` (FK handoffs), `event_type` (`created`, `trigger_appended`), `reason`, `metadata` (`jsonb`), `created_at` | Append-only event history tracking repeated escalation triggers for a conversation. |
 | `staff_notifications` | `UUID` | `user_id` (FK users), `type` (`handoff`, `escalation`, `visit_awaiting_outcome`, `system`), `title`, `message`, `link`, `is_read`, `created_at` | In-app staff notifications powering the notification bell and mirrored to the outbox. |
+| `job_runs` | `UUID` | `job`, `started_at`, `finished_at`, `ok`, `counts` (`jsonb`), `error`, `created_at` | Background job execution audit history and 10-minute reminder SLA monitoring. |
 
 ---
 
@@ -159,4 +160,5 @@ ON leads (source, first_touch_at);
 5. `005_add_dashboard_and_list_indexes.cjs`: Adds targeted covering and partial indexes for dashboard aggregations and SLA tracking.
 6. `006_handoff_events_languages_notifications.cjs`: Adds `users.languages text[]`, `handoffs.priority`, `handoffs.is_escalated`, partial unique index `idx_handoffs_open_conversation`, `handoff_events` table, `staff_notifications` table, and adds `internal` value to `channel_type` enum.
 7. `007_chat_sessions_and_first_response.cjs`: Creates `chat_sessions` table for anonymous buyer chat sessions, makes `conversations.lead_id` nullable, adds `conversations.chat_session_id`, adds `leads.first_response_kind`, and adds `messages.is_greeting`.
+8. `008_create_job_runs.cjs`: Creates `job_runs` table for execution history tracking, error logging, and 10-minute SLA health monitoring.
 

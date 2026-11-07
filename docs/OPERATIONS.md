@@ -98,34 +98,69 @@ The platform deploys as a single unified Vercel project with two independent ser
 
 ---
 
-## 3. Background Jobs & Scheduled Routines (`apps/api/src/jobs/`)
+## 3. Background Jobs, Cron Telemetry & Master Runner (`apps/api/src/jobs/`)
 
-### 1. Site-Visit Reminder Worker (`ReminderJob`)
-- **Schedule**: Evaluates every minute for due reminders (`scheduled_at <= NOW()` with status `pending`).
-- **Pessimistic Concurrency**: Claims records using `SELECT id FROM reminders WHERE ... FOR UPDATE SKIP LOCKED`, allowing safe horizontal scaling across multiple worker instances without double-dispatch.
+### Unified Master Runner: `POST /api/internal/run-jobs`
+All recurring background tasks are unified into `POST /api/internal/run-jobs`:
+- **Strict Authentication Boundary**:
+  - Authenticated **strictly via `X-Internal-Key` HTTP header**.
+  - Compared in constant time via `crypto.timingSafeEqual` to prevent timing attacks.
+  - Query parameters (`?key=`, `?apiKey=`) and staff JWT cookies are rejected, preventing secret leakage into proxy access logs.
+- **Fault-Isolated Execution**: Each routine executes inside an independent `try/catch` block, recording per-job metrics (`ok`, `durationMs`, `counts`, and sanitized `error` strings with zero stack traces) to the `job_runs` table.
+
+```
+External Cron (cron-job.org, every 5m)
+                 │
+                 ▼
+      POST /api/internal/run-jobs
+    (Header: X-Internal-Key: <SECRET>)
+                 │
+      ┌──────────┴──────────┐
+      ▼                     ▼
+┌──────────────┐     ┌──────────────┐
+│  Reminders   │     │ Slot Top-Up  │
+│  (limit 100) │     │ (to 28 days) │
+└──────────────┘     └──────────────┘
+      │                     │
+      ▼                     ▼
+┌──────────────┐     ┌──────────────┐
+│   Handoff    │     │Stale Sessions│
+│  Escalation  │     │   Cleanup    │
+└──────────────┘     └──────────────┘
+                 │
+                 ▼
+       Persist to job_runs
+```
+
+### 1. Site-Visit Reminder Worker (`reminders`)
+- **Schedule**: Evaluates for due reminders (`scheduled_at <= NOW()` with status `pending`) with a batch limit of 100.
+- **Pessimistic Concurrency**: Claims records using `SELECT id FROM reminders WHERE ... FOR UPDATE SKIP LOCKED`, allowing safe concurrent execution without double-dispatch.
 - **Pre-Dispatch Verification**:
   - Confirms the associated booking is still `confirmed` (aborts if cancelled or rescheduled).
-  - Evaluates `canContact(lead, channel)`. If the buyer has opted out, marks reminder `skipped`.
+  - Evaluates DPDP `canContact(lead, channel)`. If the buyer has opted out, marks reminder `skipped`.
 - **Timing Logic**:
   - `24h` reminder: Scheduled for `starts_at - 24 hours`. Gracefully marked `skipped` if appointment is booked less than 24h before visit.
   - `2h` reminder: Scheduled for `starts_at - 2 hours`.
 - **Retry Strategy**: Failed dispatches are retried up to 3 times before transitioning to status `'failed'`.
 
-### 2. Slot Generation Routine (`SlotGeneratorJob`)
-- **Projection**: Slices executive working shifts into 60-minute visit intervals over a rolling 21-day window.
+### 2. Slot Top-Up Routine (`slot_top_up`)
+- **Rolling 28-Day Window**: Slices executive working shifts into 60-minute visit intervals up to 28 days ahead (extended from 21 days), preventing slot exhaustion during periods without admin availability edits.
 - **Timezone Precision**: Working hours (`start_time`, `end_time`) and blackout dates are defined in `Asia/Kolkata` (IST, UTC+05:30) and projected into UTC `starts_at`/`ends_at` timestamps.
-- **Idempotency**: Executes `INSERT INTO visit_slots (...) ON CONFLICT (executive_id, starts_at) DO NOTHING`.
-- **Triggers**: Executed on application startup, nightly, and immediately when an admin modifies availability rules or blackout dates.
+- **Idempotency**: Executes `INSERT INTO visit_slots (...) ON CONFLICT (executive_id, starts_at) DO NOTHING`. Repeat calls insert 0 slots.
 
-### 3. Handoff SLA Escalation Routine (`HandoffEscalationJob`)
+### 3. Handoff SLA Escalation Routine (`handoff_escalation`)
 - **Schedule**: Evaluates for unaccepted buyer handoffs in status `new` older than 15 minutes (`created_at <= NOW() - INTERVAL '15 minutes'`).
 - **Escalation**: Flags `is_escalated = true` and elevates priority to `urgent`.
 - **Alerting**: Creates a high-priority notification for the Sales Head in `staff_notifications` and mirrors the dispatch to `outbound_messages` with `channel = 'internal'`.
-- **HTTP Trigger**: `POST /api/internal/run-escalations` authenticated via `X-Internal-Key` header or query parameter `?key=`.
 
-### 4. Execution Topology (Cron Options)
-- **Long-Running Server Daemon**: `server.ts` runs an in-process interval (`setInterval(..., 60000)`) in containerized environments (Docker, Render, Railway).
-- **Serverless HTTP Cron Trigger**: `POST /api/internal/run-reminders` authenticated via `X-Internal-Key` header or query parameter `?key=`, suitable for external schedulers (e.g. GitHub Actions, AWS EventBridge, cron-job.org).
+### 4. Stale Session Cleanup Routine (`stale_session_cleanup`)
+- **Data Minimization**: Identifies anonymous chat sessions older than 24 hours without lead conversion (`lead_id IS NULL`).
+- **State Reconciliation**: Updates `chat_sessions.status = 'abandoned'` and closes associated AI conversations (`conversations.status = 'closed'`).
+
+### 5. Execution Topology & 10-Minute SLA Health Monitor
+- **Vercel Multi-Service + External Cron (cron-job.org)**: Serverless function instances on Vercel freeze between requests, rendering in-process `setInterval` inactive. Because Vercel Hobby scheduled crons are limited to once-daily execution (too coarse for 2-hour pre-visit alerts), recurring automation is driven by an external HTTPS cron scheduler (e.g. cron-job.org or GitHub Actions) invoking `POST /api/internal/run-jobs` every 5 minutes.
+- **`job_runs` Table**: Stores audit history (`job`, `started_at`, `finished_at`, `ok`, `counts`, `error`).
+- **Health Diagnostic SLA (`/health`)**: The health check endpoint (`GET /api/health`) and UI dashboard monitor reminder freshness. If visit reminders have not completed a successful run within the last 10 minutes, the dashboard turns **RED** (`Overdue (>10m)`), alerting operators to external cron failures.
 
 ---
 
