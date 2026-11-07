@@ -4,7 +4,8 @@ import type { ChatLanguage, ChatMessageRole } from '@housy/shared';
 export interface ConversationRecord {
   [key: string]: unknown;
   id: string;
-  lead_id: string;
+  lead_id: string | null;
+  chat_session_id?: string | null;
   language: string;
   status: string;
   flagged: boolean;
@@ -24,21 +25,38 @@ export interface MessageRecord {
   content: string;
   cited_fact_ids: string[];
   meta: Record<string, unknown>;
+  is_greeting?: boolean;
   created_at: string;
 }
 
 export class ChatRepository {
   /**
-   * Create a new conversation for a lead.
+   * Create a new conversation for a lead or anonymous session.
    */
-  async createConversation(leadId: string, language: ChatLanguage = 'en'): Promise<ConversationRecord> {
+  async createConversation(
+    leadId: string | null,
+    language: ChatLanguage = 'en',
+    chatSessionId?: string | null,
+  ): Promise<ConversationRecord> {
     const res = await query<ConversationRecord>(
-      `INSERT INTO conversations (lead_id, language, status, flagged, flag_reasons)
-       VALUES ($1, $2, 'ai', false, ARRAY[]::text[])
+      `INSERT INTO conversations (lead_id, chat_session_id, language, status, flagged, flag_reasons)
+       VALUES ($1, $2, $3, 'ai', false, ARRAY[]::text[])
        RETURNING *`,
-      [leadId, language],
+      [leadId, chatSessionId ?? null, language],
     );
     return res.rows[0]!;
+  }
+
+  /**
+   * Links a lead to an anonymous conversation.
+   */
+  async linkLeadToConversation(conversationId: string, leadId: string): Promise<void> {
+    await query(
+      `UPDATE conversations
+       SET lead_id = $1, updated_at = NOW()
+       WHERE id = $2`,
+      [leadId, conversationId],
+    );
   }
 
   /**
@@ -84,7 +102,7 @@ export class ChatRepository {
    */
   async getMessages(conversationId: string): Promise<MessageRecord[]> {
     const res = await query<MessageRecord>(
-      `SELECT id, conversation_id, role, content, cited_fact_ids, meta, created_at
+      `SELECT id, conversation_id, role, content, cited_fact_ids, meta, is_greeting, created_at
        FROM messages
        WHERE conversation_id = $1
        ORDER BY created_at ASC`,
@@ -102,12 +120,13 @@ export class ChatRepository {
     content: string,
     citedFactIds: string[] = [],
     meta: Record<string, unknown> = {},
+    isGreeting = false,
   ): Promise<MessageRecord> {
     const res = await query<MessageRecord>(
-      `INSERT INTO messages (conversation_id, role, content, cited_fact_ids, meta)
-       VALUES ($1, $2, $3, $4::uuid[], $5::jsonb)
-       RETURNING id, conversation_id, role, content, cited_fact_ids, meta, created_at`,
-      [conversationId, role, content, citedFactIds, JSON.stringify(meta)],
+      `INSERT INTO messages (conversation_id, role, content, cited_fact_ids, meta, is_greeting)
+       VALUES ($1, $2, $3, $4::uuid[], $5::jsonb, $6)
+       RETURNING id, conversation_id, role, content, cited_fact_ids, meta, is_greeting, created_at`,
+      [conversationId, role, content, citedFactIds, JSON.stringify(meta), isGreeting],
     );
     return res.rows[0]!;
   }
@@ -310,14 +329,20 @@ export class ChatRepository {
   }
 
   /**
-   * Set first response timestamp if not already set.
+   * Set first response timestamp and kind if not already set.
    */
-  async setFirstResponseAt(leadId: string): Promise<void> {
+  async setFirstResponseAt(
+    leadId: string,
+    kind: 'chat_substantive_answer' | 'outbound_message' = 'chat_substantive_answer',
+    at: Date = new Date(),
+  ): Promise<void> {
     await query(
       `UPDATE leads
-       SET first_response_at = NOW()
+       SET first_response_at = COALESCE(first_response_at, $2),
+           first_response_kind = COALESCE(first_response_kind, $3),
+           last_activity_at = NOW()
        WHERE id = $1 AND first_response_at IS NULL`,
-      [leadId],
+      [leadId, at.toISOString(), kind],
     );
   }
 }

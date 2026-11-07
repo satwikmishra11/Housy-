@@ -5,6 +5,8 @@ import { query } from '../src/db/index.js';
 import { llmService } from '../src/llm/index.js';
 import { mockProvider } from '../src/llm/mock.provider.js';
 import { factService } from '../src/services/fact.service.js';
+import { leadRepository } from '../src/repositories/lead.repository.js';
+import { chatRepository } from '../src/repositories/chat.repository.js';
 import type { Fact } from '@housy/shared';
 
 describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
@@ -54,30 +56,43 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
 
     return {
       conversationId: res.body.conversationId as string,
-      leadId: res.body.leadId as string,
+      leadId: (res.body.leadId ?? null) as string | null,
+      sessionId: res.body.sessionId as string,
       sessionToken: res.body.sessionToken as string,
       cookie: res.headers['set-cookie'],
     };
   }
 
   describe('1. Chat Initialization & Session Security', () => {
-    it('creates lead, conversation, sets first response time and sets httpOnly session cookie', async () => {
+    it('creates anonymous session and conversation without lead, and sets httpOnly session cookie', async () => {
       const chat = await startChat('en');
 
-      // Verify lead created with first_response_at
-      const leadRes = await query<{ first_response_at: string | null }>(
-        'SELECT first_response_at FROM leads WHERE id = $1',
-        [chat.leadId],
-      );
-      expect(leadRes.rows[0]?.first_response_at).not.toBeNull();
+      expect(chat.leadId).toBeNull();
+      expect(chat.sessionId).toBeDefined();
 
-      // Verify messages table has greeting
-      const msgRes = await query<{ role: string; content: string }>(
-        'SELECT role, content FROM messages WHERE conversation_id = $1',
+      // Verify chat_session created
+      const sessionRes = await query<{ first_touch_at: string | null }>(
+        'SELECT first_touch_at FROM chat_sessions WHERE id = $1',
+        [chat.sessionId],
+      );
+      expect(sessionRes.rows[0]?.first_touch_at).not.toBeNull();
+
+      // Verify conversation created with null lead_id
+      const convRes = await query<{ lead_id: string | null; chat_session_id: string }>(
+        'SELECT lead_id, chat_session_id FROM conversations WHERE id = $1',
+        [chat.conversationId],
+      );
+      expect(convRes.rows[0]?.lead_id).toBeNull();
+      expect(convRes.rows[0]?.chat_session_id).toBe(chat.sessionId);
+
+      // Verify messages table has greeting with is_greeting = true
+      const msgRes = await query<{ role: string; content: string; is_greeting: boolean }>(
+        'SELECT role, content, is_greeting FROM messages WHERE conversation_id = $1',
         [chat.conversationId],
       );
       expect(msgRes.rows.length).toBeGreaterThanOrEqual(1);
       expect(msgRes.rows[0]?.role).toBe('assistant');
+      expect(msgRes.rows[0]?.is_greeting).toBe(true);
     });
 
     it('blocks /api/chat/message when session cookie/header is missing (401)', async () => {
@@ -190,6 +205,18 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
 
     it('handles opt-out request ("STOP"), sets opted_out_at, and stops further processing', async () => {
       const chat = await startChat();
+      const lead = await leadRepository.createLead({
+        name: 'Opt Out Tester',
+        phoneE164: `+9198${Math.floor(10000000 + Math.random() * 90000000)}`,
+        email: null,
+        source: 'website',
+        projectId,
+        wants: '2 BHK',
+        language: 'en',
+        status: 'new',
+        consentStatus: 'granted',
+      });
+      await chatRepository.linkLeadToConversation(chat.conversationId, lead.id);
 
       const res = await request(app)
         .post('/api/chat/message')
@@ -204,7 +231,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
 
       const leadRes = await query<{ opted_out_at: string | null; consent_status: string }>(
         'SELECT opted_out_at, consent_status FROM leads WHERE id = $1',
-        [chat.leadId],
+        [lead.id],
       );
       expect(leadRes.rows[0]?.opted_out_at).not.toBeNull();
       expect(leadRes.rows[0]?.consent_status).toBe('withdrawn');
@@ -214,6 +241,18 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
   describe('3. Agent Loop, Tools & Fact Grounding', () => {
     it('executes update_lead_profile tool and persists preferences to lead record', async () => {
       const chat = await startChat();
+      const lead = await leadRepository.createLead({
+        name: 'Profile Tester',
+        phoneE164: `+9198${Math.floor(10000000 + Math.random() * 90000000)}`,
+        email: null,
+        source: 'website',
+        projectId,
+        wants: '2 BHK',
+        language: 'en',
+        status: 'new',
+        consentStatus: 'granted',
+      });
+      await chatRepository.linkLeadToConversation(chat.conversationId, lead.id);
 
       // Script mock to call update_lead_profile tool then send_reply
       mockProvider
@@ -264,7 +303,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
         wants: string;
         timeline: string;
       }>('SELECT budget_min, budget_max, wants, timeline FROM leads WHERE id = $1', [
-        chat.leadId,
+        lead.id,
       ]);
       expect(leadRes.rows[0]?.budget_min).toBe('9500000');
       expect(leadRes.rows[0]?.budget_max).toBe('12000000');
@@ -505,10 +544,16 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
       expect(res.body.bookingId).toBeDefined();
       expect(res.body.message).toContain('Your site visit has been confirmed for');
 
-      // Verify consent stored in consents table
+      // Verify consent stored in consents table for the converted lead
+      const convRes = await query<{ lead_id: string }>(
+        'SELECT lead_id FROM conversations WHERE id = $1',
+        [chat.conversationId],
+      );
+      const bookedLeadId = convRes.rows[0]!.lead_id;
+
       const consentRes = await query<{ purpose: string; granted: boolean }>(
         'SELECT purpose, granted FROM consents WHERE lead_id = $1',
-        [chat.leadId],
+        [bookedLeadId],
       );
       expect(consentRes.rows.length).toBeGreaterThanOrEqual(1);
       expect(consentRes.rows[0]?.granted).toBe(true);

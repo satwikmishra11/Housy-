@@ -72,7 +72,8 @@ export type ChatHistoryItem = z.infer<typeof ChatHistoryItemSchema>;
 export const ChatStartResponseSchema = z.object({
   success: z.literal(true),
   conversationId: z.string().uuid(),
-  leadId: z.string().uuid(),
+  sessionId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional().nullable(),
   sessionToken: z.string(),
   language: ChatLanguageSchema,
   greeting: z.string(),

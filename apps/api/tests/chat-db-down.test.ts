@@ -1,22 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../src/app.js';
-import { leadRepository } from '../src/repositories/lead.repository.js';
+import { chatSessionRepository } from '../src/repositories/chat-session.repository.js';
 import { chatRepository } from '../src/repositories/chat.repository.js';
 import { DatabaseError } from '../src/errors/index.js';
 
 describe('Chat Service Database Failure Resiliency', () => {
   it('returns typed 503 with localized message and no fabricated data when DB is down during chat start', async () => {
-    // Stub leadRepository.createLead to simulate DB connection outage
-    const createLeadSpy = vi
-      .spyOn(leadRepository, 'createLead')
+    // Stub chatSessionRepository.createSession to simulate DB connection outage
+    const createSessionSpy = vi
+      .spyOn(chatSessionRepository, 'createSession')
       .mockRejectedValueOnce(new DatabaseError('Connection terminated unexpectedly (ECONNREFUSED)'));
 
     const res = await request(app)
       .post('/api/chat/start')
       .send({ language: 'en', source: 'website' });
 
-    createLeadSpy.mockRestore();
+    createSessionSpy.mockRestore();
 
     expect(res.status).toBe(503);
     expect(res.body.success).toBe(false);
@@ -35,15 +35,15 @@ describe('Chat Service Database Failure Resiliency', () => {
   });
 
   it('returns localized Hindi 503 message when requested in Hindi', async () => {
-    const createLeadSpy = vi
-      .spyOn(leadRepository, 'createLead')
+    const createSessionSpy = vi
+      .spyOn(chatSessionRepository, 'createSession')
       .mockRejectedValueOnce(new DatabaseError('ECONNREFUSED'));
 
     const res = await request(app)
       .post('/api/chat/start')
       .send({ language: 'hi', source: 'website' });
 
-    createLeadSpy.mockRestore();
+    createSessionSpy.mockRestore();
 
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
@@ -51,15 +51,15 @@ describe('Chat Service Database Failure Resiliency', () => {
   });
 
   it('returns localized Gujarati 503 message when requested in Gujarati', async () => {
-    const createLeadSpy = vi
-      .spyOn(leadRepository, 'createLead')
+    const createSessionSpy = vi
+      .spyOn(chatSessionRepository, 'createSession')
       .mockRejectedValueOnce(new DatabaseError('ECONNREFUSED'));
 
     const res = await request(app)
       .post('/api/chat/start')
       .send({ language: 'gu', source: 'website' });
 
-    createLeadSpy.mockRestore();
+    createSessionSpy.mockRestore();
 
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');

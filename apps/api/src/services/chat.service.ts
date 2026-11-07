@@ -10,13 +10,15 @@ import {
   normalizePhone,
 } from '@housy/shared';
 import { NotFoundError, ServiceUnavailableError } from '../errors/AppError.js';
-import { leadRepository } from '../repositories/lead.repository.js';
-import { chatRepository } from '../repositories/chat.repository.js';
+import { leadRepository, type LeadDbRow } from '../repositories/lead.repository.js';
+import { chatRepository, type ConversationRecord } from '../repositories/chat.repository.js';
+import { chatSessionRepository } from '../repositories/chat-session.repository.js';
 import { factService } from './fact.service.js';
 import { visitService } from './visit.service.js';
 import { handoffService } from './handoff.service.js';
 import { notificationService } from './notification.service.js';
 import { signBuyerSession } from '../auth/tokens.js';
+import { query } from '../db/index.js';
 import {
   detectLanguage,
   runPreFilter,
@@ -28,9 +30,16 @@ import { runAgentLoop } from '../llm/agent-loop.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
+function detectProjectInterest(text: string): boolean {
+  return (
+    /\b(\d\s*bhk|bedroom|flat|apartment|penthouse|villa|luxury|price|pricing|cost|budget|amenities|location|possession|rera|floor\s*plan|tower|sqft|carpet|balcony|clubhouse|swimming\s*pool|parking|gym)\b/i.test(text) ||
+    /(घर|फ्लैट|कीमत|बजट|किराया|सस्ता|सुविधाएं|स्थान|ભાવ|કિંમત|વિસ્તાર|સગવડ|મકાન)/i.test(text)
+  );
+}
+
 export class ChatService {
   /**
-   * Start a new chat session for a buyer, creating or attaching a lead and conversation.
+   * Start a new anonymous chat session for a buyer without creating a ghost lead.
    */
   async startChat(payload: ChatStartPayload): Promise<ChatStartResponse> {
     const language: ChatLanguage = payload.language ?? 'en';
@@ -51,36 +60,30 @@ export class ChatService {
     const quickReplies = quickRepliesMap[language] ?? quickRepliesMap.en;
 
     let conversationId: string;
-    let leadId: string;
+    let sessionId: string;
 
     try {
-      // Create an anonymous guest lead for the web session
-      const lead = await leadRepository.createLead({
-        name: 'Guest Buyer',
-        phoneE164: null,
-        email: null,
+      // 1. Create anonymous chat session (no PII, no ghost lead created)
+      const session = await chatSessionRepository.createSession({
         source: payload.source ?? 'website',
         projectId: payload.projectId ?? null,
-        wants: 'Exploring residential projects',
         language,
-        status: 'new',
-        consentStatus: 'unknown',
       });
+      sessionId = session.id;
 
-      const conversation = await chatRepository.createConversation(lead.id, language);
+      // 2. Create conversation attached to session with lead_id = null
+      const conversation = await chatRepository.createConversation(null, language, session.id);
       conversationId = conversation.id;
-      leadId = lead.id;
 
-      // Record greeting assistant message
+      // 3. Record greeting assistant message (marked isGreeting: true so it's excluded from first-response timing)
       await chatRepository.insertMessage(
         conversation.id,
         'assistant',
         greeting,
         [],
         { quickReplies },
+        true,
       );
-
-      await chatRepository.setFirstResponseAt(lead.id);
     } catch (err) {
       logger.error({ err }, 'Database error during chat start');
       const serviceUnavailableMessages: Record<ChatLanguage, string> = {
@@ -93,18 +96,93 @@ export class ChatService {
 
     const sessionToken = await signBuyerSession({
       conversationId,
-      leadId,
+      leadId: undefined,
     });
 
     return {
       success: true,
       conversationId,
-      leadId,
+      sessionId,
+      leadId: null,
       sessionToken,
       language,
       greeting,
       quickReplies,
     };
+  }
+
+  /**
+   * Lazily ensures or creates a real Lead only when conversion triggers fire:
+   * 1. Buyer provides contact details + consent
+   * 2. Buyer sends 2 or more messages with project interest
+   * 3. Buyer requests a human sales executive (handoff)
+   * 4. Buyer books a visit
+   */
+  private async getOrCreateLeadForConversation(
+    conversation: ConversationRecord,
+    _reason: 'project_interest' | 'human_requested' | 'booking' | 'contact',
+    details?: { name?: string; phoneE164?: string; consent?: boolean },
+  ): Promise<LeadDbRow> {
+    if (conversation.lead_id) {
+      const existing = await leadRepository.findById(conversation.lead_id);
+      if (existing) {
+        if (details?.phoneE164 && details.phoneE164 !== existing.phone_e164) {
+          await chatRepository.updateLeadProfile(existing.id, {
+            phoneE164: details.phoneE164,
+            name: details.name ?? existing.name,
+          });
+        }
+        if (details?.consent) {
+          await chatRepository.reConsentLead(existing.id, 'web_chat');
+        }
+        return (await leadRepository.findById(existing.id))!;
+      }
+    }
+
+    const session = await chatSessionRepository.findByConversationId(conversation.id);
+    const firstTouchAt = session?.buyer_first_message_at ?? session?.first_touch_at ?? new Date().toISOString();
+
+    // If phone provided, check if lead with this phone exists
+    if (details?.phoneE164) {
+      const existingByPhone = await leadRepository.findExactByPhone(details.phoneE164);
+      if (existingByPhone) {
+        await chatRepository.linkLeadToConversation(conversation.id, existingByPhone.id);
+        if (session) {
+          await chatSessionRepository.linkLead(session.id, existingByPhone.id);
+        }
+        if (details.consent) {
+          await chatRepository.reConsentLead(existingByPhone.id, 'web_chat');
+        }
+        return existingByPhone;
+      }
+    }
+
+    // Create new lead
+    const newLead = await leadRepository.createLead({
+      name: details?.name?.trim() || (details?.phoneE164 ? 'Website Buyer' : 'Interested Buyer'),
+      phoneE164: details?.phoneE164 ?? null,
+      email: null,
+      source: session?.source ?? 'website',
+      projectId: session?.project_id ?? null,
+      wants: 'Exploring residential projects',
+      language: (conversation.language as ChatLanguage) || session?.language || 'en',
+      status: 'new',
+      consentStatus: details?.consent ? 'granted' : 'unknown',
+    });
+
+    // Align first_touch_at with session's first buyer touchpoint
+    await query(`UPDATE leads SET first_touch_at = $1 WHERE id = $2`, [firstTouchAt, newLead.id]);
+
+    if (details?.consent) {
+      await chatRepository.reConsentLead(newLead.id, 'web_chat');
+    }
+
+    await chatRepository.linkLeadToConversation(conversation.id, newLead.id);
+    if (session) {
+      await chatSessionRepository.linkLead(session.id, newLead.id);
+    }
+
+    return (await leadRepository.findById(newLead.id))!;
   }
 
   /**
@@ -116,10 +194,7 @@ export class ChatService {
       throw new NotFoundError('Conversation not found');
     }
 
-    const lead = await leadRepository.findById(conversation.lead_id);
-    if (!lead) {
-      throw new NotFoundError('Lead not found for conversation');
-    }
+    let lead = conversation.lead_id ? await leadRepository.findById(conversation.lead_id) : null;
 
     const currentLang = (conversation.language as ChatLanguage) || 'en';
     const targetLang: ChatLanguage =
@@ -129,16 +204,29 @@ export class ChatService {
       await chatRepository.updateLanguage(conversation.id, targetLang);
     }
 
-    // 1. Record incoming buyer message
+    // 1. Record incoming buyer message in messages table
     await chatRepository.insertMessage(
       conversation.id,
       'buyer',
       payload.message,
     );
 
+    // Track buyer activity in chat_sessions
+    const hasInterest = detectProjectInterest(payload.message);
+    let session = await chatSessionRepository.findByConversationId(conversation.id);
+    if (session) {
+      session = await chatSessionRepository.recordBuyerMessage(session.id, hasInterest);
+    }
+
+    // Trigger 2: If buyer sends >= 2 messages with project interest and no lead yet, convert to lead!
+    if (!lead && session && session.buyer_message_count >= 2 && session.has_project_interest) {
+      lead = await this.getOrCreateLeadForConversation(conversation, 'project_interest');
+      conversation.lead_id = lead.id;
+    }
+
     // If conversation is taken over by a human executive, pause AI
     if (conversation.status === 'human') {
-      if (lead.assigned_to) {
+      if (lead?.assigned_to) {
         try {
           await notificationService.notify({
             userId: lead.assigned_to,
@@ -192,7 +280,9 @@ export class ChatService {
       }
 
       if (preFilter.type === 'opt_out') {
-        await chatRepository.optOutLead(lead.id);
+        if (lead) {
+          await chatRepository.optOutLead(lead.id);
+        }
         const reply: ChatReply = {
           text: preFilter.responseText!,
           language: preFilter.language ?? targetLang,
@@ -209,6 +299,10 @@ export class ChatService {
       }
 
       if (preFilter.type === 'human_requested') {
+        if (!lead) {
+          lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+          conversation.lead_id = lead.id;
+        }
         await chatRepository.flagConversation(conversation.id, ['human_requested']);
         const handoff = await handoffService.createHandoff(
           lead.id,
@@ -260,7 +354,7 @@ export class ChatService {
     // 3. Retrieve Active Fact Sheet
     const activeFacts = await factService.listFacts({
       status: 'active',
-      projectId: lead.project_id ?? undefined,
+      projectId: lead?.project_id ?? session?.project_id ?? undefined,
     });
 
     // 4. Strict Price-Info routing: if buyer enquired for pricing, require authorized price fact
@@ -272,6 +366,10 @@ export class ChatService {
       );
 
       if (!hasPriceFact) {
+        if (!lead) {
+          lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+          conversation.lead_id = lead.id;
+        }
         const fallbackText = getLocalizedFallback(targetLang);
         await chatRepository.recordUnansweredQuestion(
           conversation.id,
@@ -309,25 +407,41 @@ export class ChatService {
     // 6. Execute Agent Loop
     const loopResult = await runAgentLoop({
       conversationId: conversation.id,
-      lead: {
-        id: lead.id,
-        name: lead.name,
-        phone_e164: lead.phone_e164,
-        consent_status: lead.consent_status,
-        budget_min: lead.budget_min ? Number(lead.budget_min) : null,
-        budget_max: lead.budget_max ? Number(lead.budget_max) : null,
-        wants: lead.wants,
-        timeline: lead.timeline,
-        project_id: lead.project_id,
-      },
+      lead: lead
+        ? {
+            id: lead.id,
+            name: lead.name,
+            phone_e164: lead.phone_e164,
+            consent_status: lead.consent_status,
+            budget_min: lead.budget_min ? Number(lead.budget_min) : null,
+            budget_max: lead.budget_max ? Number(lead.budget_max) : null,
+            wants: lead.wants ?? undefined,
+            timeline: lead.timeline ?? undefined,
+            project_id: lead.project_id,
+          }
+        : {
+            id: conversation.id,
+            name: 'Visitor',
+            phone_e164: null,
+            consent_status: 'unknown' as const,
+            budget_min: null,
+            budget_max: null,
+            wants: undefined,
+            timeline: undefined,
+            project_id: session?.project_id ?? null,
+          },
       messageHistory,
       activeFacts,
       language: targetLang,
-      projectId: lead.project_id ?? undefined,
+      projectId: lead?.project_id ?? session?.project_id ?? undefined,
     });
 
     // 7. Handle Fallback if agent loop failed (e.g. LLM timeout, LLM down, max rounds exceeded)
     if (!loopResult.success) {
+      if (!lead) {
+        lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+        conversation.lead_id = lead.id;
+      }
       const fallbackText = getLocalizedFallback(targetLang);
       await chatRepository.recordUnansweredQuestion(
         conversation.id,
@@ -374,6 +488,10 @@ export class ChatService {
     });
 
     if (!postCheck.passed) {
+      if (!lead) {
+        lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+        conversation.lead_id = lead.id;
+      }
       const fallbackText = getLocalizedFallback(targetLang);
       const flagReason = postCheck.reason ?? 'grounding_failed';
 
@@ -417,6 +535,10 @@ export class ChatService {
       });
 
       if (!verifierResult.supported) {
+        if (!lead) {
+          lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+          conversation.lead_id = lead.id;
+        }
         const fallbackText = getLocalizedFallback(targetLang);
         await chatRepository.recordUnansweredQuestion(
           conversation.id,
@@ -464,16 +586,25 @@ export class ChatService {
       },
     );
 
-    await chatRepository.setFirstResponseAt(lead.id);
+    if (lead) {
+      await chatRepository.setFirstResponseAt(lead.id, 'chat_substantive_answer');
+    }
+    if (session) {
+      await chatSessionRepository.setFirstResponseAt(session.id);
+    }
 
     // Trigger handoff if agent loop requested handoff
     if (isHandoff) {
+      if (!lead) {
+        lead = await this.getOrCreateLeadForConversation(conversation, 'human_requested');
+        conversation.lead_id = lead.id;
+      }
       await handoffService.createHandoff(
         lead.id,
         'Agent loop requested handoff',
         { conversationId: conversation.id },
       );
-    } else {
+    } else if (lead) {
       // Trigger handoff on serious intent (budget and BHK known plus interest)
       const hasSeriousIntent =
         Boolean(lead.budget_min) &&
@@ -519,16 +650,13 @@ export class ChatService {
       throw new NotFoundError('Conversation not found');
     }
 
-    const lead = await leadRepository.findById(conversation.lead_id);
-    if (!lead) {
-      throw new NotFoundError('Lead not found for conversation');
-    }
+    let lead = conversation.lead_id ? await leadRepository.findById(conversation.lead_id) : null;
 
     const currentLang = (conversation.language as ChatLanguage) || 'en';
 
     // Validate phone number
-    const normalizedPhone = payload.phone ? normalizePhone(payload.phone) : lead.phone_e164;
-    const hasConsent = payload.consent === true || lead.consent_status === 'granted';
+    const normalizedPhone = payload.phone ? normalizePhone(payload.phone) : (lead?.phone_e164 ?? null);
+    const hasConsent = payload.consent === true || lead?.consent_status === 'granted';
 
     if (!normalizedPhone || !hasConsent) {
       return {
@@ -539,18 +667,32 @@ export class ChatService {
       };
     }
 
-    // If new phone or name provided, update lead
-    if (payload.phone && normalizedPhone !== lead.phone_e164) {
-      await chatRepository.updateLeadProfile(lead.id, {
-        phoneE164: normalizedPhone,
-        name: payload.name ?? lead.name,
-        projectId: payload.projectId,
-      });
-    }
+    // If conversation didn't have a lead yet, create or link it now!
+    if (!lead) {
+      lead = await this.getOrCreateLeadForConversation(
+        conversation,
+        'booking',
+        {
+          name: payload.name,
+          phoneE164: normalizedPhone,
+          consent: payload.consent,
+        },
+      );
+      conversation.lead_id = lead.id;
+    } else {
+      // If new phone or name provided, update lead
+      if (payload.phone && normalizedPhone !== lead.phone_e164) {
+        await chatRepository.updateLeadProfile(lead.id, {
+          phoneE164: normalizedPhone,
+          name: payload.name ?? lead.name,
+          projectId: payload.projectId,
+        });
+      }
 
-    // Record consent if explicitly granted (restores consent and clears opt-out if previously opted out)
-    if (payload.consent === true) {
-      await chatRepository.reConsentLead(lead.id, 'web_chat');
+      // Record consent if explicitly granted (restores consent and clears opt-out if previously opted out)
+      if (payload.consent === true) {
+        await chatRepository.reConsentLead(lead.id, 'web_chat');
+      }
     }
 
     // Execute booking via visitService

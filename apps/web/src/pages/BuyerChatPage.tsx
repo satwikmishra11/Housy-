@@ -221,9 +221,13 @@ export const BuyerChatPage: React.FC = () => {
 
         if (!isCancelled) {
           setConversationId(startRes.conversationId);
-          setLeadId(startRes.leadId);
+          setLeadId(startRes.leadId ?? null);
           sessionStorage.setItem('housy_chat_conversation_id', startRes.conversationId);
-          sessionStorage.setItem('housy_chat_lead_id', startRes.leadId);
+          if (startRes.leadId) {
+            sessionStorage.setItem('housy_chat_lead_id', startRes.leadId);
+          } else {
+            sessionStorage.removeItem('housy_chat_lead_id');
+          }
           sessionStorage.setItem('housy_chat_buyer_token', startRes.sessionToken);
 
           const greetingMsg: UiChatMessage = {
