@@ -18,7 +18,19 @@ import { execSync } from 'node:child_process';
 test.describe('Automated UI Screen & Control Crawler', () => {
   test.beforeAll(async () => {
     try {
-      execSync('npm run db:seed', { stdio: 'pipe' });
+      const dbUrl =
+        process.env.TEST_DATABASE_URL ||
+        process.env.DATABASE_URL ||
+        'postgres://housy_user:housy_password@localhost:5432/housy_test';
+      execSync('npm run db:seed', {
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          TEST_DATABASE_URL: dbUrl,
+          DATABASE_URL: dbUrl,
+          NODE_ENV: 'test',
+        },
+      });
     } catch (err) {
       console.error('Failed to seed database before crawler spec:', err);
       throw err;

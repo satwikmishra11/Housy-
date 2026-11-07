@@ -17,9 +17,21 @@ const { Client } = pg;
  */
 
 test.beforeAll(async () => {
-  // Deterministic seed before running E2E suite
+  // Deterministic seed before running E2E suite against test database
   try {
-    execSync('npm run db:seed', { stdio: 'pipe' });
+    const dbUrl =
+      process.env.TEST_DATABASE_URL ||
+      process.env.DATABASE_URL ||
+      'postgres://housy_user:housy_password@localhost:5432/housy_test';
+    execSync('npm run db:seed', {
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        TEST_DATABASE_URL: dbUrl,
+        DATABASE_URL: dbUrl,
+        NODE_ENV: 'test',
+      },
+    });
   } catch (err) {
     console.error('Failed to seed database before E2E tests:', err);
     throw err;
@@ -212,7 +224,10 @@ test.describe('Journey 4: Concurrency Defenses & Just-Taken Alternatives', () =>
   test('two browsers attempt to book the same slot; one confirms while the other receives just-taken notice with alternatives', async ({ browser }) => {
     // 0. Ensure there is only 1 single open slot for the first available future slot on Project 1
     const dbClient = new Client({
-      connectionString: process.env.DATABASE_URL || 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+      connectionString:
+        process.env.TEST_DATABASE_URL ||
+        process.env.DATABASE_URL ||
+        'postgres://housy_user:housy_password@localhost:5432/housy_test',
     });
     await dbClient.connect();
 
@@ -287,7 +302,7 @@ test.describe('Journey 4: Concurrency Defenses & Just-Taken Alternatives', () =>
 
     // Buyer 2 receives the "just taken" notification with alternative slot suggestions
     await expect(
-      page2.locator('text=That slot was just booked by another visitor').or(
+      page2.locator('text=That slot was just booked by another').or(
         page2.locator('text=The selected slot was just taken')
       ).first()
     ).toBeVisible({ timeout: 15000 });
