@@ -1,11 +1,14 @@
 import { runner } from 'node-pg-migrate';
 import path from 'node:path';
+import fs from 'node:fs';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { runSeed } from './seed.js';
 import { pool } from './index.js';
 
-const migrationsDir = path.resolve(process.cwd(), 'migrations');
+const migrationsDir = fs.existsSync(path.resolve(process.cwd(), 'migrations'))
+  ? path.resolve(process.cwd(), 'migrations')
+  : path.resolve(process.cwd(), 'apps/api/migrations');
 
 export async function resetDatabase(): Promise<void> {
   logger.info({ db: config.DATABASE_URL.replace(/:[^:@]+@/, ':***@') }, 'Running migrations up...');

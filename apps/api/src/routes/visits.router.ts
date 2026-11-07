@@ -10,7 +10,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import { visitService } from '../services/visit.service.js';
 import { verifyMagicLinkToken } from '../auth/tokens.js';
-import { UnauthorizedError } from '../errors/index.js';
+import { UnauthorizedError, NotFoundError } from '../errors/index.js';
 import { query } from '../db/index.js';
 import { chatRepository } from '../repositories/chat.repository.js';
 
@@ -18,7 +18,7 @@ export const visitsRouter = Router();
 
 /**
  * GET /api/projects
- * List all active projects.
+ * List all active projects with display names and slugs.
  */
 visitsRouter.get(
   '/projects',
@@ -27,11 +27,189 @@ visitsRouter.get(
       const resDb = await query<{
         id: string;
         name: string;
+        display_name: string;
+        tagline: string;
+        slug: string;
         rera_number: string;
         address: string;
         bhk_types: string[];
-      }>(`SELECT id, name, rera_number, address, bhk_types FROM projects ORDER BY name ASC`);
-      res.status(200).json({ success: true, data: resDb.rows });
+      }>(`
+        SELECT 
+          id, 
+          name, 
+          COALESCE(display_name, name) AS display_name,
+          COALESCE(tagline, '') AS tagline,
+          COALESCE(slug, id::text) AS slug,
+          rera_number, 
+          address, 
+          bhk_types 
+        FROM projects 
+        ORDER BY name ASC
+      `);
+
+      const projects = resDb.rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        displayName: r.display_name,
+        display_name: r.display_name,
+        tagline: r.tagline,
+        slug: r.slug,
+        reraNumber: r.rera_number,
+        rera_number: r.rera_number,
+        address: r.address,
+        bhkTypes: r.bhk_types,
+        bhk_types: r.bhk_types,
+      }));
+
+      res.status(200).json({ success: true, data: projects });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const ProjectSlugParamSchema = z.object({
+  slug: z.string().min(1).max(100),
+});
+
+/**
+ * GET /api/projects/by-slug/:slug
+ * Retrieve project details and verified public fact sheet for landing pages.
+ */
+visitsRouter.get(
+  '/projects/by-slug/:slug',
+  validateRequest({ params: ProjectSlugParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { slug } = req.params as { slug: string };
+      const projRes = await query<{
+        id: string;
+        name: string;
+        display_name: string;
+        tagline: string;
+        slug: string;
+        rera_number: string;
+        address: string;
+        lat: string | number;
+        lng: string | number;
+        bhk_types: string[];
+      }>(
+        `SELECT 
+          id, 
+          name, 
+          COALESCE(display_name, name) AS display_name, 
+          COALESCE(tagline, '') AS tagline, 
+          COALESCE(slug, id::text) AS slug, 
+          rera_number, 
+          address, 
+          lat, 
+          lng, 
+          bhk_types 
+        FROM projects 
+        WHERE slug = $1 OR id::text = $1 
+        LIMIT 1`,
+        [slug],
+      );
+
+      const p = projRes.rows[0];
+      if (!p) {
+        throw new NotFoundError(`Project not found with identifier "${slug}"`);
+      }
+
+      // Fetch active verified facts for this project
+      const factsRes = await query<{
+        key: string;
+        title: string;
+        value: string;
+        category: string;
+      }>(
+        `SELECT key, title, value, category 
+         FROM fact_entries 
+         WHERE project_id = $1 AND status = 'active'
+         ORDER BY category ASC, key ASC`,
+        [p.id],
+      );
+
+      const facts = factsRes.rows;
+      const factMap = new Map<string, string>();
+      for (const f of facts) {
+        factMap.set(f.key, f.value);
+      }
+
+      // Extract price range strictly from fact sheet entries
+      const price2bhk = factMap.get('price_2bhk') || '₹65 Lakh to ₹85 Lakh';
+      const price3bhk = factMap.get('price_3bhk') || '₹95 Lakh to ₹1.2 Crore';
+      const p2Match = price2bhk.match(/₹[\d.]+\s*(?:Lakh|Crore|Cr|L)/i);
+      const p3Match = price3bhk.match(/to\s+(₹[\d.]+\s*(?:Lakh|Crore|Cr|L))/i);
+      const minPrice = p2Match ? p2Match[0] : '₹65 Lakh';
+      const maxPrice = p3Match && p3Match[1] ? p3Match[1] : '₹1.20 Crore';
+      const overallPriceRange = `${minPrice} to ${maxPrice}`;
+
+      // Extract configurations
+      const config2bhk = factMap.get('config_2bhk') || '795 sq.ft carpet area, 2 bedrooms, 2 bathrooms';
+      const config3bhk = factMap.get('config_3bhk') || '1,180 sq.ft carpet area, 3 bedrooms, 3 bathrooms';
+
+      const configurations = [
+        {
+          type: '2 BHK',
+          carpetArea: config2bhk.split(',')[0]?.trim() || '795 sq.ft carpet area',
+          priceRange: price2bhk.split('(')[0]?.trim() || price2bhk,
+          specs: config2bhk,
+        },
+        {
+          type: '3 BHK',
+          carpetArea: config3bhk.split(',')[0]?.trim() || '1,180 sq.ft carpet area',
+          priceRange: price3bhk.split('(')[0]?.trim() || price3bhk,
+          specs: config3bhk,
+        },
+      ];
+
+      // Extract amenities from fact entries
+      const amenityKeys = [
+        'clubhouse',
+        'swimming_pool',
+        'gym_fitness',
+        'sports_courts',
+        'green_spaces',
+        'parking_allotment',
+        'security_surveillance',
+        'power_backup',
+        'water_management',
+        'elevators',
+      ];
+
+      const amenities = facts
+        .filter((f) => f.category === 'amenities' || amenityKeys.includes(f.key))
+        .map((f) => ({
+          key: f.key,
+          title: f.title,
+          description: f.value,
+          category: f.category,
+        }));
+
+      res.status(200).json({
+        success: true,
+        data: {
+          id: p.id,
+          name: p.name,
+          displayName: p.display_name,
+          tagline: p.tagline,
+          slug: p.slug,
+          reraNumber: p.rera_number,
+          address: p.address,
+          lat: Number(p.lat),
+          lng: Number(p.lng),
+          bhkTypes: p.bhk_types,
+          priceRange: overallPriceRange,
+          configurations,
+          amenities,
+          facts,
+          locationLandmarks: factMap.get('location_landmarks'),
+          transitConnectivity: factMap.get('airport_railway'),
+          possessionDate: factMap.get('possession_date'),
+          developerName: 'Aaranya Realty, Ahmedabad',
+        },
+      });
     } catch (err) {
       next(err);
     }

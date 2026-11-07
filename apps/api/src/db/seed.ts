@@ -100,10 +100,13 @@ export async function runSeed(): Promise<void> {
 
   // 3. Projects (Project 1 and Project 2)
   const project1Res = await query<{ id: string }>(
-    `INSERT INTO projects (name, rera_number, address, lat, lng, bhk_types)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    `INSERT INTO projects (name, display_name, tagline, slug, rera_number, address, lat, lng, bhk_types)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
     [
       'Project 1',
+      'The Palm Serene',
+      'Artisanal 2 & 3 BHK Living on SG Highway',
+      'the-palm-serene',
       'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126 (DEMO-PLACEHOLDER)',
       'SG Highway, Near Iscon Cross Road, Ahmedabad, Gujarat 380054',
       23.0298534,
@@ -114,10 +117,13 @@ export async function runSeed(): Promise<void> {
   const p1Id = project1Res.rows[0]!.id;
 
   const project2Res = await query<{ id: string }>(
-    `INSERT INTO projects (name, rera_number, address, lat, lng, bhk_types)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    `INSERT INTO projects (name, display_name, tagline, slug, rera_number, address, lat, lng, bhk_types)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
     [
       'Project 2',
+      'Skyline Greens',
+      'Elevated 2 & 3 BHK Urban Residences near Science City',
+      'skyline-greens',
       'PR/GJ/AHMEDABAD/AUDA/RAA05678/011126 (DEMO-PLACEHOLDER)',
       'Science City Road, Sola, Ahmedabad, Gujarat 380060',
       23.0805128,
