@@ -1,0 +1,25 @@
+# Gitleaks Configuration for Housy
+# Excludes development fixtures, test tokens, and non-production placeholder strings
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow development fixtures and non-production placeholder secrets"
+commits = [
+  "e68ce4f01736558265b4011ad92afa6923d80317"
+]
+paths = [
+  '''apps/api/tests/.*''',
+  '''packages/shared/tests/.*''',
+  '''apps/web/tests/.*''',
+  '''\.gitleaksignore''',
+  '''scripts/scan-secrets\.mjs'''
+]
+regexes = [
+  '''housy-internal-cron-key-12345''',
+  '''housy-dev-jwt-secret-min-32-chars-long!''',
+  '''housy-dev-session-secret-min-32-chars-long!''',
+  '''housy-fallback-jwt-secret-min-32-chars-long!''',
+  '''housy-fallback-session-secret-min-32-chars-long!'''
+]
