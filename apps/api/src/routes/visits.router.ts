@@ -13,7 +13,6 @@ import { verifyMagicLinkToken } from '../auth/tokens.js';
 import { UnauthorizedError } from '../errors/index.js';
 import { query } from '../db/index.js';
 import { chatRepository } from '../repositories/chat.repository.js';
-import { config } from '../config/index.js';
 
 export const visitsRouter = Router();
 
@@ -34,21 +33,6 @@ visitsRouter.get(
       }>(`SELECT id, name, rera_number, address, bhk_types FROM projects ORDER BY name ASC`);
       res.status(200).json({ success: true, data: resDb.rows });
     } catch (err) {
-      if (config.DEMO_MODE) {
-        res.status(200).json({
-          success: true,
-          data: [
-            {
-              id: '11111111-1111-1111-1111-111111111111',
-              name: 'The Grand View (Demo)',
-              rera_number: 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126',
-              address: 'Near SG Highway, Bodakdev, Ahmedabad',
-              bhk_types: ['2 BHK', '3 BHK', '4 BHK Penthouse'],
-            },
-          ],
-        });
-        return;
-      }
       next(err);
     }
   },

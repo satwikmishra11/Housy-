@@ -7,7 +7,7 @@ import { logger } from '../utils/logger.js';
 const SQL_LEAK_REGEX = /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INTO|TABLE|syntax error at or near|violates foreign key|relation "[^"]+" does not exist|column "[^"]+" does not exist)\b/i;
 
 function sanitizeErrorMessage(msg: string, statusCode: number): string {
-  if (statusCode >= 500 || SQL_LEAK_REGEX.test(msg)) {
+  if (statusCode === 500 || SQL_LEAK_REGEX.test(msg)) {
     return 'An unexpected database or internal server error occurred';
   }
   return msg;

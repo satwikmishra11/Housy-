@@ -13,10 +13,33 @@ import { validateBody, validateQuery } from '../middleware/validate.js';
 import { chatRateLimiter } from '../middleware/rateLimit.js';
 import { chatService } from '../services/chat.service.js';
 import { verifyBuyerSession } from '../auth/tokens.js';
-import { ForbiddenError, UnauthorizedError } from '../errors/index.js';
+import { ForbiddenError, UnauthorizedError, ServiceUnavailableError, DatabaseError } from '../errors/index.js';
 import { config } from '../config/index.js';
 
 export const chatRouter = Router();
+
+function mapChatError(err: unknown, req: Request): unknown {
+  if (err instanceof ServiceUnavailableError) return err;
+  const isDbDown =
+    err instanceof DatabaseError ||
+    (err instanceof Error &&
+      (err.message.includes('ECONNREFUSED') ||
+        err.message.includes('Connection terminated') ||
+        err.message.includes('timeout') ||
+        err.message.includes('database') ||
+        err.message.includes('connect')));
+
+  if (isDbDown) {
+    const lang = (req.body?.language || req.query?.language || 'en') as 'en' | 'hi' | 'gu';
+    const friendlyMessages = {
+      en: 'Our chat advisory service is temporarily unavailable. Please try again shortly.',
+      hi: 'हमारी चैट परामर्श सेवा अस्थायी रूप से अनुपलब्ध है। कृपया कुछ समय बाद पुनः प्रयास करें।',
+      gu: 'અમારી ચેટ સલાહકાર સેવા અસ્થાયી રૂપે અનુપલબ્ધ છે. કૃપા કરીને થોડા સમય પછી ફરી પ્રયાસ કરો.',
+    };
+    return new ServiceUnavailableError(friendlyMessages[lang] || friendlyMessages.en);
+  }
+  return err;
+}
 
 /**
  * Helper to extract and verify buyer session for a given conversation.
@@ -69,7 +92,7 @@ chatRouter.post(
 
       res.status(201).json(result);
     } catch (err) {
-      next(err);
+      next(mapChatError(err, req));
     }
   },
 );
@@ -91,7 +114,7 @@ chatRouter.post(
       const reply = await chatService.sendMessage(payload);
       res.status(200).json(reply);
     } catch (err) {
-      next(err);
+      next(mapChatError(err, req));
     }
   },
 );
@@ -113,7 +136,7 @@ chatRouter.post(
       const bookingResult = await chatService.bookVisit(payload);
       res.status(200).json(bookingResult);
     } catch (err) {
-      next(err);
+      next(mapChatError(err, req));
     }
   },
 );
@@ -135,7 +158,7 @@ chatRouter.get(
       const history = await chatService.getHistory(conversationId);
       res.status(200).json({ data: history });
     } catch (err) {
-      next(err);
+      next(mapChatError(err, req));
     }
   },
 );

@@ -92,6 +92,7 @@ export const BuyerChatPage: React.FC = () => {
 
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
   const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -330,20 +331,13 @@ export const BuyerChatPage: React.FC = () => {
       setIsSending(false);
 
       const apiErr = err as ApiError;
+      setLastFailedMessage(text);
       if (apiErr.statusCode === 429) {
         setRateLimitMessage('You have sent several messages recently. Please wait a moment before sending another message.');
+      } else if (apiErr.statusCode === 503) {
+        setFallbackWarning(apiErr.message || 'Our chat advisory service is temporarily unavailable. Please retry shortly.');
       } else {
-        // Fallback message
-        const fallbackMsg: UiChatMessage = {
-          id: `asst_err_${Date.now()}`,
-          role: 'assistant',
-          content: 'A member of our team will confirm this with you shortly.',
-          createdAt: new Date().toISOString(),
-          isHandoff: true,
-        };
-        setMessages((prev) => [...prev, fallbackMsg]);
-        setIsHandoff(true);
-        setFallbackWarning('Our sales team has been notified and will assist you directly.');
+        setFallbackWarning(apiErr.message || 'Unable to deliver message. Please retry.');
       }
     } finally {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -680,6 +674,20 @@ export const BuyerChatPage: React.FC = () => {
             <span className="flex-1 leading-relaxed">
               {rateLimitMessage || fallbackWarning}
             </span>
+            {lastFailedMessage && !isSending && (
+              <button
+                type="button"
+                onClick={() => {
+                  const retryText = lastFailedMessage;
+                  setLastFailedMessage(null);
+                  setFallbackWarning(null);
+                  void handleSendMessage(retryText);
+                }}
+                className="font-semibold underline text-amber-900 hover:text-amber-950 px-2 py-0.5 rounded hover:bg-amber-500/20 transition-colors flex-shrink-0"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       )}
