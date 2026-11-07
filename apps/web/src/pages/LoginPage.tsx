@@ -71,6 +71,7 @@ export const LoginPage: React.FC = () => {
           <span className="text-muted/40">·</span>
           <Link
             to="/"
+            aria-label="Back to Home"
             className="text-xs text-muted hover:text-ink transition-colors inline-flex items-center gap-1"
           >
             <ArrowLeft className="w-3.5 h-3.5" />

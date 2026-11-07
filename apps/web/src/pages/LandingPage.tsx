@@ -64,6 +64,7 @@ export const LandingPage: React.FC = () => {
           {/* Homebuyer Chat CTA */}
           <Link
             to="/chat"
+            aria-label="Buyer AI Chat"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-accent bg-accent-soft hover:bg-accent-soft/80 border border-accent/20 transition-colors"
           >
             <MessageSquare className="w-3.5 h-3.5" />

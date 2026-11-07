@@ -396,7 +396,7 @@ describe('Buyer Chat UI & Inline Interactive Components', () => {
         expect(screen.getByText('Welcome.')).toBeInTheDocument();
       });
 
-      const talkToPersonBtn = screen.getByRole('button', { name: /Talk to a human sales executive/i });
+      const talkToPersonBtn = screen.getByRole('button', { name: /Talk to a person/i });
       fireEvent.click(talkToPersonBtn);
 
       await waitFor(() => {

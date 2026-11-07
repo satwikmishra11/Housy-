@@ -31,20 +31,21 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       <div className="flex items-center gap-1">
         {supportedLanguages.map((lang) => {
           const isActive = currentLang === lang.code;
+          const visibleLabel = compact ? lang.code.toUpperCase() : lang.nativeName;
           return (
             <button
               key={lang.code}
               type="button"
               onClick={() => handleLanguageChange(lang.code)}
               aria-pressed={isActive}
-              aria-label={`Switch language to ${lang.label}`}
+              aria-label={`${visibleLabel} (${lang.label})`}
               className={`min-h-[44px] min-w-[44px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center justify-center ${
                 isActive
                   ? 'bg-accent text-white font-semibold'
                   : 'text-ink/80 hover:text-ink hover:bg-background'
               }`}
             >
-              {compact ? lang.code.toUpperCase() : lang.nativeName}
+              {visibleLabel}
             </button>
           );
         })}

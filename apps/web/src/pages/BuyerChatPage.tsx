@@ -705,7 +705,11 @@ export const BuyerChatPage: React.FC = () => {
               onClick={handleTalkToPerson}
               disabled={isSending || conversationStatus === 'human'}
               className="text-xs font-semibold px-2.5 py-1.5 text-accent border-accent/25 hover:bg-accent-soft"
-              aria-label="Talk to a human sales executive"
+              aria-label={
+                conversationStatus === 'human'
+                  ? 'Connected to sales team'
+                  : 'Talk to a person - Sales team'
+              }
             >
               <Headphones className="w-3.5 h-3.5 sm:mr-1.5 text-accent" />
               <span className="hidden sm:inline">
