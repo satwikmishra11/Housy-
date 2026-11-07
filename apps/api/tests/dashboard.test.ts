@@ -76,17 +76,39 @@ describe('Sales Analytics & Executive Performance Dashboard', () => {
 
     // 3. Build Hand-Crafted Test Fixture (6 known leads attached to isolated project and users)
     // Lead 1: property_portal, response 120s (2m), visited, assigned to exec1
-    await query(
+    const l1 = await query<{ id: string }>(
       `INSERT INTO leads (name, email, phone_e164, source, project_id, wants, status, assigned_to, first_touch_at, first_response_at)
-       VALUES ('Lead One', 'lead1@fixture.test', '+919100000001', 'property_portal', $1, '3 BHK', 'visited', $2, '2026-06-10T10:00:00Z', '2026-06-10T10:02:00Z')`,
+       VALUES ('Lead One', 'lead1@fixture.test', '+919100000001', 'property_portal', $1, '3 BHK', 'visited', $2, '2026-06-10T10:00:00Z', '2026-06-10T10:02:00Z')
+       RETURNING id`,
       [projectId, exec1Id],
+    );
+    const s1 = await query<{ id: string }>(
+      `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+       VALUES ($1, $2, '2026-06-12T10:00:00Z', '2026-06-12T11:00:00Z', 'booked') RETURNING id`,
+      [projectId, exec1Id],
+    );
+    await query(
+      `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key)
+       VALUES ($1, $2, 'completed', 'dash-fixture-book-1')`,
+      [l1.rows[0]!.id, s1.rows[0]!.id],
     );
 
     // Lead 2: property_portal, response 360s (6m), no_show, assigned to exec1
-    await query(
+    const l2 = await query<{ id: string }>(
       `INSERT INTO leads (name, email, phone_e164, source, project_id, wants, status, assigned_to, first_touch_at, first_response_at)
-       VALUES ('Lead Two', 'lead2@fixture.test', '+919100000002', 'property_portal', $1, '2 BHK', 'no_show', $2, '2026-06-10T11:00:00Z', '2026-06-10T11:06:00Z')`,
+       VALUES ('Lead Two', 'lead2@fixture.test', '+919100000002', 'property_portal', $1, '2 BHK', 'no_show', $2, '2026-06-10T11:00:00Z', '2026-06-10T11:06:00Z')
+       RETURNING id`,
       [projectId, exec1Id],
+    );
+    const s2 = await query<{ id: string }>(
+      `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+       VALUES ($1, $2, '2026-06-12T11:00:00Z', '2026-06-12T12:00:00Z', 'booked') RETURNING id`,
+      [projectId, exec1Id],
+    );
+    await query(
+      `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key)
+       VALUES ($1, $2, 'no_show', 'dash-fixture-book-2')`,
+      [l2.rows[0]!.id, s2.rows[0]!.id],
     );
 
     // Lead 3: social_ad, response 49 hours (176400s > 48h boundary), engaged, assigned to exec2
@@ -97,10 +119,21 @@ describe('Sales Analytics & Executive Performance Dashboard', () => {
     );
 
     // Lead 4: social_ad, response 300s (5m), visit_booked, assigned to exec2
-    await query(
+    const l4 = await query<{ id: string }>(
       `INSERT INTO leads (name, email, phone_e164, source, project_id, wants, status, assigned_to, first_touch_at, first_response_at)
-       VALUES ('Lead Four', 'lead4@fixture.test', '+919100000004', 'social_ad', $1, '2 BHK', 'visit_booked', $2, '2026-06-12T14:00:00Z', '2026-06-12T14:05:00Z')`,
+       VALUES ('Lead Four', 'lead4@fixture.test', '+919100000004', 'social_ad', $1, '2 BHK', 'visit_booked', $2, '2026-06-12T14:00:00Z', '2026-06-12T14:05:00Z')
+       RETURNING id`,
       [projectId, exec2Id],
+    );
+    const s4 = await query<{ id: string }>(
+      `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+       VALUES ($1, $2, '2026-06-14T10:00:00Z', '2026-06-14T11:00:00Z', 'booked') RETURNING id`,
+      [projectId, exec2Id],
+    );
+    await query(
+      `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key)
+       VALUES ($1, $2, 'confirmed', 'dash-fixture-book-4')`,
+      [l4.rows[0]!.id, s4.rows[0]!.id],
     );
 
     // Lead 5: website, never responded (unreached > 48h), status 'new', assigned to exec1
@@ -111,10 +144,21 @@ describe('Sales Analytics & Executive Performance Dashboard', () => {
     );
 
     // Lead 6: hoarding_call, response 60s (1m), visited, assigned to exec2
-    await query(
+    const l6 = await query<{ id: string }>(
       `INSERT INTO leads (name, email, phone_e164, source, project_id, wants, status, assigned_to, first_touch_at, first_response_at)
-       VALUES ('Lead Six', 'lead6@fixture.test', '+919100000006', 'hoarding_call', $1, '2 BHK', 'visited', $2, '2026-06-15T12:00:00Z', '2026-06-15T12:01:00Z')`,
+       VALUES ('Lead Six', 'lead6@fixture.test', '+919100000006', 'hoarding_call', $1, '2 BHK', 'visited', $2, '2026-06-15T12:00:00Z', '2026-06-15T12:01:00Z')
+       RETURNING id`,
       [projectId, exec2Id],
+    );
+    const s6 = await query<{ id: string }>(
+      `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+       VALUES ($1, $2, '2026-06-16T10:00:00Z', '2026-06-16T11:00:00Z', 'booked') RETURNING id`,
+      [projectId, exec2Id],
+    );
+    await query(
+      `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key)
+       VALUES ($1, $2, 'completed', 'dash-fixture-book-6')`,
+      [l6.rows[0]!.id, s6.rows[0]!.id],
     );
   });
 

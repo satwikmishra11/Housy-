@@ -409,15 +409,32 @@ export const DashboardPage: React.FC = () => {
 
             {/* Pipeline Volume Counters Strip */}
             <Card padding="md" className="bg-surface/50 border border-hairline">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-hairline">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 divide-y md:divide-y-0 md:divide-x divide-hairline">
                 <div className="px-2 pt-2 md:pt-0">
+                  <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    Chats Started
+                  </div>
+                  <div className="mt-1 font-serif text-2xl font-bold text-accent">
+                    {data.summary.chatsStarted ?? 0}
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">Anonymous buyer sessions</div>
+                </div>
+
+                <div className="px-2 pt-2 md:pt-0 md:pl-4">
                   <div className="text-xs font-semibold text-muted uppercase tracking-wider">
                     Total Leads
                   </div>
                   <div className="mt-1 font-serif text-2xl font-bold text-ink">
                     {data.summary.totalLeads}
                   </div>
-                  <div className="text-xs text-muted mt-0.5">Ingested across channels</div>
+                  <div className="text-xs text-muted mt-0.5">
+                    {data.summary.contactableLeadsCount ?? data.summary.totalLeads} contactable
+                    {typeof data.summary.notContactableCount === 'number' && data.summary.notContactableCount > 0 ? (
+                      <span className="text-amber-600 block text-[11px]">
+                        ({data.summary.notContactableCount} not contactable)
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="px-2 pt-2 md:pt-0 md:pl-4">
@@ -451,6 +468,109 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Before vs After AI-Assisted Performance Card */}
+            {data.comparison && (
+              <Card padding="md" className="space-y-4 border border-accent/20 bg-gradient-to-r from-surface to-accent/5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-hairline pb-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-serif text-base font-semibold text-ink">
+                        AI-Assisted Transformation: Before vs After
+                      </h2>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-accent/10 text-accent border border-accent/30">
+                        Simulated demo data
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Ahmedabad Baseline (prior to Oct 15, 2026 go-live) vs. Autonomous AI Advisory Performance
+                    </p>
+                  </div>
+                  <div className="text-xs text-muted font-mono">
+                    Go-Live Date: <span className="font-semibold text-ink">Oct 15, 2026</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Metric 1: Median Response */}
+                  <div className="p-3 bg-surface rounded-lg border border-hairline space-y-2">
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                      Median First Response
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <div className="text-[11px] text-muted">Baseline (Before)</div>
+                        <div className="font-mono text-base font-bold text-amber-700">
+                          {data.comparison.before.medianResponseFormatted}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[11px] text-muted">AI-Assisted (After)</div>
+                        <div className="font-mono text-base font-bold text-success">
+                          {data.comparison.after.medianResponseFormatted}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-muted pt-1 border-t border-hairline flex justify-between">
+                      <span>Target: &lt; 5 min</span>
+                      <span className="font-semibold text-success">99% speedup</span>
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Not Reached > 48h */}
+                  <div className="p-3 bg-surface rounded-lg border border-hairline space-y-2">
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                      Leads Not Reached &gt; 48h
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <div className="text-[11px] text-muted">Baseline (Before)</div>
+                        <div className="font-mono text-base font-bold text-danger">
+                          {data.comparison.before.unreached48hFormatted}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[11px] text-muted">AI-Assisted (After)</div>
+                        <div className="font-mono text-base font-bold text-success">
+                          {data.comparison.after.unreached48hFormatted}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-muted pt-1 border-t border-hairline flex justify-between">
+                      <span>Target SLA: &lt; 5.0%</span>
+                      <span className="font-semibold text-success">SLA Compliant</span>
+                    </div>
+                  </div>
+
+                  {/* Metric 3: Lead-to-Visit Rate */}
+                  <div className="p-3 bg-surface rounded-lg border border-hairline space-y-2">
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                      Lead-to-Visit Rate
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <div className="text-[11px] text-muted">Baseline (Before)</div>
+                        <div className="font-mono text-base font-bold text-ink">
+                          {data.comparison.before.leadToVisitFormatted}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[11px] text-muted">AI-Assisted (After)</div>
+                        <div className="font-mono text-base font-bold text-success">
+                          {data.comparison.after.leadToVisitFormatted}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-muted pt-1 border-t border-hairline flex justify-between">
+                      <span>Target: 8.0% (Baseline 6.0%)</span>
+                      <span className="font-semibold text-success">
+                        Cohort sizes: {data.comparison.before.totalLeads} / {data.comparison.after.totalLeads}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* State 3: Empty State when no leads in window */}
             {data.summary.totalLeads === 0 ? (
@@ -641,11 +761,10 @@ export const DashboardPage: React.FC = () => {
                           <th className="py-3 px-4">Marketing Source</th>
                           <th className="py-3 px-4 text-right">Leads</th>
                           <th className="py-3 px-4 text-right">Median Response</th>
-                          <th className="py-3 px-4 text-right">Visits Booked</th>
-                          <th className="py-3 px-4 text-right">Completed Visits</th>
+                          <th className="py-3 px-4 text-right">Visits (Completed / Booked)</th>
                           <th className="py-3 px-4 text-right">Show-up Rate</th>
                           <th className="py-3 px-4 text-right">Period Spend</th>
-                          <th className="py-3 px-4 text-right">Cost / Visit</th>
+                          <th className="py-3 px-4 text-right">Cost / Completed Visit</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-hairline">
@@ -666,6 +785,9 @@ export const DashboardPage: React.FC = () => {
                                     Small Sample
                                   </span>
                                 )}
+                                <div className="text-[10px] text-muted mt-0.5">
+                                  {sourceItem.spendSource || 'Ad Spend Allocation (₹30L/mo)'}
+                                </div>
                               </div>
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-medium">
@@ -686,10 +808,9 @@ export const DashboardPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right font-mono">
-                              {sourceItem.visitsBooked}
-                            </td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-success">
-                              {sourceItem.visitsCompleted}
+                              <span className="font-bold text-success">{sourceItem.visitsCompleted}</span>
+                              <span className="text-muted"> / </span>
+                              <span>{sourceItem.visitsBooked}</span>
                             </td>
                             <td className="py-3 px-4 text-right font-mono">
                               {sourceItem.showUpRateFormatted}
@@ -698,7 +819,25 @@ export const DashboardPage: React.FC = () => {
                               ₹{sourceItem.spendInr.toLocaleString('en-IN')}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-ink">
-                              {sourceItem.costPerVisitFormatted}
+                              {sourceItem.visitsCompleted < 5 ? (
+                                <div>
+                                  <span className="font-bold text-muted" title={`Fewer than 5 completed visits (sample: ${sourceItem.visitsCompleted})`}>
+                                    —
+                                  </span>
+                                  <span className="text-[10px] text-muted block font-normal">
+                                    &lt; 5 visits
+                                  </span>
+                                </div>
+                              ) : (
+                                <div>
+                                  <span>{sourceItem.costPerVisitFormatted}</span>
+                                  {sourceItem.costPerBookedVisit ? (
+                                    <span className="text-[10px] text-muted block font-normal">
+                                      ₹{sourceItem.costPerBookedVisit.toLocaleString('en-IN')} / booked
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -729,16 +868,27 @@ export const DashboardPage: React.FC = () => {
 
             <div className="space-y-3">
               <div>
-                <h4 className="font-semibold text-ink text-sm">1. Median First Response Time</h4>
+                <h4 className="font-semibold text-ink text-sm">1. Median First Response Time &amp; Semantics</h4>
                 <p className="text-muted mt-0.5">
                   The 50th percentile (<code className="bg-surface px-1 py-0.5 rounded">PERCENTILE_CONT(0.5)</code>) of the difference between first response (<code className="bg-surface px-1 py-0.5 rounded">first_response_at</code>) and intake timestamp (<code className="bg-surface px-1 py-0.5 rounded">first_touch_at</code>) in seconds, calculated across all leads that have received a response. Target SLA: <span className="font-semibold text-success">&lt; 5 minutes</span> (300 seconds).
                 </p>
+                <ul className="list-disc list-inside mt-1.5 space-y-1 text-muted text-[11px]">
+                  <li>
+                    <strong className="text-ink">Web Chat:</strong> Measured from the buyer's first inbound message to the first substantive assistant answer. The initial welcome greeting is stored separately (<code className="bg-surface px-1 py-0.5 rounded">is_greeting: true</code>) and excluded from the SLA clock.
+                  </li>
+                  <li>
+                    <strong className="text-ink">Ingested Leads:</strong> Measured from ingestion to the first outbound message dispatched via channel outbox (<code className="bg-surface px-1 py-0.5 rounded">first_response_kind: outbound_message</code>).
+                  </li>
+                </ul>
               </div>
 
               <div>
                 <h4 className="font-semibold text-ink text-sm">2. Leads Not Reached Within 48 Hours</h4>
                 <p className="text-muted mt-0.5">
-                  Count of leads in the period where either no response has occurred and more than 48 hours have elapsed since intake, or where the first response took more than 48 hours, divided by total leads. Target SLA: <span className="font-semibold text-success">&lt; 5.0%</span>.
+                  Count of leads in the period where either no response has occurred and more than 48 hours have elapsed since intake, or where the first response took more than 48 hours, divided by total <strong className="text-ink">contactable</strong> leads. Target SLA: <span className="font-semibold text-success">&lt; 5.0%</span>.
+                </p>
+                <p className="text-muted text-[11px] mt-1">
+                  <strong className="text-ink">DPDP Act Compliance:</strong> Leads who have withdrawn consent or opted out cannot legally receive outbound communications. They are strictly excluded from the 48-hour SLA denominator and reported as <em className="text-ink">not contactable</em> so sales staff is never penalized for privacy compliance.
                 </p>
               </div>
 
@@ -752,14 +902,17 @@ export const DashboardPage: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-ink text-sm">4. Lead-to-Visit Conversion Rate</h4>
                 <p className="text-muted mt-0.5">
-                  Calculated as <code className="bg-surface px-1 py-0.5 rounded">Completed Visits / Total Ingested Leads</code>. Developer target benchmark is <span className="font-semibold text-ink">8.0%</span>, improving from the Ahmedabad residential baseline of <span className="font-semibold text-ink">6.0%</span>.
+                  Calculated as <code className="bg-surface px-1 py-0.5 rounded">Completed Visits / Total Ingested Leads</code>. Developer target benchmark is <span className="font-semibold text-ink">8.0%</span>, improving from the Ahmedabad residential baseline of <span className="font-semibold text-ink">6.0%</span>. Anonymous chat sessions without conversion triggers are tracked separately under <em className="text-ink">Chats Started</em>.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold text-ink text-sm">5. Cost Per Completed Site Visit</h4>
                 <p className="text-muted mt-0.5">
-                  Calculated as <code className="bg-surface px-1 py-0.5 rounded">Allocated Source Spend / Completed Visits</code>. Spend for the period is computed by proportionally allocating monthly marketing budgets (<code className="bg-surface px-1 py-0.5 rounded">ad_spend</code>) by day across the filter timeframe. Returns divide-by-zero safe <code className="bg-surface px-1 py-0.5 rounded">-</code> when completed visits equal zero.
+                  Calculated as <code className="bg-surface px-1 py-0.5 rounded">Allocated Source Spend / Completed Visits</code>. Spend for the period is computed by proportionally allocating monthly marketing budgets (<code className="bg-surface px-1 py-0.5 rounded">ad_spend</code>, default ₹30L/mo) by day across the filter timeframe.
+                </p>
+                <p className="text-muted text-[11px] mt-1">
+                  <strong className="text-ink">Sample Integrity:</strong> When completed visits are fewer than 5, cost per visit displays <code className="bg-surface px-1 py-0.5 rounded">—</code> to prevent skewed unit economics from insufficient sample sizes. Both completed and booked visit counts are displayed side by side.
                 </p>
               </div>
 

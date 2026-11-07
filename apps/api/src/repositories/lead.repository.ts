@@ -261,7 +261,10 @@ export class LeadRepository {
       [leadId, channel, templateKey, body],
     );
     await query(
-      `UPDATE leads SET first_response_at = NOW(), last_activity_at = NOW()
+      `UPDATE leads
+       SET first_response_at = NOW(),
+           first_response_kind = COALESCE(first_response_kind, 'outbound_message'),
+           last_activity_at = NOW()
        WHERE id = $1 AND first_response_at IS NULL`,
       [leadId],
     );

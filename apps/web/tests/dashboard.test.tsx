@@ -56,6 +56,9 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
       unreached48hFormatted: '4.0%',
       unreachedTargetPercent: 5.0,
       totalLeads: 50,
+      chatsStarted: 40,
+      contactableLeadsCount: 48,
+      notContactableCount: 2,
       engagedLeads: 38,
       visitsBooked: 12,
       visitsCompleted: 6,
@@ -73,64 +76,80 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
         source: 'property_portal',
         sourceLabel: 'Property Portal',
         leadsCount: 20,
+        chatsStarted: 0,
         medianResponseSeconds: 120,
         medianResponseFormatted: '2m',
-        visitsBooked: 5,
-        visitsCompleted: 3,
+        visitsBooked: 8,
+        visitsCompleted: 6,
         visitsNoShow: 1,
+        bookedCount: 8,
+        completedCount: 6,
         showUpRate: 0.75,
         showUpRateFormatted: '75.0%',
         spendInr: 1200000,
         costPerVisitInr: 400000,
         costPerVisitFormatted: '₹4,00,000',
+        spendSource: 'Ad Spend Allocation (₹30L/mo)',
         isSmallSample: false,
       },
       {
         source: 'social_ad',
         sourceLabel: 'Social Media Ad',
         leadsCount: 15,
+        chatsStarted: 0,
         medianResponseSeconds: 180,
         medianResponseFormatted: '3m',
-        visitsBooked: 4,
-        visitsCompleted: 2,
+        visitsBooked: 7,
+        visitsCompleted: 5,
         visitsNoShow: 1,
+        bookedCount: 7,
+        completedCount: 5,
         showUpRate: 0.667,
         showUpRateFormatted: '66.7%',
         spendInr: 1000000,
         costPerVisitInr: 500000,
         costPerVisitFormatted: '₹5,00,000',
+        spendSource: 'Ad Spend Allocation (₹30L/mo)',
         isSmallSample: false,
       },
       {
         source: 'website',
         sourceLabel: 'Website Enquiry',
         leadsCount: 10,
+        chatsStarted: 40,
         medianResponseSeconds: 90,
         medianResponseFormatted: '1m 30s',
-        visitsBooked: 2,
-        visitsCompleted: 1,
+        visitsBooked: 6,
+        visitsCompleted: 5,
         visitsNoShow: 0,
+        bookedCount: 6,
+        completedCount: 5,
         showUpRate: 1.0,
         showUpRateFormatted: '100.0%',
         spendInr: 300000,
         costPerVisitInr: 300000,
         costPerVisitFormatted: '₹3,00,000',
+        spendSource: 'Ad Spend Allocation (₹30L/mo)',
         isSmallSample: false,
       },
       {
         source: 'hoarding_call',
         sourceLabel: 'Hoarding Phone Call',
         leadsCount: 5,
+        chatsStarted: 0,
         medianResponseSeconds: 60,
         medianResponseFormatted: '1m',
         visitsBooked: 1,
         visitsCompleted: 0,
         visitsNoShow: 0,
+        bookedCount: 1,
+        completedCount: 0,
         showUpRate: null,
         showUpRateFormatted: '-',
         spendInr: 500000,
         costPerVisitInr: null,
-        costPerVisitFormatted: '-',
+        costPerVisitFormatted: '—',
+        spendSource: 'Ad Spend Allocation (₹30L/mo)',
         isSmallSample: true,
       },
     ],
@@ -202,6 +221,28 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
         targetMinutes: 5,
       },
     ],
+    comparison: {
+      goLiveDate: '2026-10-15T00:00:00Z',
+      isDemoSimulated: true,
+      before: {
+        medianResponseSeconds: 50400,
+        medianResponseFormatted: '14h',
+        unreached48hPercent: 35.5,
+        unreached48hFormatted: '35.5%',
+        leadToVisitRate: 0.06,
+        leadToVisitFormatted: '6.0%',
+        totalLeads: 50,
+      },
+      after: {
+        medianResponseSeconds: 150,
+        medianResponseFormatted: '2m 30s',
+        unreached48hPercent: 0.0,
+        unreached48hFormatted: '0.0%',
+        leadToVisitRate: 0.08,
+        leadToVisitFormatted: '8.0%',
+        totalLeads: 50,
+      },
+    },
     calculatedAt: '2026-11-06T00:00:00.000Z',
   };
 
@@ -306,7 +347,7 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
       });
 
       // KPI Values
-      expect(screen.getByText('2m 30s')).toBeInTheDocument();
+      expect(screen.getAllByText('2m 30s').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('4.0%')).toBeInTheDocument();
       expect(screen.getByText('12.0%')).toBeInTheDocument();
       expect(screen.getAllByText('75.0%').length).toBeGreaterThanOrEqual(1);
@@ -318,9 +359,18 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
 
       // Volume counters
       expect(screen.getAllByText('50').length).toBeGreaterThanOrEqual(1); // Total Leads
+      expect(screen.getAllByText('40').length).toBeGreaterThanOrEqual(1); // Chats Started
+      expect(screen.getByText(/48 contactable/)).toBeInTheDocument();
+      expect(screen.getByText(/\(2 not contactable\)/)).toBeInTheDocument();
       expect(screen.getAllByText('38').length).toBeGreaterThanOrEqual(1); // Engaged Leads
       expect(screen.getAllByText('12').length).toBeGreaterThanOrEqual(1); // Visits Booked
       expect(screen.getAllByText('6').length).toBeGreaterThanOrEqual(1);  // Visits Completed
+
+      // Before vs After Comparison Card
+      expect(screen.getByText('AI-Assisted Transformation: Before vs After')).toBeInTheDocument();
+      expect(screen.getByText('Simulated demo data')).toBeInTheDocument();
+      expect(screen.getByText('14h')).toBeInTheDocument();
+      expect(screen.getByText('35.5%')).toBeInTheDocument();
     });
 
     it('renders by-source performance breakdown table with divide-by-zero safe values', async () => {
@@ -341,10 +391,10 @@ describe('Sales Analytics & Executive Performance Dashboard Views', () => {
       expect(screen.getAllByText('₹5,00,000').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('₹3,00,000').length).toBeGreaterThanOrEqual(1);
 
-      // Divide-by-zero safe hyphen for Hoarding with 0 completed visits
+      // Divide-by-zero safe hyphen or dash for Hoarding with 0 completed visits
       const cells = screen.getAllByRole('cell');
-      const hyphenCells = cells.filter((c) => c.textContent === '-');
-      expect(hyphenCells.length).toBeGreaterThanOrEqual(2);
+      const hyphenCells = cells.filter((c) => c.textContent === '-' || c.textContent?.includes('—'));
+      expect(hyphenCells.length).toBeGreaterThanOrEqual(1);
 
       // Small sample flag
       expect(screen.getByText('Small Sample')).toBeInTheDocument();

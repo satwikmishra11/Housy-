@@ -71,8 +71,8 @@ describe('Human Handoff Workflow & Assignment Rules', () => {
     });
 
     it('falls back to the active executive with fewest open assigned leads when no booked visit exists', async () => {
-      // Mark any open leads currently assigned to Executive B as visited so Executive B has 0 open leads
-      await query(`UPDATE leads SET status = 'visited' WHERE assigned_to = $1`, [executiveBId]);
+      // Mark any open leads currently assigned to Executive B as lost so Executive B has 0 open leads
+      await query(`UPDATE leads SET status = 'lost' WHERE assigned_to = $1`, [executiveBId]);
 
       // Heavily load Executive A with open leads
       for (let i = 0; i < 3; i++) {

@@ -64,6 +64,7 @@ export function getDevelopmentDefaults(nodeEnv: string = process.env.NODE_ENV ||
     DEMO_MODE: 'true',
     INTERNAL_API_KEY: DEV_INTERNAL_CRON_DEFAULT,
     VERIFY_REPLIES: 'false',
+    GO_LIVE_DATE: '2026-10-15T00:00:00Z',
   };
 }
 
@@ -92,6 +93,7 @@ const EnvSchema = z.object({
   DEMO_MODE: booleanSchema.default(true),
   INTERNAL_API_KEY: z.string().min(1, 'INTERNAL_API_KEY is required'),
   VERIFY_REPLIES: booleanSchema.default(false),
+  GO_LIVE_DATE: z.string().default('2026-10-15T00:00:00Z'),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

@@ -1,8 +1,10 @@
 import {
   dashboardRepository,
   type DashboardRepository,
+  type RawBeforeAfterCohortRow,
 } from '../repositories/dashboard.repository.js';
 import { DEFAULT_MONTHLY_SPEND_INR } from './ad-spend.service.js';
+import { config } from '../config/index.js';
 import {
   type DashboardFilterQuery,
   type SalesDashboardData,
@@ -10,6 +12,8 @@ import {
   type SourceMetricItem,
   type FunnelStageItem,
   type ResponseTimeBySourceItem,
+  type BeforeAfterComparison,
+  type BeforeAfterMetrics,
   type LeadSource,
   getLeadSourceLabel,
   formatDurationSeconds,
@@ -178,7 +182,7 @@ export class DashboardService {
     // Scoping: executive only sees their own assigned leads; sales_head sees all
     const scopedExecutiveId = user.role === 'executive' ? user.id : undefined;
 
-    const [summaryRow, sourceRows, spendBySource] = await Promise.all([
+    const [summaryRow, sourceRows, spendBySource, cohortRows] = await Promise.all([
       this.repo.getSummaryMetrics({
         fromUtc,
         toUtc,
@@ -192,6 +196,10 @@ export class DashboardService {
         executiveId: scopedExecutiveId,
       }),
       this.calculateSpendForPeriod(fromStr, toStr),
+      this.repo.getBeforeAfterCohortMetrics(config.GO_LIVE_DATE, {
+        projectId: filter.projectId,
+        executiveId: scopedExecutiveId,
+      }),
     ]);
 
     // Build map of DB rows by source
@@ -213,10 +221,11 @@ export class DashboardService {
     const overallLeadToVisitRate =
       summaryRow.total_leads > 0 ? summaryRow.visits_completed / summaryRow.total_leads : null;
 
-    // Leads not reached within 48h % (target < 5%)
+    // Leads not reached within 48h % (target < 5% calculated over contactable leads)
+    const contactableLeads = summaryRow.contactable_leads_count;
     const unreached48hPercent =
-      summaryRow.total_leads > 0
-        ? Number(((summaryRow.unreached_48h_count / summaryRow.total_leads) * 100).toFixed(1))
+      contactableLeads > 0
+        ? Number(((summaryRow.unreached_48h_count / contactableLeads) * 100).toFixed(1))
         : null;
 
     const summary: SalesKpiSummary = {
@@ -228,6 +237,9 @@ export class DashboardService {
       unreached48hFormatted: formatPercentValue(unreached48hPercent),
       unreachedTargetPercent: 5.0,
       totalLeads: summaryRow.total_leads,
+      chatsStarted: summaryRow.chats_started,
+      notContactableCount: summaryRow.not_contactable_count,
+      contactableLeadsCount: summaryRow.contactable_leads_count,
       engagedLeads: summaryRow.engaged_leads,
       visitsBooked: summaryRow.visits_booked,
       visitsCompleted: summaryRow.visits_completed,
@@ -245,6 +257,7 @@ export class DashboardService {
     const bySource: SourceMetricItem[] = ALL_LEAD_SOURCES.map((source) => {
       const row = sourceRowMap.get(source);
       const leadsCount = row?.total_leads ?? 0;
+      const chatsStarted = row?.chats_started ?? 0;
       const visitsBooked = row?.visits_booked ?? 0;
       const visitsCompleted = row?.visits_completed ?? 0;
       const visitsNoShow = row?.visits_no_show ?? 0;
@@ -254,25 +267,34 @@ export class DashboardService {
       const showUpRate = showUpDenom > 0 ? visitsCompleted / showUpDenom : null;
 
       const spendInr = Math.round(spendBySource[source] ?? 0);
-      const costPerVisitInr =
-        visitsCompleted > 0 ? Math.round(spendInr / visitsCompleted) : null;
-
       const isSmallSample = leadsCount < 5 || visitsCompleted < 5;
+
+      const costPerCompletedVisit =
+        visitsCompleted > 0 ? Math.round(spendInr / visitsCompleted) : null;
+      const costPerBookedVisit =
+        visitsBooked > 0 ? Math.round(spendInr / visitsBooked) : null;
+      const costPerVisitInr = costPerCompletedVisit;
 
       return {
         source,
         sourceLabel: getLeadSourceLabel(source),
         leadsCount,
+        chatsStarted,
         medianResponseSeconds: medianSecs,
         medianResponseFormatted: formatDurationSeconds(medianSecs),
         visitsBooked,
         visitsCompleted,
         visitsNoShow,
+        bookedCount: visitsBooked,
+        completedCount: visitsCompleted,
         showUpRate,
         showUpRateFormatted: formatRatePercent(showUpRate),
         spendInr,
         costPerVisitInr,
         costPerVisitFormatted: formatInrCurrency(costPerVisitInr),
+        costPerCompletedVisit,
+        costPerBookedVisit,
+        spendSource: 'Ad Spend Allocation (₹30L/mo)',
         isSmallSample,
       };
     });
@@ -358,6 +380,42 @@ export class DashboardService {
       targetMinutes: 5,
     }));
 
+    // Before vs After AI-assisted cohort comparison
+    const beforeRow = cohortRows.find((c) => c.cohort === 'before');
+    const afterRow = cohortRows.find((c) => c.cohort === 'after');
+
+    const formatCohortMetrics = (r?: RawBeforeAfterCohortRow): BeforeAfterMetrics => {
+      const total = Number(r?.total_leads ?? 0);
+      const contactable = Number(r?.contactable_leads ?? 0);
+      const completed = Number(r?.visits_completed ?? 0);
+      const unreached = Number(r?.unreached_48h_count ?? 0);
+      const medianSecs =
+        r?.median_response_seconds !== null && r?.median_response_seconds !== undefined
+          ? Number(r.median_response_seconds)
+          : null;
+
+      const unreachedPct =
+        contactable > 0 ? Number(((unreached / contactable) * 100).toFixed(1)) : null;
+      const visitRate = total > 0 ? completed / total : null;
+
+      return {
+        medianResponseSeconds: medianSecs,
+        medianResponseFormatted: formatDurationSeconds(medianSecs),
+        unreached48hPercent: unreachedPct,
+        unreached48hFormatted: formatPercentValue(unreachedPct),
+        leadToVisitRate: visitRate,
+        leadToVisitFormatted: formatRatePercent(visitRate),
+        totalLeads: total,
+      };
+    };
+
+    const comparison: BeforeAfterComparison = {
+      goLiveDate: config.GO_LIVE_DATE,
+      isDemoSimulated: true,
+      before: formatCohortMetrics(beforeRow),
+      after: formatCohortMetrics(afterRow),
+    };
+
     return {
       filter: {
         period: filter.period,
@@ -371,6 +429,7 @@ export class DashboardService {
       bySource,
       funnel,
       responseTimeBySource,
+      comparison,
       calculatedAt: new Date().toISOString(),
     };
   }

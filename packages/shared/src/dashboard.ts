@@ -100,6 +100,9 @@ export const SalesKpiSummarySchema = z.object({
   unreached48hFormatted: z.string(),
   unreachedTargetPercent: z.number().default(5.0), // < 5% target
   totalLeads: z.number().int().min(0),
+  chatsStarted: z.number().int().min(0).default(0), // Anonymous chats started separately from leads
+  notContactableCount: z.number().int().min(0).default(0), // Non-consented leads excluded from 48h SLA denominator
+  contactableLeadsCount: z.number().int().min(0).default(0),
   engagedLeads: z.number().int().min(0),
   visitsBooked: z.number().int().min(0),
   visitsCompleted: z.number().int().min(0),
@@ -118,19 +121,44 @@ export const SourceMetricItemSchema = z.object({
   source: LeadSourceSchema,
   sourceLabel: z.string(),
   leadsCount: z.number().int().min(0),
+  chatsStarted: z.number().int().min(0).default(0),
   medianResponseSeconds: z.number().nullable(),
   medianResponseFormatted: z.string(),
   visitsBooked: z.number().int().min(0),
   visitsCompleted: z.number().int().min(0),
   visitsNoShow: z.number().int().min(0),
+  bookedCount: z.number().int().min(0).default(0),
+  completedCount: z.number().int().min(0).default(0),
   showUpRate: z.number().nullable(),
   showUpRateFormatted: z.string(),
   spendInr: z.number().min(0),
   costPerVisitInr: z.number().nullable(),
   costPerVisitFormatted: z.string(),
+  costPerCompletedVisit: z.number().nullable().optional(),
+  costPerBookedVisit: z.number().nullable().optional(),
+  spendSource: z.string().default('Ad Spend Allocation (₹30L/mo)'),
   isSmallSample: z.boolean(),
 });
 export type SourceMetricItem = z.infer<typeof SourceMetricItemSchema>;
+
+export const BeforeAfterMetricsSchema = z.object({
+  medianResponseSeconds: z.number().nullable(),
+  medianResponseFormatted: z.string(),
+  unreached48hPercent: z.number().nullable(),
+  unreached48hFormatted: z.string(),
+  leadToVisitRate: z.number().nullable(),
+  leadToVisitFormatted: z.string(),
+  totalLeads: z.number().int().min(0),
+});
+export type BeforeAfterMetrics = z.infer<typeof BeforeAfterMetricsSchema>;
+
+export const BeforeAfterComparisonSchema = z.object({
+  goLiveDate: z.string(),
+  isDemoSimulated: z.literal(true).default(true),
+  before: BeforeAfterMetricsSchema,
+  after: BeforeAfterMetricsSchema,
+});
+export type BeforeAfterComparison = z.infer<typeof BeforeAfterComparisonSchema>;
 
 export const FunnelStageKeySchema = z.enum(['leads', 'engaged', 'booked', 'visited']);
 export type FunnelStageKey = z.infer<typeof FunnelStageKeySchema>;
@@ -168,6 +196,7 @@ export const SalesDashboardDataSchema = z.object({
   bySource: z.array(SourceMetricItemSchema),
   funnel: z.array(FunnelStageItemSchema),
   responseTimeBySource: z.array(ResponseTimeBySourceItemSchema),
+  comparison: BeforeAfterComparisonSchema.optional(),
   calculatedAt: z.string().datetime(),
 });
 export type SalesDashboardData = z.infer<typeof SalesDashboardDataSchema>;

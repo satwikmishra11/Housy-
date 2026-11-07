@@ -8,6 +8,8 @@ import {
   type CsvCommitPayload,
 } from '@housy/shared';
 import { leadRepository, type LeadDbRow } from '../repositories/lead.repository.js';
+import { chatRepository } from '../repositories/chat.repository.js';
+import { chatSessionRepository } from '../repositories/chat-session.repository.js';
 import {
   BadRequestError,
   NotFoundError,
@@ -174,7 +176,7 @@ export class LeadIngestService {
     }
 
     // Find conversation and its lead
-    const res = await query<{ lead_id: string }>(
+    const res = await query<{ lead_id: string | null }>(
       `SELECT lead_id FROM conversations WHERE id = $1 LIMIT 1`,
       [conversationId],
     );
@@ -187,10 +189,38 @@ export class LeadIngestService {
 
     // Check if another lead already exists with this phone
     const existingLead = await leadRepository.findExactByPhone(phoneE164);
-    if (existingLead && existingLead.id !== currentLeadId) {
-      // Merge conversation into existing lead
-      await leadRepository.mergeAnonymousConversation(currentLeadId, existingLead.id, conversationId);
+    if (existingLead) {
+      if (currentLeadId && currentLeadId !== existingLead.id) {
+        // Merge conversation into existing lead
+        await leadRepository.mergeAnonymousConversation(currentLeadId, existingLead.id, conversationId);
+      } else {
+        await chatRepository.linkLeadToConversation(conversationId, existingLead.id);
+        const session = await chatSessionRepository.findByConversationId(conversationId);
+        if (session) {
+          await chatSessionRepository.linkLead(session.id, existingLead.id);
+        }
+      }
       return { outcome: 'merged', leadId: existingLead.id };
+    }
+
+    if (!currentLeadId) {
+      const session = await chatSessionRepository.findByConversationId(conversationId);
+      const newLead = await leadRepository.createLead({
+        name: rawName?.trim() || 'Website Buyer',
+        phoneE164,
+        email: null,
+        source: session?.source ?? 'website',
+        projectId: session?.project_id ?? null,
+        wants: 'Exploring residential projects',
+        language: session?.language ?? 'en',
+        status: 'new',
+        consentStatus: 'granted',
+      });
+      await chatRepository.linkLeadToConversation(conversationId, newLead.id);
+      if (session) {
+        await chatSessionRepository.linkLead(session.id, newLead.id);
+      }
+      return { outcome: 'attached', leadId: newLead.id };
     }
 
     // Update phone on the current lead

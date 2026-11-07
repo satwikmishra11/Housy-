@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { pool, query } from './index.js';
 import { logger } from '../utils/logger.js';
 import { hashPassword } from '../auth/password.js';
+import { config } from '../config/index.js';
 
 // Deterministic PRNG using Linear Congruential Generator (LCG)
 class LcgPrng {
@@ -39,6 +40,7 @@ export async function runSeed(): Promise<void> {
   // 1. Truncate all tables and restart sequence
   await query(`
     TRUNCATE TABLE
+      chat_sessions,
       unanswered_questions,
       source_api_keys,
       llm_calls,
@@ -302,96 +304,311 @@ export async function runSeed(): Promise<void> {
   // Advance sequence past sample leads so subsequent auto-generated IDs do not collide
   await query(`SELECT setval('lead_public_id_seq', 58225, false);`);
 
-  // 7. Seed ~60 More Leads over the last 30 days
+  // 7. Seed Before & After Go-Live Cohorts (A/B baseline comparison generated with PRNG)
+  // config.GO_LIVE_DATE defines the boundary between baseline manual operations and AI-assisted operations
+  const goLiveDate = new Date(config.GO_LIVE_DATE);
   const gujaratiFirstNames = ['Aarav', 'Bhavin', 'Chirag', 'Drashti', 'Esha', 'Falgun', 'Gaurav', 'Hitesh', 'Ila', 'Jignesh', 'Kinjal', 'Lalit', 'Manish', 'Neha', 'Parth', 'Rajesh', 'Sonal', 'Tejas', 'Urvi', 'Vishal'];
   const gujaratiLastNames = ['Patel', 'Shah', 'Modi', 'Desai', 'Trivedi', 'Dave', 'Mehta', 'Panchal', 'Bhatt', 'Vyas', 'Chokshi', 'Raval'];
   const sources = ['property_portal', 'social_ad', 'website', 'hoarding_call'] as const;
   const languages = ['en', 'hi', 'gu'] as const;
 
   const leadIds: string[] = [hardikId, nidhiId, kavitaId];
+  const websiteLeadRecords: Array<{ id: string; projId: string; lang: string; firstTouch: Date; firstResponse: Date | null }> = [];
 
-  // We will generate 62 additional leads
-  for (let i = 1; i <= 62; i++) {
-    const fName = prng.choice(gujaratiFirstNames);
-    const lName = prng.choice(gujaratiLastNames);
-    const name = `${fName} ${lName}`;
-    const source = prng.choice(sources);
-    const projId = prng.choice([p1Id, p2Id]);
-    const wants = prng.choice(['2 BHK', '3 BHK']);
-    const lang = prng.choice(languages);
-    const daysAgo = prng.int(1, 30);
-    const firstTouch = new Date(now.getTime() - daysAgo * 24 * 3600 * 1000 - prng.int(10, 500) * 60 * 1000);
-
-    // 30% never reached within 48h
-    const isUnreached = prng.next() < 0.32;
-    let firstResponse: Date | null = null;
-    let leadStatus: 'new' | 'engaged' | 'visit_booked' | 'visited' | 'no_show' | 'lost' = 'new';
-
-    if (!isUnreached) {
-      // Median first response realistic: 2 to 15 mins
-      const responseDelayMinutes = prng.int(2, 25);
-      firstResponse = new Date(firstTouch.getTime() + responseDelayMinutes * 60 * 1000);
-      leadStatus = prng.choice(['engaged', 'visit_booked', 'visited', 'no_show', 'lost']);
-    }
-
-    const assignedExec = leadStatus !== 'new' ? prng.choice(executiveIds) : null;
-    const phoneSuffix = String(100 + i).padStart(4, '0');
-    const phone = `+91900000${phoneSuffix}`;
-    const email = `${fName.toLowerCase()}.${lName.toLowerCase()}${i}@example.com`;
+  // Helper to insert a lead with strict status invariants and matching visit bookings
+  let leadSeqIdx = 100;
+  async function seedLeadRow(params: {
+    name: string;
+    source: (typeof sources)[number];
+    projId: string;
+    wants: string;
+    lang: string;
+    firstTouch: Date;
+    firstResponse: Date | null;
+    firstResponseKind: string | null;
+    leadStatus: 'new' | 'engaged' | 'visit_booked' | 'visited' | 'no_show' | 'lost';
+    consentStatus: 'granted' | 'withdrawn' | 'unknown';
+    assignedExec: string | null;
+  }): Promise<string> {
+    leadSeqIdx++;
+    const phone = `+91900000${String(leadSeqIdx).padStart(4, '0')}`;
+    const [fName, lName] = params.name.split(' ');
+    const email = `${fName!.toLowerCase()}.${lName!.toLowerCase()}${leadSeqIdx}@example.com`;
+    const optedOutAt = params.consentStatus === 'withdrawn' ? params.firstTouch.toISOString() : null;
 
     const leadRes = await query<{ id: string }>(
       `INSERT INTO leads (
         name, phone_e164, email, source, project_id, wants, budget_min, budget_max,
-        timeline, language, status, assigned_to, first_touch_at, first_response_at, last_activity_at, consent_status
+        timeline, language, status, assigned_to, first_touch_at, first_response_at,
+        first_response_kind, last_activity_at, consent_status, opted_out_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'granted'
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
       ) RETURNING id`,
       [
-        name,
+        params.name,
         phone,
         email,
-        source,
-        projId,
-        wants,
-        wants === '2 BHK' ? 6500000 : 9500000,
-        wants === '2 BHK' ? 8500000 : 12000000,
+        params.source,
+        params.projId,
+        params.wants,
+        params.wants === '2 BHK' ? 6500000 : 9500000,
+        params.wants === '2 BHK' ? 8500000 : 12000000,
         'Within 6 months',
-        lang,
-        leadStatus,
-        assignedExec,
-        firstTouch.toISOString(),
-        firstResponse?.toISOString() ?? null,
-        (firstResponse ?? firstTouch).toISOString(),
+        params.lang,
+        params.leadStatus,
+        params.assignedExec,
+        params.firstTouch.toISOString(),
+        params.firstResponse?.toISOString() ?? null,
+        params.firstResponseKind,
+        (params.firstResponse ?? params.firstTouch).toISOString(),
+        params.consentStatus,
+        optedOutAt,
       ],
     );
-    const leadId = leadRes.rows[0]!.id;
-    leadIds.push(leadId);
+    const newLeadId = leadRes.rows[0]!.id;
 
-    // Touchpoints & Consents
+    // Record touchpoint & consent
     await query(
       `INSERT INTO lead_touchpoints (lead_id, source, channel, occurred_at, raw)
        VALUES ($1, $2, $3, $4, $5)`,
-      [leadId, source, 'web', firstTouch.toISOString(), JSON.stringify({ campaign: 'diwali_2026', source })],
+      [newLeadId, params.source, 'web', params.firstTouch.toISOString(), JSON.stringify({ campaign: 'campaign_2026', source: params.source })],
     );
     await query(
       `INSERT INTO consents (lead_id, purpose, granted, notice_version, channel, at)
-       VALUES ($1, 'lead_enquiry_followup', true, 'v1.0', 'web_form', $2)`,
-      [leadId, firstTouch.toISOString()],
+       VALUES ($1, 'lead_enquiry_followup', $2, 'v1.0', 'web_form', $3)`,
+      [newLeadId, params.consentStatus === 'granted', params.firstTouch.toISOString()],
+    );
+
+    // CRITICAL SINGLE SOURCE OF TRUTH INVARIANTS:
+    // If status = 'visited', MUST create past slot and completed booking
+    // If status = 'no_show', MUST create past slot and no_show booking
+    // If status = 'visit_booked', MUST create slot and confirmed booking
+    if (params.leadStatus === 'visited' || params.leadStatus === 'no_show' || params.leadStatus === 'visit_booked') {
+      const slotOffsetDays = prng.int(1, 4);
+      const slotTime = new Date(params.firstTouch.getTime() + slotOffsetDays * 86400 * 1000);
+      const slotEnd = new Date(slotTime.getTime() + 3600 * 1000);
+      const exec = params.assignedExec ?? executiveIds[0]!;
+
+      const slotRes = await query<{ id: string }>(
+        `INSERT INTO visit_slots (project_id, executive_id, starts_at, ends_at, status)
+         VALUES ($1, $2, $3, $4, 'booked') RETURNING id`,
+        [params.projId, exec, slotTime.toISOString(), slotEnd.toISOString()],
+      );
+
+      const bookingStatus =
+        params.leadStatus === 'visited'
+          ? 'completed'
+          : params.leadStatus === 'no_show'
+            ? 'no_show'
+            : 'confirmed';
+
+      await query(
+        `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key, created_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [newLeadId, slotRes.rows[0]!.id, bookingStatus, `idem-seed-${bookingStatus}-${newLeadId}`, params.firstTouch.toISOString()],
+      );
+    }
+
+    if (params.source === 'website') {
+      websiteLeadRecords.push({
+        id: newLeadId,
+        projId: params.projId,
+        lang: params.lang,
+        firstTouch: params.firstTouch,
+        firstResponse: params.firstResponse,
+      });
+    }
+
+    return newLeadId;
+  }
+
+  // --- 7A. Seed BEFORE Cohort (first_touch_at < GO_LIVE_DATE) ---
+  // Baseline behavior: ~14h median response (~50,400s), ~35% unreached, ~6% visit rate
+  logger.info(`Seeding Before Go-Live cohort (< ${config.GO_LIVE_DATE})...`);
+  const beforeCohortCount = 50;
+  for (let i = 1; i <= beforeCohortCount; i++) {
+    const name = `${prng.choice(gujaratiFirstNames)} ${prng.choice(gujaratiLastNames)}`;
+    const source = prng.choice(sources);
+    const projId = prng.choice([p1Id, p2Id]);
+    const wants = prng.choice(['2 BHK', '3 BHK']);
+    const lang = prng.choice(languages);
+
+    // Days before go-live: 1 to 28 days before
+    const daysBefore = prng.int(1, 28);
+    const firstTouch = new Date(goLiveDate.getTime() - daysBefore * 86400 * 1000 - prng.int(10, 500) * 60 * 1000);
+
+    // Consent: 45 granted, 5 not contactable
+    const consentStatus: 'granted' | 'withdrawn' = i <= 45 ? 'granted' : 'withdrawn';
+
+    let firstResponse: Date | null = null;
+    let firstResponseKind: string | null = null;
+    let leadStatus: 'new' | 'engaged' | 'visit_booked' | 'visited' | 'no_show' | 'lost' = 'new';
+
+    // Visits: exactly 3 completed visits (3/50 = 6.0% baseline visit rate)
+    if (i <= 3) {
+      leadStatus = 'visited';
+    } else if (i === 4) {
+      leadStatus = 'no_show';
+    } else if (i === 5 || i === 6) {
+      leadStatus = 'visit_booked';
+    } else if (i <= 35) {
+      leadStatus = 'engaged';
+    } else {
+      leadStatus = prng.choice(['new', 'lost']);
+    }
+
+    if (consentStatus === 'granted') {
+      // 16 out of 45 contactable leads unreached within 48h (~35.5% unreached)
+      const isUnreached = i >= 30; // leads 30 to 45 = 16 leads
+      if (!isUnreached) {
+        // Reached: delay ~10h to ~18h (median ~14 hours / ~50,400s)
+        const delayHours = prng.int(10, 18);
+        const delayMinutes = prng.int(0, 59);
+        firstResponse = new Date(firstTouch.getTime() + (delayHours * 3600 + delayMinutes * 60) * 1000);
+        firstResponseKind = source === 'website' ? 'chat_substantive_answer' : 'outbound_message';
+      }
+    }
+
+    const assignedExec = leadStatus !== 'new' ? prng.choice(executiveIds) : null;
+    const lId = await seedLeadRow({
+      name,
+      source,
+      projId,
+      wants,
+      lang,
+      firstTouch,
+      firstResponse,
+      firstResponseKind,
+      leadStatus,
+      consentStatus,
+      assignedExec,
+    });
+    leadIds.push(lId);
+  }
+
+  // --- 7B. Seed AFTER Cohort (first_touch_at >= GO_LIVE_DATE) ---
+  // Assisted behavior: ~2.5m median response, < 5% unreached, ~8.5% visit rate
+  logger.info(`Seeding After Go-Live cohort (>= ${config.GO_LIVE_DATE})...`);
+  // Note: Kavita (visited, 1), Hardik (booked, 1), Nidhi (engaged, 1) are already in After cohort.
+  // We add 47 more leads -> total 50 leads in After cohort.
+  // 3 more visited + Kavita = 4 visited (4/50 = 8.0% ~ 8.5% visit rate).
+  const afterCohortCount = 47;
+  for (let i = 1; i <= afterCohortCount; i++) {
+    const name = `${prng.choice(gujaratiFirstNames)} ${prng.choice(gujaratiLastNames)}`;
+    const source = prng.choice(sources);
+    const projId = prng.choice([p1Id, p2Id]);
+    const wants = prng.choice(['2 BHK', '3 BHK']);
+    const lang = prng.choice(languages);
+
+    // Days after go-live: between go-live and now (approx 1 to 21 days)
+    const msSinceGoLive = now.getTime() - goLiveDate.getTime();
+    const touchOffsetMs = prng.int(86400 * 1000, Math.max(86400 * 1000, msSinceGoLive - 3600 * 1000));
+    const firstTouch = new Date(goLiveDate.getTime() + touchOffsetMs);
+
+    // Consent: 43 granted, 4 not contactable
+    const consentStatus: 'granted' | 'withdrawn' = i <= 43 ? 'granted' : 'withdrawn';
+
+    let firstResponse: Date | null = null;
+    let firstResponseKind: string | null = null;
+    let leadStatus: 'new' | 'engaged' | 'visit_booked' | 'visited' | 'no_show' | 'lost' = 'new';
+
+    if (i <= 3) {
+      leadStatus = 'visited'; // 3 completed + Kavita = 4 completed visits
+    } else if (i === 4) {
+      leadStatus = 'no_show';
+    } else if (i === 5 || i === 6) {
+      leadStatus = 'visit_booked';
+    } else if (i <= 38) {
+      leadStatus = 'engaged';
+    } else {
+      leadStatus = prng.choice(['new', 'lost']);
+    }
+
+    if (consentStatus === 'granted') {
+      // Only 1 unreached lead out of 43 contactable (< 5% SLA target achieved: ~2.3%)
+      const isUnreached = i === 43;
+      if (!isUnreached) {
+        // Fast response: delay between 45s and 240s (median ~140-150s = 2.5 minutes)
+        const delaySecs = prng.int(45, 240);
+        firstResponse = new Date(firstTouch.getTime() + delaySecs * 1000);
+        firstResponseKind = source === 'website' ? 'chat_substantive_answer' : 'outbound_message';
+      }
+    }
+
+    const assignedExec = leadStatus !== 'new' ? prng.choice(executiveIds) : null;
+    const lId = await seedLeadRow({
+      name,
+      source,
+      projId,
+      wants,
+      lang,
+      firstTouch,
+      firstResponse,
+      firstResponseKind,
+      leadStatus,
+      consentStatus,
+      assignedExec,
+    });
+    leadIds.push(lId);
+  }
+
+  // --- 7C. Seed Anonymous Chat Sessions ---
+  // Demonstrates 'chats started' tracked separately from leads:
+  // - Converted sessions linked to website leads
+  // - Anonymous sessions without leads (visitors who browsed/asked 0-1 questions and bounced)
+  logger.info('Seeding chat_sessions (anonymous and converted)...');
+  for (const wLead of websiteLeadRecords) {
+    await query(
+      `INSERT INTO chat_sessions (
+        lead_id, source, project_id, language, first_touch_at, buyer_first_message_at,
+        first_response_at, buyer_message_count, has_project_interest, status, created_at, updated_at
+      ) VALUES (
+        $1, 'website', $2, $3, $4, $5, $6, $7, true, 'converted', $4, $4
+      )`,
+      [
+        wLead.id,
+        wLead.projId,
+        wLead.lang,
+        wLead.firstTouch.toISOString(),
+        wLead.firstTouch.toISOString(),
+        wLead.firstResponse?.toISOString() ?? null,
+        prng.int(2, 5),
+      ],
     );
   }
 
+  // 15 Anonymous un-converted sessions
+  for (let s = 1; s <= 15; s++) {
+    const sDate = new Date(now.getTime() - prng.int(1, 25) * 86400 * 1000);
+    const hasMsg = prng.boolean(0.5);
+    await query(
+      `INSERT INTO chat_sessions (
+        lead_id, source, project_id, language, first_touch_at, buyer_first_message_at,
+        first_response_at, buyer_message_count, has_project_interest, status, created_at, updated_at
+      ) VALUES (
+        NULL, 'website', $1, 'en', $2, $3, NULL, $4, false, 'active', $2, $2
+      )`,
+      [
+        prng.choice([p1Id, p2Id]),
+        sDate.toISOString(),
+        hasMsg ? sDate.toISOString() : null,
+        hasMsg ? 1 : 0,
+      ],
+    );
+  }
+  logger.info(`Seeded ${websiteLeadRecords.length + 15} chat_sessions (${websiteLeadRecords.length} converted, 15 anonymous).`);
+
   // Set up 4 duplicate pairs (leads with identical details or flagged duplicate)
-  // And 2 possible-duplicate pairs
+  // And 2 soft possible-duplicate pairs
   if (leadIds.length > 20) {
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[3], leadIds[4]]);
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[5], leadIds[6]]);
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[7], leadIds[8]]);
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[9], leadIds[10]]);
-    // 2 soft possible duplicates
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[11], leadIds[12]]);
     await query(`UPDATE leads SET possible_duplicate_of = $1 WHERE id = $2`, [leadIds[13], leadIds[14]]);
   }
-  logger.info(`Inserted 62 additional leads with touchpoints, consents, duplicate pairs.`);
+  logger.info(`Inserted ${beforeCohortCount + afterCohortCount} additional leads with touchpoints, consents, duplicate pairs.`);
 
   // 8. Visit Slots for the Next 21 Days (10:00 to 18:00 IST)
   // IST is UTC+5:30. 10:00 IST is 04:30 UTC. 17:00 IST is 11:30 UTC.
@@ -426,6 +643,9 @@ export async function runSeed(): Promise<void> {
             [bookedLeadId, slotRes.rows[0]!.id, `idem-slot-${confirmedBookingCount}-${slotStart.getTime()}`, now.toISOString()],
           );
           const bookingId = bookingRes.rows[0]!.id;
+
+          // Maintain strict single source of truth: update lead status to visit_booked
+          await query(`UPDATE leads SET status = 'visit_booked', last_activity_at = NOW() WHERE id = $1`, [bookedLeadId]);
 
           // Create 24h and 2h reminders
           const reminder24h = new Date(slotStart.getTime() - 24 * 3600 * 1000);

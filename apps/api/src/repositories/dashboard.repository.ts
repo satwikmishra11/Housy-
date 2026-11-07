@@ -11,6 +11,9 @@ export interface DashboardFilterDbOptions {
 
 export interface RawSummaryMetricsRow extends QueryResultRow {
   total_leads: number;
+  chats_started: number;
+  contactable_leads_count: number;
+  not_contactable_count: number;
   engaged_leads: number;
   visits_booked: number;
   visits_completed: number;
@@ -22,6 +25,9 @@ export interface RawSummaryMetricsRow extends QueryResultRow {
 export interface RawSourceMetricsRow extends QueryResultRow {
   source: LeadSource;
   total_leads: number;
+  chats_started: number;
+  contactable_leads_count: number;
+  not_contactable_count: number;
   engaged_leads: number;
   visits_booked: number;
   visits_completed: number;
@@ -36,6 +42,15 @@ export interface RawAdSpendRow extends QueryResultRow {
   amount_inr: string | number;
 }
 
+export interface RawBeforeAfterCohortRow extends QueryResultRow {
+  cohort: 'before' | 'after';
+  total_leads: number;
+  contactable_leads: number;
+  visits_completed: number;
+  median_response_seconds: number | null;
+  unreached_48h_count: number;
+}
+
 /**
  * Repository layer for Sales Dashboard analytics.
  *
@@ -45,18 +60,21 @@ export interface RawAdSpendRow extends QueryResultRow {
  * 1. Median First Response Time:
  *    50th percentile (PERCENTILE_CONT(0.5)) of EXTRACT(EPOCH FROM (first_response_at - first_touch_at))
  *    for leads where first_response_at IS NOT NULL. Target SLA: < 5 minutes (300 seconds).
+ *    For chat: time from buyer's first message to first substantive answer (greeting stored separately).
+ *    For ingested leads: time to first outbound dispatch.
  * 2. Leads Not Reached Within 48 Hours:
- *    Count of leads in period where (first_response_at IS NULL AND NOW() - first_touch_at > INTERVAL '48 hours')
+ *    Count of contactable leads (consent_status = 'granted' and opted_out_at IS NULL) where
+ *    (first_response_at IS NULL AND NOW() - first_touch_at > INTERVAL '48 hours')
  *    OR (first_response_at IS NOT NULL AND first_response_at - first_touch_at > INTERVAL '48 hours').
- *    Target SLA: < 5% of period leads.
+ *    Non-consented leads are excluded from SLA denominator and shown as "not contactable".
  * 3. Engaged Leads:
  *    Leads where status != 'new' (or touchpoints/messages exchanged).
- * 4. Visits Booked:
- *    Leads where status IN ('visit_booked', 'visited', 'no_show') or active/completed booking exists in visit_bookings.
- * 5. Visits Completed:
- *    Leads where status = 'visited' or booking status = 'completed'.
- * 6. Visits No-Show:
- *    Leads where status = 'no_show' or booking status = 'no_show'.
+ * 4. Visits Booked (Single Source of Truth):
+ *    Leads where status IN ('visit_booked', 'visited', 'no_show').
+ * 5. Visits Completed (Single Source of Truth):
+ *    Leads where status = 'visited'.
+ * 6. Visits No-Show (Single Source of Truth):
+ *    Leads where status = 'no_show'.
  * 7. Show-up Rate:
  *    visits_completed / (visits_completed + visits_no_show).
  * 8. Lead-to-Visit Rate:
@@ -85,46 +103,46 @@ export class DashboardRepository {
     const sql = `
       SELECT
         COUNT(*)::int AS total_leads,
+        COUNT(*) FILTER (WHERE l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)::int AS contactable_leads_count,
+        COUNT(*) FILTER (WHERE l.consent_status = 'withdrawn' OR l.opted_out_at IS NOT NULL)::int AS not_contactable_count,
         COUNT(*) FILTER (WHERE l.status NOT IN ('new'))::int AS engaged_leads,
-        COUNT(*) FILTER (
-          WHERE l.status IN ('visit_booked', 'visited', 'no_show')
-             OR EXISTS (
-               SELECT 1 FROM visit_bookings vb
-               WHERE vb.lead_id = l.id AND vb.status IN ('confirmed', 'completed', 'no_show')
-             )
-        )::int AS visits_booked,
-        COUNT(*) FILTER (
-          WHERE l.status = 'visited'
-             OR EXISTS (
-               SELECT 1 FROM visit_bookings vb
-               WHERE vb.lead_id = l.id AND vb.status = 'completed'
-             )
-        )::int AS visits_completed,
-        COUNT(*) FILTER (
-          WHERE l.status = 'no_show'
-             OR (
-               EXISTS (
-                 SELECT 1 FROM visit_bookings vb
-                 WHERE vb.lead_id = l.id AND vb.status = 'no_show'
-               ) AND l.status != 'visited'
-             )
-        )::int AS visits_no_show,
+        COUNT(*) FILTER (WHERE l.status IN ('visit_booked', 'visited', 'no_show'))::int AS visits_booked,
+        COUNT(*) FILTER (WHERE l.status = 'visited')::int AS visits_completed,
+        COUNT(*) FILTER (WHERE l.status = 'no_show')::int AS visits_no_show,
         PERCENTILE_CONT(0.5) WITHIN GROUP (
           ORDER BY EXTRACT(EPOCH FROM (l.first_response_at - l.first_touch_at))
         ) FILTER (WHERE l.first_response_at IS NOT NULL AND l.first_response_at >= l.first_touch_at) AS median_response_seconds,
         COUNT(*) FILTER (
-          WHERE (l.first_response_at IS NULL AND (NOW() - l.first_touch_at > INTERVAL '48 hours'))
-             OR (l.first_response_at IS NOT NULL AND (l.first_response_at - l.first_touch_at > INTERVAL '48 hours'))
+          WHERE (l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)
+            AND (
+              (l.first_response_at IS NULL AND (NOW() - l.first_touch_at > INTERVAL '48 hours'))
+              OR (l.first_response_at IS NOT NULL AND (l.first_response_at - l.first_touch_at > INTERVAL '48 hours'))
+            )
         )::int AS unreached_48h_count
       FROM leads l
       WHERE ${whereClauses.join(' AND ')}
     `;
 
-    const res = await query<RawSummaryMetricsRow>(sql, params);
-    const row = res.rows[0];
+    const chatsParams: unknown[] = [options.fromUtc, options.toUtc];
+    let chatsSql = `SELECT COUNT(*)::int AS count FROM chat_sessions cs WHERE cs.created_at >= $1 AND cs.created_at <= $2`;
+    if (options.projectId) {
+      chatsParams.push(options.projectId);
+      chatsSql += ` AND cs.project_id = $3`;
+    }
+
+    const [leadsRes, chatsRes] = await Promise.all([
+      query<RawSummaryMetricsRow>(sql, params),
+      query<{ count: number }>(chatsSql, chatsParams),
+    ]);
+
+    const row = leadsRes.rows[0];
+    const chatsStarted = Number(chatsRes.rows[0]?.count ?? 0);
 
     return {
       total_leads: Number(row?.total_leads ?? 0),
+      chats_started: chatsStarted,
+      contactable_leads_count: Number(row?.contactable_leads_count ?? 0),
+      not_contactable_count: Number(row?.not_contactable_count ?? 0),
       engaged_leads: Number(row?.engaged_leads ?? 0),
       visits_booked: Number(row?.visits_booked ?? 0),
       visits_completed: Number(row?.visits_completed ?? 0),
@@ -158,36 +176,21 @@ export class DashboardRepository {
       SELECT
         l.source,
         COUNT(*)::int AS total_leads,
+        COUNT(*) FILTER (WHERE l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)::int AS contactable_leads_count,
+        COUNT(*) FILTER (WHERE l.consent_status = 'withdrawn' OR l.opted_out_at IS NOT NULL)::int AS not_contactable_count,
         COUNT(*) FILTER (WHERE l.status NOT IN ('new'))::int AS engaged_leads,
-        COUNT(*) FILTER (
-          WHERE l.status IN ('visit_booked', 'visited', 'no_show')
-             OR EXISTS (
-               SELECT 1 FROM visit_bookings vb
-               WHERE vb.lead_id = l.id AND vb.status IN ('confirmed', 'completed', 'no_show')
-             )
-        )::int AS visits_booked,
-        COUNT(*) FILTER (
-          WHERE l.status = 'visited'
-             OR EXISTS (
-               SELECT 1 FROM visit_bookings vb
-               WHERE vb.lead_id = l.id AND vb.status = 'completed'
-             )
-        )::int AS visits_completed,
-        COUNT(*) FILTER (
-          WHERE l.status = 'no_show'
-             OR (
-               EXISTS (
-                 SELECT 1 FROM visit_bookings vb
-                 WHERE vb.lead_id = l.id AND vb.status = 'no_show'
-               ) AND l.status != 'visited'
-             )
-        )::int AS visits_no_show,
+        COUNT(*) FILTER (WHERE l.status IN ('visit_booked', 'visited', 'no_show'))::int AS visits_booked,
+        COUNT(*) FILTER (WHERE l.status = 'visited')::int AS visits_completed,
+        COUNT(*) FILTER (WHERE l.status = 'no_show')::int AS visits_no_show,
         PERCENTILE_CONT(0.5) WITHIN GROUP (
           ORDER BY EXTRACT(EPOCH FROM (l.first_response_at - l.first_touch_at))
         ) FILTER (WHERE l.first_response_at IS NOT NULL AND l.first_response_at >= l.first_touch_at) AS median_response_seconds,
         COUNT(*) FILTER (
-          WHERE (l.first_response_at IS NULL AND (NOW() - l.first_touch_at > INTERVAL '48 hours'))
-             OR (l.first_response_at IS NOT NULL AND (l.first_response_at - l.first_touch_at > INTERVAL '48 hours'))
+          WHERE (l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)
+            AND (
+              (l.first_response_at IS NULL AND (NOW() - l.first_touch_at > INTERVAL '48 hours'))
+              OR (l.first_response_at IS NOT NULL AND (l.first_response_at - l.first_touch_at > INTERVAL '48 hours'))
+            )
         )::int AS unreached_48h_count
       FROM leads l
       WHERE ${whereClauses.join(' AND ')}
@@ -195,10 +198,34 @@ export class DashboardRepository {
       ORDER BY total_leads DESC
     `;
 
-    const res = await query<RawSourceMetricsRow>(sql, params);
+    const chatsParams: unknown[] = [options.fromUtc, options.toUtc];
+    let chatsSql = `
+      SELECT cs.source, COUNT(*)::int AS count
+      FROM chat_sessions cs
+      WHERE cs.created_at >= $1 AND cs.created_at <= $2
+    `;
+    if (options.projectId) {
+      chatsParams.push(options.projectId);
+      chatsSql += ` AND cs.project_id = $3`;
+    }
+    chatsSql += ` GROUP BY cs.source`;
+
+    const [res, chatsBySourceRes] = await Promise.all([
+      query<RawSourceMetricsRow>(sql, params),
+      query<{ source: LeadSource; count: number }>(chatsSql, chatsParams),
+    ]);
+
+    const chatsMap = new Map<LeadSource, number>();
+    for (const c of chatsBySourceRes.rows) {
+      chatsMap.set(c.source, Number(c.count));
+    }
+
     return res.rows.map((row) => ({
       source: row.source,
       total_leads: Number(row.total_leads ?? 0),
+      chats_started: chatsMap.get(row.source) ?? 0,
+      contactable_leads_count: Number(row.contactable_leads_count ?? 0),
+      not_contactable_count: Number(row.not_contactable_count ?? 0),
       engaged_leads: Number(row.engaged_leads ?? 0),
       visits_booked: Number(row.visits_booked ?? 0),
       visits_completed: Number(row.visits_completed ?? 0),
@@ -209,6 +236,51 @@ export class DashboardRepository {
           : null,
       unreached_48h_count: Number(row.unreached_48h_count ?? 0),
     }));
+  }
+
+  /**
+   * Computes Before vs After go-live cohort metrics to evaluate AI assistant impact.
+   */
+  async getBeforeAfterCohortMetrics(
+    goLiveDateIso: string,
+    options: { projectId?: string; executiveId?: string } = {},
+  ): Promise<RawBeforeAfterCohortRow[]> {
+    const params: unknown[] = [goLiveDateIso];
+    const whereClauses: string[] = ['1=1'];
+
+    if (options.projectId) {
+      params.push(options.projectId);
+      whereClauses.push(`l.project_id = $${params.length}`);
+    }
+
+    if (options.executiveId) {
+      params.push(options.executiveId);
+      whereClauses.push(`l.assigned_to = $${params.length}`);
+    }
+
+    const sql = `
+      SELECT
+        CASE WHEN l.first_touch_at < $1 THEN 'before' ELSE 'after' END AS cohort,
+        COUNT(*)::int AS total_leads,
+        COUNT(*) FILTER (WHERE l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)::int AS contactable_leads,
+        COUNT(*) FILTER (WHERE l.status = 'visited')::int AS visits_completed,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (
+          ORDER BY EXTRACT(EPOCH FROM (l.first_response_at - l.first_touch_at))
+        ) FILTER (WHERE l.first_response_at IS NOT NULL AND l.first_response_at >= l.first_touch_at) AS median_response_seconds,
+        COUNT(*) FILTER (
+          WHERE (l.consent_status != 'withdrawn' AND l.opted_out_at IS NULL)
+            AND (
+              (l.first_response_at IS NULL AND (NOW() - l.first_touch_at > INTERVAL '48 hours'))
+              OR (l.first_response_at IS NOT NULL AND (l.first_response_at - l.first_touch_at > INTERVAL '48 hours'))
+            )
+        )::int AS unreached_48h_count
+      FROM leads l
+      WHERE ${whereClauses.join(' AND ')}
+      GROUP BY cohort
+    `;
+
+    const res = await query<RawBeforeAfterCohortRow>(sql, params);
+    return res.rows;
   }
 
   /**
