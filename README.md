@@ -2,104 +2,101 @@
 
 [![CI](https://github.com/satwikmishra11/Housy-/actions/workflows/ci.yml/badge.svg)](https://github.com/satwikmishra11/Housy-/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Compliance](https://img.shields.io/badge/Compliance-DPDP%202023%20%7C%20RERA%20Gujarat-emerald.svg)]()
 
-> Production-quality full-stack AI residence advisor and site-visit scheduling engine designed specifically for luxury real estate developers in Ahmedabad, Gujarat.
->
-> 🌐 **Live Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)  
-> 📐 **Technical Design Document (TDD)**: [`docs/TDD.md`](./docs/TDD.md) | [Exported PDF](./docs/TDD.pdf)  
-> 📖 **Production Deployment Guide**: [`deployment.md`](./deployment.md)  
-> 📦 **Reviewer Submission ZIP**: [`submission.zip`](./submission.zip) (Contains `TDD.pdf` and `deployment.md`, 3.5 MB)
+> Full-stack AI conversational sales assistant and conflict-free site-visit booking platform built for residential real estate developers in Ahmedabad, Gujarat (Project 1 & Project 2, ₹65L – ₹1.2 Cr). Solves lead wastage and slow response times by guaranteeing 24/7 sub-2-minute replies in English, Hindi, and Gujarati, booking real free slots with zero double-booking, and orchestrating warm handoffs to sales executives.
+
+- 🌐 **Live Web Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)
+- 📐 **Technical Design Document (TDD)**: [`docs/TDD.md`](./docs/TDD.md) | [Exported PDF](./docs/TDD.pdf)
+- 📖 **Deployment Guide**: [`deployment.md`](./deployment.md)
+- 📦 **Submission Package**: Downloadable as a release asset under [GitHub Releases](https://github.com/satwikmishra11/Housy-/releases)
 
 ---
 
-## Overview
+## Screen Highlights
 
-Housy automates high-intent lead qualification, multilingual conversational inquiry handling, and conflict-free site-visit booking across multi-channel buyer touchpoints (Property Portals, Social Media Ads, Websites, and Hoardings).
+| Multilingual Buyer Advisory | Slot Booking & Map Pin Confirmation |
+| :---: | :---: |
+| ![Buyer Chat Greeting](./docs/assets/screenshots/01-chat-greeting-desktop.png) | ![Confirmed Booking Mobile](./docs/assets/screenshots/02-chat-booking-confirmed-phone.png) |
 
-### Core Capabilities
-1. **Multilingual AI Residence Advisor**: Answers buyer queries in English, Hindi, and Gujarati, strictly grounded in authoritative project fact sheets with zero hallucination.
-2. **Deterministic Pre-Filters & Guardrails**: Automatically catches price/discount haggling, human agent requests, and opt-out keywords (`STOP`) without calling LLM endpoints.
-3. **Idempotent Real-Time Slot Booking**: Guarantees zero double-booking under high concurrency using PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED` and database constraints.
-4. **DPDP Act 2023 Compliance**: Enforces explicit opt-in consent before booking or dispatching communications; immediate opt-out halting for automated reminders.
-5. **Executive & Sales Head Portals**: Full-featured workspaces for unified lead triage, handoff acceptance, audit-logged fact sheet editing, and executive conversion analytics.
+| Unified Lead Intake & Deduplication | Executive Handoff & AI Summary |
+| :---: | :---: |
+| ![Leads Dashboard](./docs/assets/screenshots/04-leads-desktop.png) | ![Handoff Inbox](./docs/assets/screenshots/05-handoffs-desktop.png) |
 
----
-
-## Architecture & Monorepo Structure
-
-```
-Housy-/
-├── packages/
-│   └── shared/                 # Shared domain types, Zod schemas, utilities & formatting
-├── apps/
-│   ├── api/                    # Node.js + Express 3-tier API backend (PostgreSQL, Pino, Argon2id)
-│   └── web/                    # React 18 + Vite + Tailwind CSS + TanStack Query frontend
-├── e2e/                        # Playwright end-to-end user journeys & axe-core accessibility
-├── docs/                       # Architectural specifications, hardening reports, assumptions
-└── scripts/                    # Automation utilities (dev launcher, secret scanners)
-```
+| Sales Performance & Source Analytics | Fact Sheet Knowledge Base Editor |
+| :---: | :---: |
+| ![Sales Analytics Dashboard](./docs/assets/screenshots/06-dashboard-desktop.png) | ![Fact Sheet Editor](./docs/assets/screenshots/07-factsheet-desktop.png) |
 
 ---
 
-## Quickstart
+## 5-Command Quickstart
 
-### Prerequisites
-- Node.js 20+ (managed via NVM)
-- PostgreSQL 16+ (or Docker)
+Get a complete local development environment running against PostgreSQL in 5 commands:
 
-### Setup & Run Locally
 ```bash
-# 1. Install dependencies
-npm ci
-
-# 2. Build shared workspace
-npm run build --workspace=@housy/shared
-
-# 3. Configure environment
+git clone https://github.com/satwikmishra11/Housy-.git && cd Housy-
+npm install
 cp apps/api/.env.example apps/api/.env
-
-# 4. Migrate and seed deterministic database
-npm run db:migrate
-npm run db:seed
-
-# 5. Start development servers (API on 3001, Web on 5173)
+npm run db:test:reset
 npm run dev
 ```
 
+The API backend starts on `http://localhost:3001` and the React frontend on `http://localhost:5173` (with `/api` requests proxied to the backend).
+
+### Quick Demo Accounts
+| Role | Email | Password | Scope |
+|---|---|---|---|
+| **Sales Head (Admin)** | `harshil.mehta@example.com` | `DemoPass123!` | Developer-wide analytics, fact sheet editor, slot rules, ad spend |
+| **Sales Executive** | `amit.shah@example.com` | `DemoPass123!` | Assigned lead triage, executive handoff inbox, visit outcome verification |
+
 ---
 
-## Testing & Quality Assurance
-
-Housy enforces strict automated verification across unit, integration, end-to-end, and accessibility layers:
+## Verification & Test Commands
 
 ```bash
-# Run unit & integration test suites
-npm test
+# Run full verification suite (lint + typecheck + unit/integration tests)
+npm run check
 
-# Run Playwright E2E user journeys & Axe accessibility audits
+# Run Playwright End-to-End user journeys (headless Chromium)
 npm run test:e2e
 
-# Run linter & strict typecheck
-npm run lint
-npm run typecheck
-
-# Run secret scanning
+# Run automated secret scanner across working tree and git history
 npm run scan:secrets
 ```
 
-### End-to-End User Journeys (`e2e/housy-e2e.spec.ts`)
-1. **Buyer AI Chat Journey**: Multilingual inquiry in Hindi, DPDP contact collection, slot selection, and confirmation card with map pin link.
-2. **Sales Executive Workflow**: Staff authentication, attribution source tag verification, handoff transcript review, and visit attendance outcome tracking.
-3. **Sales Head Fact Management & Analytics**: Fact editing, version recording, assistant preview synchronization, and executive conversion dashboard review.
-4. **Concurrency Defense**: Isolated browser contexts booking the same last slot; first confirms, second receives "just taken" notice with nearest alternatives.
-5. **DPDP 2023 Opt-Out**: Immediate communication revocation on `STOP`, ensuring pre-visit reminders are cleanly skipped.
-6. **Axe-Core Audits**: Automated WCAG 2.1 AA accessibility checks across Buyer Chat, Staff Login, and Sales Analytics pages.
+---
+
+## Core Capabilities
+
+1. **24/7 Multilingual AI Advisory**: Converses in English, Hindi, and Gujarati, strictly grounded in the sales head's active fact sheet. Hallucinations and unauthorized claims are eliminated by deterministic pre- and post-check guardrails.
+2. **Zero Double-Booking Guarantee**: Pessimistic row-level locking (`SELECT ... FOR UPDATE SKIP LOCKED`) combined with PostgreSQL partial unique constraints (`UNIQUE(slot_id) WHERE status = 'confirmed'`) ensures concurrent buyers can never book the same slot.
+3. **Automated Deduplication Pipeline**: Exact phone/email normalization and PostgreSQL trigram matching (`pg_trgm`) deduplicate incoming leads across property portals, Meta ads, website forms, and offline hoardings.
+4. **DPDP Act 2023 & RERA Compliance**: Strict affirmative consent notices, immediate opt-out halting on `STOP` or cancellation, and statutory Gujarat AUDA RERA registration numbers embedded on all touchpoints.
+5. **Executive Analytics Dashboard**: Real-time tracking of first response latency (median target < 5 min), 48h SLA breach %, show-up rates, and prorated cost-per-completed-visit by acquisition source.
 
 ---
 
-## Regulatory Compliance
-- **Digital Personal Data Protection (DPDP) Act 2023**: Granular consent recording, affirmative purpose notices, and `canContact` enforcement.
-- **Real Estate (Regulation and Development) Act (RERA)**: Registered Gujarat AUDA numbers embedded in headers, calendar `.ics` files, and message outbox templates.
+## Honest Limitations & Boundaries
 
+To ensure complete transparency regarding scope:
+
+- **CRM Scope**: Designed as an agile sales acceleration slice (intake, qualification, booking, handoff, analytics), not a full ERP or CRM replacement. Does not handle token money collection, booking payments, or flat allotment letters.
+- **Telephony & Outbound Voice**: Voice calling is not implemented; contact numbers are surfaced as one-tap `tel:` and `wa.me` links for executive outreach.
+- **Messaging Adapters**: WhatsApp, SMS, and Email pipelines use an asynchronous outbox pattern (`outbound_messages`). In local/CI environments, mock adapters log dispatches; live external dispatch requires provider credentials (e.g. Meta Cloud API or Twilio).
+- **LLM Keys**: In development and CI, the test suite executes deterministically against `LLM_PROVIDER=mock`. Live production deployment requires an Anthropic or Google Gemini API key.
+- **Operating Hours**: Site visits run 10:00–18:00 IST in 60-minute intervals with a minimum 3-hour advance booking lead time.
+
+---
+
+## Documentation
+
+Detailed technical documentation is available in `docs/`:
+
+- **[System Architecture](docs/ARCHITECTURE.md)**: 3-tier structure, layering, error codes, authentication, and frontend design tokens.
+- **[Data Model & Constraints](docs/DATA_MODEL.md)**: 19 PostgreSQL tables, ER diagram, partial unique indexes, and Migration 005 performance indexing.
+- **[AI Pipeline & Guardrails](docs/AI_PIPELINE.md)**: Autonomous agent loop, tool schemas, multilingual regex pre-filters, failure mitigations, and evals.
+- **[Operations & Deployment](docs/OPERATIONS.md)**: Vercel multi-service project (`vercel.json`), serverless runtime, background reminder workers, and outbox.
+- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A60`).
+- **[Hardening & Security](docs/HARDENING.md)**: Rate limiting benchmarks, CSRF/CSP protections, secret scanning, and WCAG AA audits.
+- **[AI Evaluation Suite](docs/AI_EVALS.md)**: 48-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.

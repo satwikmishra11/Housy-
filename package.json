@@ -35,7 +35,7 @@
     "db:reset": "npm run db:reset --workspace=@housy/api",
     "db:test:reset": "npm run db:reset --workspace=@housy/api",
     "check": "npm run lint && npm run typecheck && npm test",
-    "prepare": "husky"
+    "prepare": "npm run build:shared && husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
