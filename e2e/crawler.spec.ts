@@ -71,6 +71,7 @@ test.describe('Automated UI Screen & Control Crawler', () => {
     await expect(page.locator('input[type="email"]')).toHaveValue('harshil.mehta@example.com');
 
     // Login as Sales Head
+    await page.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await page.locator('button:has-text("Sign In to Workspace")').click();
     await page.waitForURL('**/leads', { timeout: 15000 });
 

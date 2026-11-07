@@ -191,3 +191,4 @@ Every step of the 5-minute interactive walkthrough documented in `deployment.md`
   - `docs/TDD.pdf`: 10-page technical design document with architecture diagrams, data schemas, and honest limits (4.36 MB, $\le 12$ pages).
   - `submission.zip`: Verified two-file submission bundle (`TDD.pdf` + `deployment.md`, 3.8 MB, $\le 25$ MB).
   - `docs/VERIFICATION.md`: This comprehensive fresh-clone test and verification log.
+

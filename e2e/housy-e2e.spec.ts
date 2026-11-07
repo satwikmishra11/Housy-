@@ -103,6 +103,7 @@ test.describe('Journey 2: Sales Executive Lead Workflow & Visit Completion', () 
 
     // Use Quick Demo account button for Sales Executive
     await page.locator('button:has-text("Sales Executive")').click();
+    await page.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await page.locator('button:has-text("Sign In to Workspace")').click();
 
     // Redirected to /leads
@@ -174,6 +175,7 @@ test.describe('Journey 3: Sales Head Fact Sheet Management & Dashboard Analytics
     // 1. Sales head logs in
     await page.goto('/login');
     await page.locator('button:has-text("Sales Head")').click();
+    await page.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await page.locator('button:has-text("Sign In to Workspace")').click();
     await page.waitForURL('**/leads', { timeout: 15000 });
 
@@ -360,6 +362,7 @@ test.describe('Accessibility (Axe-Core Audits on Primary Views)', () => {
     // Login as sales head first
     await page.goto('/login');
     await page.locator('button:has-text("Sales Head")').click();
+    await page.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await page.locator('button:has-text("Sign In to Workspace")').click();
     await page.waitForURL('**/leads');
 

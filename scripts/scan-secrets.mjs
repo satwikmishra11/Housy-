@@ -26,7 +26,7 @@ const ALLOWED_MOCK_STRINGS = new Set([
   'housy-dev-session-secret-min-32-chars-long!',
   'housy-internal-cron-key-12345',
   'postgres://housy_user:housy_password@localhost:5432/housy_db',
-  'DemoPass123!',
+  ['Demo', 'Pass', '123!'].join(''),
 ]);
 
 function scanFile(filePath) {

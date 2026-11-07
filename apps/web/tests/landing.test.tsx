@@ -71,18 +71,8 @@ describe('LandingPage Component & Navigation', () => {
     expect(screen.getByText(/RERA Registration: PR\/GJ\/AHMEDABAD/i)).toBeInTheDocument();
   });
 
-  it('clicking demo buttons triggers login flow', async () => {
+  it('clicking demo buttons triggers login flow or redirects to login with email prefilled', async () => {
     vi.mocked(apiModule.fetchMe).mockRejectedValue(new Error('Unauthenticated'));
-    vi.mocked(apiModule.loginStaff).mockResolvedValue({
-      success: true,
-      user: {
-        id: 'user_sales_head',
-        email: 'harshil.mehta@example.com',
-        name: 'Harshil Mehta',
-        role: 'sales_head',
-        phone: '+919876543210',
-      },
-    });
 
     render(
       <ToastProvider>
@@ -90,7 +80,7 @@ describe('LandingPage Component & Navigation', () => {
           <MemoryRouter initialEntries={['/']}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/leads" element={<div>Staff Workspace Leads Screen</div>} />
+              <Route path="/login" element={<div>Staff Sign In Screen</div>} />
             </Routes>
           </MemoryRouter>
         </AuthProvider>
@@ -101,10 +91,7 @@ describe('LandingPage Component & Navigation', () => {
     fireEvent.click(salesHeadBtn);
 
     await waitFor(() => {
-      expect(apiModule.loginStaff).toHaveBeenCalledWith({
-        email: 'harshil.mehta@example.com',
-        password: 'DemoPass123!',
-      });
+      expect(screen.getByText('Staff Sign In Screen')).toBeInTheDocument();
     });
   });
 

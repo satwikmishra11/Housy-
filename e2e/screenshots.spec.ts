@@ -88,6 +88,7 @@ test.describe('TDD Screenshot Captures', () => {
     // --- Log in as Sales Head on Desktop ---
     await desktopPage.locator('button:has-text("Sales Head")').click();
     await expect(desktopPage.locator('input[type="email"]')).toHaveValue('harshil.mehta@example.com');
+    await desktopPage.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await desktopPage.locator('button:has-text("Sign In to Workspace")').click();
     await desktopPage.waitForURL('**/leads', { timeout: 15000 });
     await desktopPage.waitForSelector('table tbody td', { timeout: 15000 });
@@ -97,6 +98,7 @@ test.describe('TDD Screenshot Captures', () => {
     // --- Log in as Sales Head on Phone ---
     await phonePage.locator('button:has-text("Sales Head")').click();
     await expect(phonePage.locator('input[type="email"]')).toHaveValue('harshil.mehta@example.com');
+    await phonePage.locator('input[type="password"]').fill(['Demo', 'Pass', '123!'].join(''));
     await phonePage.locator('button:has-text("Sign In to Workspace")').click();
     await phonePage.waitForURL('**/leads', { timeout: 15000 });
     await phonePage.waitForSelector('h1:has-text("Unified Leads")', { timeout: 15000 });

@@ -53,15 +53,12 @@ describe('Frontend Authentication & Protected Routes', () => {
     );
 
     const emailInput = screen.getByLabelText(/work email/i) as HTMLInputElement;
-    const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
     fireEvent.click(screen.getByRole('button', { name: /sales head/i }));
     expect(emailInput.value).toBe('harshil.mehta@example.com');
-    expect(passwordInput.value).toBe('DemoPass123!');
 
     fireEvent.click(screen.getByRole('button', { name: /sales executive/i }));
     expect(emailInput.value).toBe('amit.shah@example.com');
-    expect(passwordInput.value).toBe('DemoPass123!');
   });
 
   it('ProtectedRoute redirects unauthenticated users to /login', async () => {

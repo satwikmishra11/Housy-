@@ -24,16 +24,21 @@ export const LandingPage: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Quick 1-click login for demo accounts directly from landing page
-  const handleQuickLogin = async (email: string, pass: string) => {
-    try {
-      setIsLoggingIn(true);
-      await login({ email, password: pass });
-      navigate('/leads', { replace: true });
-    } catch {
-      navigate('/login');
-    } finally {
-      setIsLoggingIn(false);
+  const handleQuickLogin = async (email: string) => {
+    const demoPassword = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_DEMO_SEED_PASSWORD;
+    if (demoPassword) {
+      try {
+        setIsLoggingIn(true);
+        await login({ email, password: demoPassword });
+        navigate('/leads', { replace: true });
+        return;
+      } catch {
+        // Fallback to regular login
+      } finally {
+        setIsLoggingIn(false);
+      }
     }
+    navigate(`/login?email=${encodeURIComponent(email)}`);
   };
 
   return (
@@ -219,7 +224,7 @@ export const LandingPage: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     disabled={isLoggingIn}
-                    onClick={() => handleQuickLogin('harshil.mehta@example.com', 'DemoPass123!')}
+                    onClick={() => handleQuickLogin('harshil.mehta@example.com')}
                     className="text-xs justify-center"
                     leftIcon={<Shield className="w-3.5 h-3.5 text-accent" />}
                   >
@@ -230,7 +235,7 @@ export const LandingPage: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     disabled={isLoggingIn}
-                    onClick={() => handleQuickLogin('amit.shah@example.com', 'DemoPass123!')}
+                    onClick={() => handleQuickLogin('amit.shah@example.com')}
                     className="text-xs justify-center"
                     leftIcon={<User className="w-3.5 h-3.5 text-muted" />}
                   >

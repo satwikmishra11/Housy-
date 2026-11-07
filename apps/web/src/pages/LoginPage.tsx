@@ -47,9 +47,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const fillDemoAccount = (demoEmail: string, demoPass: string): void => {
+  const fillDemoAccount = (demoEmail: string): void => {
     setEmail(demoEmail);
-    setPassword(demoPass);
+    const demoSeedPass = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_DEMO_SEED_PASSWORD;
+    if (demoSeedPass) {
+      setPassword(demoSeedPass);
+    }
     setErrorMessage(null);
   };
 
@@ -159,7 +162,7 @@ export const LoginPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('harshil.mehta@example.com', 'DemoPass123!')}
+                    onClick={() => fillDemoAccount('harshil.mehta@example.com')}
                     className="min-h-[44px] px-3 py-2 border border-hairline bg-surface hover:bg-background rounded-xl text-xs text-ink transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <Shield className="w-3.5 h-3.5 text-accent" />
@@ -168,13 +171,16 @@ export const LoginPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('amit.shah@example.com', 'DemoPass123!')}
+                    onClick={() => fillDemoAccount('amit.shah@example.com')}
                     className="min-h-[44px] px-3 py-2 border border-hairline bg-surface hover:bg-background rounded-xl text-xs text-ink transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <User className="w-3.5 h-3.5 text-muted" />
                     <span>Sales Executive</span>
                   </button>
                 </div>
+                <p className="text-[11px] text-muted text-center mt-2.5">
+                  Staff accounts are seeded per deployment.md (see README.md for credentials)
+                </p>
               </div>
             </CardContent>
           </Card>
