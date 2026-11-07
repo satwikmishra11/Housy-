@@ -40,10 +40,10 @@ export const KNOWN_DEFAULT_SECRETS = new Set<string>([
  * Clearly named function containing development/test only defaults.
  * Strictly forbidden in production (NODE_ENV === 'production').
  */
-export function getDevelopmentDefaults(): Record<string, string> {
+export function getDevelopmentDefaults(nodeEnv: string = process.env.NODE_ENV || 'development'): Record<string, string> {
   return {
     PORT: '3001',
-    NODE_ENV: 'development',
+    NODE_ENV: nodeEnv,
     DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
     CORS_ORIGIN: 'http://localhost:5173',
     LOG_LEVEL: 'info',
@@ -57,7 +57,7 @@ export function getDevelopmentDefaults(): Record<string, string> {
     RATE_LIMIT_GENERAL_WINDOW_MS: '60000',
     RATE_LIMIT_CHAT_MAX: '30',
     RATE_LIMIT_CHAT_WINDOW_MS: '60000',
-    LLM_PROVIDER: process.env.NODE_ENV === 'test' ? 'mock' : 'gemini',
+    LLM_PROVIDER: nodeEnv === 'test' ? 'mock' : 'gemini',
     LLM_MODEL: 'gemini-1.5-flash',
     LLM_TIMEOUT_MS: '20000',
     LLM_DAILY_MESSAGE_CAP: '1000',
@@ -102,13 +102,22 @@ export type ConfigValidationResult =
  * Validates environment variables according to environment requirements.
  */
 export function evaluateConfig(rawEnv: Record<string, string | undefined>): ConfigValidationResult {
-  const isProduction = rawEnv['NODE_ENV'] === 'production';
+  const nodeEnv = rawEnv['NODE_ENV'] || process.env.NODE_ENV || 'development';
+  const isProduction = nodeEnv === 'production';
   const errors: string[] = [];
+
+  // Filter out empty/whitespace strings from rawEnv so dev defaults can supply fallbacks in non-production
+  const cleanedRawEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(rawEnv)) {
+    if (value !== undefined && value.trim() !== '') {
+      cleanedRawEnv[key] = value.trim();
+    }
+  }
 
   // In non-production, fill missing values with dev defaults
   const effectiveEnv: Record<string, unknown> = isProduction
-    ? { ...rawEnv }
-    : { ...getDevelopmentDefaults(), ...rawEnv };
+    ? { ...cleanedRawEnv }
+    : { ...getDevelopmentDefaults(nodeEnv), ...cleanedRawEnv };
 
   // Remove empty strings so Zod defaults / optional can take over when appropriate
   for (const [key, value] of Object.entries(effectiveEnv)) {

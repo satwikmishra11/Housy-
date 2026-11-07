@@ -64,12 +64,14 @@ jobs:
         env:
           DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
           NODE_ENV: test
+          LLM_PROVIDER: mock
         run: npm run db:migrate
 
       - name: Seed test database
         env:
           DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
           NODE_ENV: test
+          LLM_PROVIDER: mock
         run: npm run db:seed
 
       - name: Run tests

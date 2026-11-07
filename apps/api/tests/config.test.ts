@@ -215,4 +215,34 @@ describe('Configuration & Strict Boolean Parsing', () => {
       ).toThrow(/Configuration validation failed/);
     });
   });
+
+  describe('evaluateConfig() in Development and Test environments', () => {
+    it('populates defaults when env fields are empty strings in test mode', () => {
+      const result = evaluateConfig({
+        NODE_ENV: 'test',
+        LLM_PROVIDER: '',
+        DATABASE_URL: '',
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.NODE_ENV).toBe('test');
+        expect(result.data.LLM_PROVIDER).toBe('mock');
+        expect(result.data.DATABASE_URL).toContain('housy_db');
+      }
+    });
+
+    it('populates gemini default when LLM_PROVIDER is empty string in development mode', () => {
+      const result = evaluateConfig({
+        NODE_ENV: 'development',
+        LLM_PROVIDER: '   ',
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.NODE_ENV).toBe('development');
+        expect(result.data.LLM_PROVIDER).toBe('gemini');
+      }
+    });
+  });
 });
