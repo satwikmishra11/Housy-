@@ -223,3 +223,74 @@ The test suite enforces a rigorous multi-tier pyramid:
 3. **Frontend Component & View Tests (`apps/web/tests/`)**: Vitest + React Testing Library tests verifying loading, empty, and error states across all screens.
 4. **Playwright End-to-End Suite (`e2e/housy-e2e.spec.ts`)**: Automated Chromium user journeys covering multilingual buyer chat, staff lead management, double-booking prevention, and DPDP opt-outs.
 5. **Accessibility Audits**: Automated WCAG 2.1 AA audits via `@axe-core/playwright` on all primary routes (`/chat`, `/login`, `/dashboard`).
+
+---
+
+## 8. Anonymous Chat Sessions & Lazy Lead Creation
+
+To protect user privacy and avoid polluting the sales CRM with spurious "Guest Buyer" records upon every page refresh:
+- **`chat_sessions` Table**: Tracks anonymous chat browsing without storing any personally identifiable information (PII). Each session records a UUID, `created_at`, `last_activity_at`, and optional non-PII `metadata` (such as project affinity and UTM attribution).
+- **Decoupled Conversations**: `conversations.lead_id` is nullable and references `chat_sessions.id` via `conversations.chat_session_id`.
+- **Lazy Lead Promotion**: A lead record is created and linked to the active session **only when an explicit conversion trigger occurs**:
+  1. The buyer provides verified contact information and grants DPDP consent via the contact drawer.
+  2. The buyer exchanges $\ge 2$ chat turns expressing project intent (project interest).
+  3. The buyer explicitly requests human sales executive intervention (`detectIntent` resolves to `human`).
+  4. The buyer books a site visit appointment.
+- **Migration of Legacy Guest Leads**: Existing anonymous guest rows are cleanly reconciled into `chat_sessions`, decoupling raw chats from CRM lead counts.
+- **Metric Distinction**: The analytics dashboard distinctly tracks **"Chats Started"** (all initiated web sessions) alongside **"Total Ingested Leads"** (CRM records qualified by contact or intent).
+
+---
+
+## 9. First Response SLA & DPDP Compliance Semantics
+
+Response speed is critical for real estate conversion; the system establishes unambiguous, legally-grounded mathematical definitions:
+
+### Web Chat vs. Ingested Channels
+- **Web Chat Conversations**: First response latency is measured from the buyer's first inbound message (`buyer_first_message_at`) to the assistant's first substantive factual answer (`first_response_at`).
+  - **Greeting Exclusion**: The initial automated system greeting is flagged with `messages.is_greeting = true` and is explicitly excluded from the response timer, eliminating artificial 0-second SLA gaming.
+  - **Audit Stamp**: `leads.first_response_kind` is recorded as `'chat_substantive_answer'`.
+- **Ingested Omnichannel Leads (Portal / Social / Hoarding)**: Measured from initial ingestion (`first_touch_at`) to the dispatch of the first outbound notification (`first_response_at`) with `first_response_kind = 'outbound_message'`.
+
+### DPDP Non-Consented Lead Exclusion
+Under the Digital Personal Data Protection (DPDP) Act 2023, contacting an individual who has not consented or who has withdrawn consent is prohibited.
+- **Contactable Leads (`contactable_leads_count`)**: Leads where `consent_status != 'withdrawn' AND opted_out_at IS NULL`.
+- **Not Contactable Leads (`not_contactable_count`)**: Leads without valid consent or with active opt-outs.
+- **SLA Invariant**: Non-contactable leads are **excluded from the 48-hour SLA response rate denominator**, ensuring sales teams are evaluated exclusively on legally contactable leads without penalizing regulatory compliance. The dashboard explicitly presents the contactable breakdown in the metric popover.
+
+---
+
+## 10. Single Source of Truth: Visit Bookings & Lead Status
+
+To prevent desynchronization between calendar appointment records and CRM pipeline stages:
+- **Atomic Transactions (`VisitService`)**: Any state transition in a visit booking (`confirmed`, `completed`, `no_show`, `cancelled`) updates both `visit_bookings` and `leads.status` inside a single PostgreSQL database transaction.
+- **Elimination of Fragile SQL Fallbacks**: Removed fragile `OR` / `EXISTS` query fallbacks in reporting queries; lead status is guaranteed authoritative and coherent.
+- **Mathematical Invariants**:
+  $$\text{leads.status} = \text{'visited'} \iff \exists\, \text{visit\_bookings.status} = \text{'completed'}$$
+  $$\text{leads.status} = \text{'visit\_booked'} \iff \exists\, \text{visit\_bookings.status} = \text{'confirmed'}$$
+  $$\text{leads.status} = \text{'no\_show'} \iff \exists\, \text{visit\_bookings.status} = \text{'no\_show'}$$
+  Strict regression fixtures guarantee 0 orphaned records or cross-state inconsistencies across the database.
+
+---
+
+## 11. Executive Analytics: Before vs. After Transformation & Cost per Visit
+
+### Before vs. After Cohort Comparison
+To quantify the operational impact of the AI sales assistant against Company A's pre-launch baseline:
+- **Configurable Cutoff**: `GO_LIVE_DATE` (defaults to `2026-10-15T00:00:00Z`).
+- **Pre-Launch Baseline Cohort (Before)**: Leads ingested prior to go-live reflect traditional manual broker workflows:
+  - Median first response: $\approx 14\text{ hours}$.
+  - Leads unreached in 48h: $\approx 35.5\%$.
+  - Visit booking rate: $\approx 6.0\%$.
+- **AI-Assisted Cohort (After)**: Leads ingested post go-live assisted by Housy:
+  - Median first response: $< 5\text{ minutes}$ ($> 99\%$ reduction).
+  - Leads unreached in 48h: $< 5\%$.
+  - Visit booking rate: $\ge 8.0\%$.
+- **PRNG Deterministic Simulation**: Demo seed data is generated using a seeded pseudo-random number generator (PRNG) anchored to realistic distributions (never hard-coded KPI numbers).
+- **UI Transparency**: Displayed prominently in the Executive Dashboard with a clear "Simulated demo data" chip and explicit mathematical calculation popovers.
+
+### Cost Per Completed Visit Attribution
+Acquisition marketing spend (₹30 Lakh/month across portals, social, Google search, and physical hoardings) is attributed dynamically:
+- **Dual Denominators**: Displays both **Booked Visits** and **Completed Visits** side-by-side.
+- **Cost per Completed Visit**: Calculated as $\frac{\text{Attributed Ad Spend}}{\text{Completed Site Visits}}$.
+- **Statistical Significance Threshold**: If an acquisition channel has fewer than 5 completed visits in the reporting period, the cost is displayed as `"—"` to avoid distorted outliers from small sample sizes.
+- **Explicit Spend Note**: Labeled with the exact allocation basis (`Ad Spend Allocation (₹30L/mo)`).

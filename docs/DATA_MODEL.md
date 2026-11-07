@@ -36,25 +36,26 @@ erDiagram
 
 ---
 
-## 2. Relational Entity Catalog (19 Tables)
+## 2. Relational Entity Catalog (20 Tables)
 
 | Entity | Primary Key | Key Attributes & Foreign Keys | Purpose |
 |---|---|---|---|
-| `users` | `UUID` | `email` (unique), `password_hash`, `role` (`executive`, `sales_head`), `phone`, `active` | Staff authentication, executive assignment, and role-based access. |
+| `users` | `UUID` | `email` (unique), `password_hash`, `role` (`executive`, `sales_head`), `phone`, `active`, `languages` (`text[]`) | Staff authentication, executive assignment, language routing, and RBAC. |
 | `projects` | `UUID` | `name`, `rera_number`, `address`, `lat`, `lng`, `bhk_types` | Developer residential projects (Project 1 & Project 2). |
 | `fact_entries` | `UUID` | `project_id` (FK projects, nullable), `key`, `title`, `value`, `category`, `status` (`active`, `archived`) | Ground truth facts for AI assistant answers and admin overrides. |
 | `fact_entry_versions` | `UUID` | `fact_entry_id` (FK fact_entries), `value`, `changed_by` (FK users), `changed_at` | Immutable audit trail of edits to knowledge base facts. |
 | `unanswered_questions` | `UUID` | `project_id` (FK projects, nullable), `question`, `language`, `status` (`pending`, `resolved`, `dismissed`) | Captures buyer questions when AI lacks grounded facts. |
-| `leads` | `UUID` | `public_id` (e.g. `LD-58210`), `phone_e164`, `email`, `source`, `project_id`, `assigned_to` (FK users), `status`, `possible_duplicate_of` (FK leads) | Ingested buyer records across property portals, ads, web, and hoardings. |
+| `chat_sessions` | `UUID` | `created_at`, `last_activity_at`, `metadata` (`jsonb`) | Anonymous buyer web chat sessions isolating raw web traffic from CRM leads without PII. |
+| `leads` | `UUID` | `public_id` (e.g. `LD-58210`), `phone_e164`, `email`, `source`, `project_id`, `assigned_to` (FK users), `status`, `first_response_kind`, `possible_duplicate_of` (FK leads) | Ingested buyer records across property portals, ads, web, and hoardings. |
 | `lead_touchpoints` | `UUID` | `lead_id` (FK leads), `source`, `channel`, `occurred_at`, `external_id`, `raw` (`jsonb`) | Omnichannel interaction event stream and raw intake payloads. |
 | `consents` | `UUID` | `lead_id` (FK leads), `purpose`, `granted`, `notice_version`, `channel`, `at` | DPDP Act 2023 compliance audit trail for digital personal data processing. |
-| `conversations` | `UUID` | `lead_id` (FK leads), `language`, `status` (`ai`, `human`, `closed`), `flagged`, `flag_reasons`, `reviewed_by` (FK users) | Buyer-assistant conversational threads with AI safety review flagging. |
-| `messages` | `UUID` | `conversation_id` (FK conversations), `role`, `content`, `cited_fact_ids` (`uuid[]`), `meta` (`jsonb`) | Verbatim transcript messages grounded in cited fact entry UUIDs. |
+| `conversations` | `UUID` | `lead_id` (FK leads, nullable), `chat_session_id` (FK chat_sessions, nullable), `language`, `status` (`ai`, `human`, `closed`), `flagged`, `flag_reasons`, `reviewed_by` (FK users) | Buyer-assistant conversational threads with AI safety review flagging. |
+| `messages` | `UUID` | `conversation_id` (FK conversations), `role`, `content`, `is_greeting`, `cited_fact_ids` (`uuid[]`), `meta` (`jsonb`) | Verbatim transcript messages grounded in cited fact entry UUIDs. |
 | `availability_rules` | `UUID` | `project_id` (FK projects), `executive_id` (FK users), `weekday`, `start_time`, `end_time`, `slot_minutes` | Weekly operating hours and recurring availability rules (10:00–18:00 IST). |
 | `blackout_dates` | `UUID` | `project_id` (FK projects, nullable), `executive_id` (FK users, nullable), `date`, `reason` | Public holidays, developer office closures, or executive leave dates. |
 | `visit_slots` | `UUID` | `project_id` (FK projects), `executive_id` (FK users), `starts_at`, `ends_at`, `status` (`open`, `booked`, `blocked`) | Calendar time slots (60 minutes each); unique on `(executive_id, starts_at)`. |
 | `visit_bookings` | `UUID` | `lead_id` (FK leads), `slot_id` (FK visit_slots), `status`, `idempotency_key` | Confirmed site visit reservations protected by partial unique indexes. |
-| `handoffs` | `UUID` | `lead_id` (FK leads), `conversation_id`, `executive_id`, `reason`, `summary` (`jsonb`), `status` | Warm transfer transitions from AI assistant to assigned sales executive. |
+| `handoffs` | `UUID` | `lead_id` (FK leads), `conversation_id`, `executive_id`, `priority`, `is_escalated`, `reason`, `summary` (`jsonb`), `status` | Warm transfer transitions from AI assistant to assigned sales executive. |
 | `reminders` | `UUID` | `booking_id` (FK visit_bookings), `kind` (`24h`, `2h`), `scheduled_at`, `status`, `attempt_count` | Automated pre-visit alerts scheduled 1 day and 2 hours prior to visit. |
 | `outbound_messages` | `UUID` | `channel`, `recipient`, `template_id`, `variables` (`jsonb`), `status`, `sent_at`, `error_message` | Outbox table backing mock delivery for WhatsApp, SMS, and Email. |
 | `ad_spend` | `UUID` | `month` (`DATE`), `source`, `amount_inr` | Monthly acquisition marketing spend tracking (₹30 Lakh/month across 4 sources). |
@@ -157,4 +158,5 @@ ON leads (source, first_touch_at);
 4. `004_create_unanswered_questions.cjs`: Adds `unanswered_questions` table with resolution workflows.
 5. `005_add_dashboard_and_list_indexes.cjs`: Adds targeted covering and partial indexes for dashboard aggregations and SLA tracking.
 6. `006_handoff_events_languages_notifications.cjs`: Adds `users.languages text[]`, `handoffs.priority`, `handoffs.is_escalated`, partial unique index `idx_handoffs_open_conversation`, `handoff_events` table, `staff_notifications` table, and adds `internal` value to `channel_type` enum.
+7. `007_chat_sessions_and_first_response.cjs`: Creates `chat_sessions` table for anonymous buyer chat sessions, makes `conversations.lead_id` nullable, adds `conversations.chat_session_id`, adds `leads.first_response_kind`, and adds `messages.is_greeting`.
 
