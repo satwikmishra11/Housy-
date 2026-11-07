@@ -18,6 +18,12 @@ describe('Health API', () => {
       }),
     };
 
+    vi.spyOn(llmService, 'probe').mockResolvedValueOnce({
+      ok: true,
+      latencyMs: 15,
+      errorKind: null,
+    });
+
     const mockLlmCalls: Partial<LlmCallRepository> = {
       getLastSuccessTime: vi.fn().mockResolvedValue('2026-11-07T10:00:00.000Z'),
       getLastErrorKind: vi.fn().mockResolvedValue(null),
@@ -98,6 +104,36 @@ describe('Health API', () => {
       expect(parseResult.data.status).toBe('degraded');
       expect(parseResult.data.database.status).toBe('disconnected');
       expect(parseResult.data.database.message).toBe('Connection refused');
+    }
+  });
+
+  it('GET /api/health reports unconfigured status when LLM credentials are not provided', async () => {
+    const mockRepo: HealthRepository = {
+      pingDatabase: vi.fn().mockResolvedValue({
+        connected: true,
+        latencyMs: 4.1,
+      }),
+    };
+
+    vi.spyOn(llmService, 'probe').mockResolvedValueOnce({
+      ok: false,
+      latencyMs: 0,
+      errorKind: 'unconfigured',
+      errorMessage: 'GEMINI_API_KEY is not configured',
+    });
+
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.use('/api', createHealthRouter(new HealthService(mockRepo)));
+
+    const response = await request(testApp).get('/api/health');
+
+    expect(response.status).toBe(200);
+    const parseResult = HealthCheckResponseSchema.safeParse(response.body);
+    expect(parseResult.success).toBe(true);
+    if (parseResult.success) {
+      expect(parseResult.data.status).toBe('ok');
+      expect(parseResult.data.llm?.status).toBe('unconfigured');
     }
   });
 

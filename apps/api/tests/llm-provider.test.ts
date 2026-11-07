@@ -236,7 +236,9 @@ describe('LLM Provider Adapters & Error Mapping', () => {
 
     it('caches probe results for 60 seconds unless forced', async () => {
       const { LLMService } = await import('../src/llm/llm.service.js');
+      const { mockProvider } = await import('../src/llm/mock.provider.js');
       const service = new LLMService();
+      service.setProvider(mockProvider, 'mock', 'mock-model');
 
       const first = await service.probe();
       expect(first.ok).toBe(true);
