@@ -307,7 +307,7 @@ export class LeadRepository {
     const lead = await this.findById(id);
     if (!lead) return null;
 
-    const [tpRes, convRes, bookRes, handoffRes] = await Promise.all([
+    const [tpRes, convRes, bookRes, handoffRes, notesRes] = await Promise.all([
       query<LeadTouchpointDbRow>(
         `SELECT id, lead_id, source, channel, occurred_at, external_id, raw
          FROM lead_touchpoints
@@ -363,6 +363,20 @@ export class LeadRepository {
          ORDER BY h.created_at DESC`,
         [id],
       ),
+      query<{
+        id: string;
+        lead_id: string;
+        author_id: string;
+        author_name: string;
+        note: string;
+        created_at: Date;
+      }>(
+        `SELECT id, lead_id, author_id, author_name, note, created_at
+         FROM lead_notes
+         WHERE lead_id = $1
+         ORDER BY created_at DESC`,
+        [id],
+      ),
     ]);
 
     return {
@@ -371,6 +385,7 @@ export class LeadRepository {
       conversations: convRes.rows,
       bookings: bookRes.rows,
       handoffs: handoffRes.rows,
+      notes: notesRes.rows,
     };
   }
 
@@ -588,6 +603,84 @@ export class LeadRepository {
       await query(`UPDATE source_api_keys SET last_used_at = NOW() WHERE id = $1`, [row.id]);
     }
     return row ?? null;
+  }
+
+  /**
+   * Fetch notes for a lead.
+   */
+  async getNotes(leadId: string): Promise<
+    Array<{
+      id: string;
+      lead_id: string;
+      author_id: string;
+      author_name: string;
+      note: string;
+      created_at: Date;
+    }>
+  > {
+    const res = await query<{
+      id: string;
+      lead_id: string;
+      author_id: string;
+      author_name: string;
+      note: string;
+      created_at: Date;
+    }>(
+      `SELECT id, lead_id, author_id, author_name, note, created_at
+       FROM lead_notes
+       WHERE lead_id = $1
+       ORDER BY created_at DESC`,
+      [leadId],
+    );
+    return res.rows;
+  }
+
+  /**
+   * Add a timestamped note to a lead.
+   */
+  async addNote(
+    leadId: string,
+    authorId: string,
+    authorName: string,
+    note: string,
+  ): Promise<{
+    id: string;
+    lead_id: string;
+    author_id: string;
+    author_name: string;
+    note: string;
+    created_at: Date;
+  }> {
+    const res = await query<{
+      id: string;
+      lead_id: string;
+      author_id: string;
+      author_name: string;
+      note: string;
+      created_at: Date;
+    }>(
+      `INSERT INTO lead_notes (lead_id, author_id, author_name, note)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, lead_id, author_id, author_name, note, created_at`,
+      [leadId, authorId, authorName, note],
+    );
+
+    await query(`UPDATE leads SET last_activity_at = NOW() WHERE id = $1`, [leadId]);
+    return res.rows[0]!;
+  }
+
+  /**
+   * Update lead status directly.
+   */
+  async updateLeadStatus(leadId: string, status: LeadStatus): Promise<LeadDbRow | null> {
+    const res = await query<LeadDbRow>(
+      `UPDATE leads
+       SET status = $1, last_activity_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [status, leadId],
+    );
+    return res.rows[0] ?? null;
   }
 
   /**

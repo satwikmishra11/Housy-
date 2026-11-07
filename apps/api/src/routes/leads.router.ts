@@ -5,6 +5,10 @@ import {
   LeadMergePayloadSchema,
   CsvCommitPayloadSchema,
   LeadSourceSchema,
+  UpdateLeadStatusPayloadSchema,
+  CreateLeadNotePayloadSchema,
+  type ConsentStatus,
+  type LeadSource,
 } from '@housy/shared';
 import { query } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -190,6 +194,14 @@ leadsRouter.get(
             executiveName: h.executive_name,
             createdAt: h.created_at.toISOString(),
           })),
+          notes: (details.notes || []).map((n) => ({
+            id: n.id,
+            leadId: n.lead_id,
+            authorId: n.author_id,
+            authorName: n.author_name,
+            note: n.note,
+            createdAt: n.created_at.toISOString(),
+          })),
         };
 
         res.status(200).json({
@@ -313,6 +325,294 @@ leadsRouter.post(
       res.status(200).json({
         success: true,
         ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * PATCH /api/leads/:id/status
+ * Updates lead status with audit logging.
+ */
+leadsRouter.patch(
+  '/leads/:id/status',
+  requireAuth,
+  validateRequest({ params: LeadIdParamSchema, body: UpdateLeadStatusPayloadSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const leadId = req.params['id'] as string;
+      await assertLeadOwnership(leadId, req.user!);
+
+      const { status } = req.body;
+      const updated = await leadRepository.updateLeadStatus(leadId, status);
+      if (!updated) {
+        throw new NotFoundError(`Lead with ID '${leadId}' not found`);
+      }
+
+      await query(
+        `INSERT INTO audit_log (actor_id, action, entity, entity_id, diff, at)
+         VALUES ($1, 'status_change', 'lead', $2, $3, NOW())`,
+        [req.user!.id, leadId, JSON.stringify({ newStatus: status })],
+      );
+
+      res.status(200).json({
+        success: true,
+        data: {
+          id: updated.id,
+          status: updated.status,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /api/leads/:id/notes
+ * List timestamped staff notes on a lead.
+ */
+leadsRouter.get(
+  '/leads/:id/notes',
+  requireAuth,
+  validateRequest({ params: LeadIdParamSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const leadId = req.params['id'] as string;
+      await assertLeadOwnership(leadId, req.user!);
+
+      const notes = await leadRepository.getNotes(leadId);
+      const formatted = notes.map((n) => ({
+        id: n.id,
+        leadId: n.lead_id,
+        authorId: n.author_id,
+        authorName: n.author_name,
+        note: n.note,
+        createdAt: n.created_at.toISOString(),
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: formatted,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /api/leads/:id/notes
+ * Add a timestamped staff note to a lead.
+ */
+leadsRouter.post(
+  '/leads/:id/notes',
+  requireAuth,
+  validateRequest({ params: LeadIdParamSchema, body: CreateLeadNotePayloadSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const leadId = req.params['id'] as string;
+      await assertLeadOwnership(leadId, req.user!);
+
+      const { note } = req.body;
+      const authorName = req.user!.name || 'Sales Staff';
+      const created = await leadRepository.addNote(leadId, req.user!.id, authorName, note);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: created.id,
+          leadId: created.lead_id,
+          authorId: created.author_id,
+          authorName: created.author_name,
+          note: created.note,
+          createdAt: created.created_at.toISOString(),
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /api/executive/today
+ * Priority executive cockpit view:
+ * 1. Visits scheduled today
+ * 2. Visits awaiting attendance outcome
+ * 3. New handoffs assigned to executive
+ * 4. Leads unanswered for over 2 hours
+ */
+leadsRouter.get(
+  '/executive/today',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const isExecutive = req.user!.role === 'executive';
+      const executiveId = isExecutive ? req.user!.id : (req.query['executiveId'] as string | undefined);
+
+      // 1. Visits scheduled for today (Asia/Kolkata date = today)
+      const visitsTodayRes = await query<{
+        booking_id: string;
+        starts_at: Date;
+        ends_at: Date;
+        status: string;
+        lead_id: string;
+        lead_name: string;
+        lead_phone: string | null;
+        project_name: string;
+        notes: string | null;
+      }>(
+        `SELECT b.id AS booking_id, s.starts_at, s.ends_at, b.status,
+                l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
+                p.name AS project_name, b.notes
+         FROM visit_bookings b
+         JOIN visit_slots s ON b.slot_id = s.id
+         JOIN projects p ON s.project_id = p.id
+         JOIN leads l ON b.lead_id = l.id
+         WHERE (s.starts_at AT TIME ZONE 'Asia/Kolkata')::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
+           AND ($1::uuid IS NULL OR s.executive_id = $1)
+         ORDER BY s.starts_at ASC`,
+        [executiveId ?? null],
+      );
+
+      // 2. Visits awaiting attendance outcome (starts_at < NOW() and status = 'confirmed')
+      const awaitingRes = await query<{
+        booking_id: string;
+        starts_at: Date;
+        ends_at: Date;
+        status: string;
+        lead_id: string;
+        lead_name: string;
+        lead_phone: string | null;
+        project_name: string;
+      }>(
+        `SELECT b.id AS booking_id, s.starts_at, s.ends_at, b.status,
+                l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
+                p.name AS project_name
+         FROM visit_bookings b
+         JOIN visit_slots s ON b.slot_id = s.id
+         JOIN projects p ON s.project_id = p.id
+         JOIN leads l ON b.lead_id = l.id
+         WHERE s.starts_at < NOW()
+           AND b.status = 'confirmed'
+           AND ($1::uuid IS NULL OR s.executive_id = $1)
+         ORDER BY s.starts_at ASC`,
+        [executiveId ?? null],
+      );
+
+      // 3. New handoffs (status = 'new')
+      const handoffsRes = await query<{
+        id: string;
+        conversation_id: string;
+        lead_id: string;
+        lead_name: string;
+        lead_phone: string | null;
+        project_name: string | null;
+        reason: string;
+        summary: Record<string, unknown>;
+        priority: string | null;
+        created_at: Date;
+      }>(
+        `SELECT h.id, h.conversation_id, l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
+                p.name AS project_name, h.reason, h.summary, h.priority, h.created_at
+         FROM handoffs h
+         JOIN leads l ON h.lead_id = l.id
+         LEFT JOIN projects p ON l.project_id = p.id
+         WHERE h.status = 'new'
+           AND ($1::uuid IS NULL OR h.executive_id = $1)
+         ORDER BY (h.priority = 'urgent') DESC, h.created_at DESC`,
+        [executiveId ?? null],
+      );
+
+      // 4. Leads unanswered for over 2 hours
+      const unansweredRes = await query<{
+        id: string;
+        public_id: string;
+        name: string;
+        phone_e164: string | null;
+        source: LeadSource;
+        project_name: string | null;
+        first_touch_at: Date;
+        consent_status: ConsentStatus;
+      }>(
+        `SELECT l.id, l.public_id, l.name, l.phone_e164, l.source,
+                p.name AS project_name, l.first_touch_at, l.consent_status
+         FROM leads l
+         LEFT JOIN projects p ON l.project_id = p.id
+         WHERE l.first_response_at IS NULL
+           AND l.first_touch_at < NOW() - INTERVAL '2 hours'
+           AND l.consent_status != 'withdrawn'
+           AND ($1::uuid IS NULL OR l.assigned_to = $1)
+         ORDER BY l.first_touch_at ASC`,
+        [executiveId ?? null],
+      );
+
+      const nowTime = Date.now();
+      const unansweredLeads = unansweredRes.rows.map((r) => ({
+        leadId: r.id,
+        publicId: r.public_id,
+        name: r.name,
+        phoneE164: r.phone_e164,
+        source: r.source,
+        projectName: r.project_name,
+        firstTouchAt: r.first_touch_at.toISOString(),
+        hoursElapsed: Math.round(((nowTime - r.first_touch_at.getTime()) / (1000 * 3600)) * 10) / 10,
+        consentStatus: r.consent_status,
+      }));
+
+      const visitsToday = visitsTodayRes.rows.map((v) => ({
+        bookingId: v.booking_id,
+        startsAt: v.starts_at.toISOString(),
+        endsAt: v.ends_at.toISOString(),
+        status: v.status,
+        leadId: v.lead_id,
+        leadName: v.lead_name,
+        leadPhone: v.lead_phone,
+        projectName: v.project_name,
+        notes: v.notes,
+      }));
+
+      const awaitingOutcome = awaitingRes.rows.map((v) => ({
+        bookingId: v.booking_id,
+        startsAt: v.starts_at.toISOString(),
+        endsAt: v.ends_at.toISOString(),
+        status: v.status,
+        leadId: v.lead_id,
+        leadName: v.lead_name,
+        leadPhone: v.lead_phone,
+        projectName: v.project_name,
+      }));
+
+      const newHandoffs = handoffsRes.rows.map((h) => ({
+        handoffId: h.id,
+        conversationId: h.conversation_id,
+        leadId: h.lead_id,
+        leadName: h.lead_name,
+        leadPhone: h.lead_phone,
+        projectName: h.project_name,
+        reason: h.reason,
+        summary: h.summary || {},
+        priority: h.priority || 'normal',
+        createdAt: h.created_at.toISOString(),
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: {
+          visitsToday,
+          awaitingOutcome,
+          newHandoffs,
+          unansweredLeads,
+          summaryCounts: {
+            visitsToday: visitsToday.length,
+            awaitingOutcome: awaitingOutcome.length,
+            newHandoffs: newHandoffs.length,
+            unansweredLeads: unansweredLeads.length,
+          },
+        },
       });
     } catch (err) {
       next(err);

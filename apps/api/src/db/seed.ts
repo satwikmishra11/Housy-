@@ -57,6 +57,7 @@ export async function runSeed(): Promise<void> {
       conversations,
       consents,
       lead_touchpoints,
+      lead_notes,
       leads,
       fact_entry_versions,
       fact_entries,
@@ -303,6 +304,14 @@ export async function runSeed(): Promise<void> {
     `INSERT INTO visit_bookings (lead_id, slot_id, status, idempotency_key, created_at)
      VALUES ($1, $2, 'completed', 'idem-kavita-visit-58224', '2026-10-25T09:10:00Z')`,
     [kavitaId, kavitaSlot.rows[0]!.id],
+  );
+
+  // Seed initial notes for sample leads
+  await query(
+    `INSERT INTO lead_notes (lead_id, author_id, author_name, note, created_at)
+     VALUES ($1, $2, 'Amit Shah', 'Spoke on call; interested in 3 BHK high floor facing club house. Arranged site visit.', '2026-10-31T10:30:00Z'),
+            ($3, $4, 'Bhavik Patel', 'Visited with family; appreciated sample flat design. Following up on bank pre-approval.', '2026-10-28T16:00:00Z')`,
+    [hardikId, executiveIds[0], kavitaId, executiveIds[2]],
   );
 
   logger.info(`Inserted 3 sample leads from brief verbatim.`);

@@ -186,8 +186,29 @@ export const LeadTouchpointSchema = z.object({
 });
 export type LeadTouchpoint = z.infer<typeof LeadTouchpointSchema>;
 
+export const LeadNoteSchema = z.object({
+  id: z.string().uuid(),
+  leadId: z.string().uuid(),
+  authorId: z.string().uuid(),
+  authorName: z.string(),
+  note: z.string(),
+  createdAt: z.string(),
+});
+export type LeadNote = z.infer<typeof LeadNoteSchema>;
+
+export const CreateLeadNotePayloadSchema = z.object({
+  note: z.string().min(1, 'Note cannot be empty').max(5000),
+});
+export type CreateLeadNotePayload = z.infer<typeof CreateLeadNotePayloadSchema>;
+
+export const UpdateLeadStatusPayloadSchema = z.object({
+  status: LeadStatusSchema,
+});
+export type UpdateLeadStatusPayload = z.infer<typeof UpdateLeadStatusPayloadSchema>;
+
 export const LeadDetailSchema = LeadListItemSchema.extend({
   touchpoints: z.array(LeadTouchpointSchema),
+  notes: z.array(LeadNoteSchema).optional(),
   conversations: z.array(
     z.object({
       id: z.string().uuid(),
@@ -221,6 +242,124 @@ export const LeadDetailSchema = LeadListItemSchema.extend({
   ),
 });
 export type LeadDetail = z.infer<typeof LeadDetailSchema>;
+
+export const ExecutiveTodaySummarySchema = z.object({
+  visitsToday: z.array(
+    z.object({
+      bookingId: z.string().uuid(),
+      startsAt: z.string(),
+      endsAt: z.string(),
+      status: z.string(),
+      leadId: z.string().uuid(),
+      leadName: z.string(),
+      leadPhone: z.string().nullable(),
+      projectName: z.string(),
+      notes: z.string().nullable().optional(),
+    }),
+  ),
+  awaitingOutcome: z.array(
+    z.object({
+      bookingId: z.string().uuid(),
+      startsAt: z.string(),
+      endsAt: z.string(),
+      status: z.string(),
+      leadId: z.string().uuid(),
+      leadName: z.string(),
+      leadPhone: z.string().nullable(),
+      projectName: z.string(),
+    }),
+  ),
+  newHandoffs: z.array(
+    z.object({
+      handoffId: z.string().uuid(),
+      conversationId: z.string().uuid(),
+      leadId: z.string().uuid(),
+      leadName: z.string(),
+      leadPhone: z.string().nullable(),
+      projectName: z.string().nullable(),
+      reason: z.string(),
+      summary: z.record(z.string(), z.unknown()),
+      priority: z.string().optional(),
+      createdAt: z.string(),
+    }),
+  ),
+  unansweredLeads: z.array(
+    z.object({
+      leadId: z.string().uuid(),
+      publicId: z.string(),
+      name: z.string(),
+      phoneE164: z.string().nullable(),
+      source: LeadSourceSchema,
+      projectName: z.string().nullable(),
+      firstTouchAt: z.string(),
+      hoursElapsed: z.number(),
+      consentStatus: ConsentStatusSchema,
+    }),
+  ),
+  summaryCounts: z.object({
+    visitsToday: z.number(),
+    awaitingOutcome: z.number(),
+    newHandoffs: z.number(),
+    unansweredLeads: z.number(),
+  }),
+});
+export type ExecutiveTodaySummary = z.infer<typeof ExecutiveTodaySummarySchema>;
+
+export const DailyReviewSummarySchema = z.object({
+  flaggedChats: z.array(
+    z.object({
+      id: z.string().uuid(),
+      leadId: z.string().uuid(),
+      leadPublicId: z.string(),
+      leadName: z.string(),
+      language: z.string(),
+      flagReasons: z.array(z.string()),
+      createdAt: z.string(),
+    }),
+  ),
+  unansweredQuestions: z.array(
+    z.object({
+      id: z.string().uuid(),
+      question: z.string(),
+      buyerLanguage: z.string(),
+      projectName: z.string().nullable(),
+      createdAt: z.string(),
+      status: z.string(),
+    }),
+  ),
+  escalatedHandoffs: z.array(
+    z.object({
+      id: z.string().uuid(),
+      conversationId: z.string().uuid(),
+      leadId: z.string().uuid(),
+      leadName: z.string(),
+      executiveName: z.string().nullable(),
+      reason: z.string(),
+      priority: z.string(),
+      createdAt: z.string(),
+      minutesWaiting: z.number(),
+    }),
+  ),
+  unreachedLeads: z.array(
+    z.object({
+      id: z.string().uuid(),
+      publicId: z.string(),
+      name: z.string(),
+      phoneE164: z.string().nullable(),
+      source: LeadSourceSchema,
+      projectName: z.string().nullable(),
+      firstTouchAt: z.string(),
+      daysBreached: z.number(),
+    }),
+  ),
+  counts: z.object({
+    flaggedChats: z.number(),
+    unansweredQuestions: z.number(),
+    escalatedHandoffs: z.number(),
+    unreachedLeads: z.number(),
+  }),
+});
+export type DailyReviewSummary = z.infer<typeof DailyReviewSummarySchema>;
 
 export const LeadFilterQuerySchema = z.object({
   source: LeadSourceSchema.optional(),
