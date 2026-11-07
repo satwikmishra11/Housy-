@@ -34,3 +34,4 @@ exports.down = (pgm) => {
     DROP TABLE IF EXISTS lead_notes CASCADE;
   `);
 };
+

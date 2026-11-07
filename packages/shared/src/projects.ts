@@ -67,3 +67,4 @@ export const ProjectDetailResponseSchema = z.object({
   data: ProjectDetailSchema,
 });
 export type ProjectDetailResponse = z.infer<typeof ProjectDetailResponseSchema>;
+

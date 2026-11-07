@@ -21,26 +21,26 @@ graph TD
   subgraph Frontend_App["Vite + React 18 SPA (apps/web)"]
     Router["React Router v6"]
     ChatUI["Buyer Chat (i18n: EN, HI, GU)"]
-    StaffUI["Staff Workspace (Leads, Handoffs, Visits, Dashboard)"]
+    StaffUI["Staff Workspace (Today, Leads, Handoffs, Visits, Daily Review, Dashboard)"]
     TanStack["TanStack Query (Cache & State)"]
   end
 
   subgraph API_Layer["3-Tier Express API (apps/api)"]
     Routes["Zod Validated Routes (/api/*)"]
-    AuthMW["Auth & Role Guards (JWT + HMAC Magic Links)"]
+    AuthMW["Auth & Role Guards (JWT + CSRF Header + Magic Links)"]
     
     subgraph Services["Domain Services"]
       ChatSvc["Chat & Assistant Service"]
       VisitSvc["Visit & Slot Service (Row Locks)"]
-      LeadSvc["Lead Ingest & Dedupe Service"]
-      HandoffSvc["Handoff Orchestrator"]
-      ReportSvc["Analytics & SLA Engine"]
+      LeadSvc["Lead Ingest, Dedupe & Notes"]
+      HandoffSvc["Handoff & Escalation Orchestrator"]
+      ReportSvc["Analytics, Cohorts & SLA Engine"]
     end
 
     subgraph Adapters["Infrastructure & External Adapters"]
       LLMAdapter["LLM Provider (Claude / Gemini / Mock)"]
-      Guardrails["Guardrail & Grounding Pipeline"]
-      OutboxWorker["Outbox Dispatcher (SKIP LOCKED)"]
+      Guardrails["Intent Pre-Filters & Grounding Pipeline"]
+      OutboxWorker["Unified Master Runner (POST /run-jobs)"]
       ChannelMock["Channel Adapters (WhatsApp / SMS)"]
     end
 
@@ -49,12 +49,12 @@ graph TD
 
   subgraph DB_Layer["PostgreSQL 16 Relational Engine"]
     DB[(Neon / Local PostgreSQL)]
-    T_Leads["leads & lead_touchpoints"]
+    T_Leads["leads, chat_sessions, touchpoints & lead_notes"]
     T_Slots["visit_slots & visit_bookings"]
     T_Facts["fact_entries & versions"]
-    T_Handoffs["conversations, messages & handoffs"]
-    T_Outbox["outbox_messages"]
-    T_Audit["audit_log & source_api_keys"]
+    T_Handoffs["conversations, handoffs & handoff_events"]
+    T_Outbox["outbox_messages & staff_notifications"]
+    T_Audit["job_runs, audit_log & source_api_keys"]
   end
 
   Buyer --> Router
@@ -90,15 +90,20 @@ erDiagram
   USERS ||--o{ VISIT_SLOTS : assigns
   USERS ||--o{ LEADS : owns
   USERS ||--o{ HANDOFFS : handles
+  USERS ||--o{ LEAD_NOTES : authors
 
+  CHAT_SESSIONS ||--o| CONVERSATIONS : initiates
+  CHAT_SESSIONS ||--o| LEADS : promotes_to
   LEADS ||--o{ LEAD_TOUCHPOINTS : logs
   LEADS ||--o{ CONSENTS : records
-  LEADS ||--o{ CONVERSATIONS : initiates
+  LEADS ||--o{ CONVERSATIONS : associates
   LEADS ||--o{ VISIT_BOOKINGS : books
   LEADS ||--o{ HANDOFFS : escalates
+  LEADS ||--o{ LEAD_NOTES : stores
 
   CONVERSATIONS ||--o{ CHAT_MESSAGES : holds
   CONVERSATIONS ||--o| HANDOFFS : triggers
+  HANDOFFS ||--o{ HANDOFF_EVENTS : records
   VISIT_BOOKINGS ||--o{ REMINDERS : triggers
   VISIT_BOOKINGS ||--o{ OUTBOX_MESSAGES : enqueues
 

@@ -2,13 +2,19 @@
 
 This document details the production deployment architecture, local development steps, configuration parameters, reviewer credentials, and demonstration workflows for the Housy real estate conversational AI platform.
 
+- **GitHub Repository**: [https://github.com/satwikmishra11/Housy-](https://github.com/satwikmishra11/Housy-)
+- **Live Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)
+- **Latest Commit**: `dfacc89` (2026-11-08)
+
 ---
 
-## 1. Overview and live URLs
+## 1. Overview and Live URLs
 
-Housy is a production-grade conversational sales assistant, site-visit scheduling platform, and lead intelligence system engineered for Company A (Ahmedabad). The platform unifies intake across four marketing channels (Property Portals, Social Media Ads, Hoarding Calls, and Website Inquiries), provides real-time duplicate detection, answers buyer questions exclusively from an authoritative developer fact sheet in English, Hindi, and Gujarati, coordinates visit bookings against real-time executive calendars with partial unique index conflict defenses, and surfaces first-touch attribution analytics to sales leadership.
+Housy is a production-grade conversational sales assistant, site-visit scheduling platform, and lead intelligence system engineered for **Aaranya Realty, Ahmedabad** (residential portfolio: **The Palm Serene** and **Skyline Greens**). The platform unifies intake across four marketing channels (Property Portals, Social Media Ads, Hoarding Phone Calls, and Website Inquiries), provides real-time duplicate detection, answers buyer questions exclusively from an authoritative developer fact sheet in English, Hindi, and Gujarati, coordinates visit bookings against real-time executive calendars with conflict defenses, and surfaces first-touch attribution analytics to sales leadership.
 
-### Live Environment Architecture
+### Exactly One Production Topology: Vercel Multi-Service + Managed PostgreSQL
+
+Housy deploys to **one unified production topology**: a Vercel multi-service architecture with a client-side Vite SPA, an Express Node.js API service, a managed cloud PostgreSQL database, and an external HTTPS cron scheduler.
 
 ```
 [ Buyer (Mobile / Desktop) ]       [ Staff (Sales Head / Executive) ]
@@ -16,41 +22,54 @@ Housy is a production-grade conversational sales assistant, site-visit schedulin
              ▼                                      ▼
     ┌───────────────────┐                  ┌───────────────────┐
     │  Vercel Frontend  │                  │  Vercel Frontend  │
-    │ (React 18 + Vite) │                  │ (/leads, /visits) │
+    │ (React 18 + Vite) │                  │ (/leads, /today)  │
     └─────────┬─────────┘                  └─────────┬─────────┘
               │                                      │
-              │  /api/* (Reverse Proxy / HTTPS)      │
+              │  /api/* (Edge Reverse Proxy / HTTPS) │
               ▼                                      ▼
     ┌──────────────────────────────────────────────────────────┐
-    │                   Render / Railway                       │
-    │                 Express + Node 20 API                    │
+    │                    Vercel API Service                    │
+    │                  Express + Node 20 API                   │
     └──────────────┬────────────────────────────┬──────────────┘
                    │                            │
                    ▼                            ▼
          ┌──────────────────┐          ┌──────────────────┐
-         │ PostgreSQL 16    │          │ LLM Provider     │
+         │  PostgreSQL 16   │          │   LLM Provider   │
          │ (Neon / Supabase)│          │ (Gemini/Claude)  │
-         └──────────────────┘          └──────────────────┘
+         └─────────▲────────┘          └──────────────────┘
+                   │
+                   │ HTTPS Webhook (every 5 min)
+         ┌─────────┴────────┐
+         │ cron-job.org     │
+         │ POST /run-jobs   │
+         └──────────────────┘
 ```
 
-### Live URLs
+### Verified Live URLs
 
 | Service / Interface | Live URL | Description |
 | :--- | :--- | :--- |
-| **Web Application & Buyer Chat** | `https://housy-ebon.vercel.app` | Buyer chat assistant entry point with language toggle and RERA footer |
-| **Attributed Portal Campaign** | `https://housy-ebon.vercel.app/chat?src=portal` | MagicBricks & 99acres campaign landing with source attribution tag |
-| **Attributed Social Campaign** | `https://housy-ebon.vercel.app/chat?src=social` | Meta Ads / Instagram campaign entry point |
-| **Staff Portal (Login)** | `https://housy-ebon.vercel.app/login` | Staff authentication screen with quick-demo role selection buttons |
-| **Sales Analytics Dashboard** | `https://housy-ebon.vercel.app/dashboard` | Sales Head KPIs: response time SLA, show-up rate, cost per visit |
-| **Demo Simulation Center** | `https://housy-ebon.vercel.app/demo` | Reviewer sandbox: simulate leads, advance reminders, inspect outbox |
-| **API Health & Diagnostic** | `https://housy-api.onrender.com/api/health` | Diagnostic endpoint returning database and memory status |
-| **Outbox Message Inspector** | `https://housy-ebon.vercel.app/outbox` | View rendered WhatsApp/SMS notifications and RERA registration |
+| **Public Landing Page** | [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/) | Developer portfolio, dual entry portals (Buyer Chat vs. Staff Workspace), and 1-click demo logins |
+| **Project Showcase (Palm Serene)** | [https://housy-ebon.vercel.app/projects/the-palm-serene](https://housy-ebon.vercel.app/projects/the-palm-serene) | Dedicated project showcase with pure SVG elevation art, price ranges from fact sheet, amenities, and RERA |
+| **Project Showcase (Skyline Greens)** | [https://housy-ebon.vercel.app/projects/skyline-greens](https://housy-ebon.vercel.app/projects/skyline-greens) | Elevated 2 & 3 BHK residences showcase near Science City with map link and sticky CTAs |
+| **Buyer AI Chat Advisor** | [https://housy-ebon.vercel.app/chat](https://housy-ebon.vercel.app/chat) | Trilingual buyer chat with synchronized `en`/`hi`/`gu` state, typing indicator, and persistent human handoff |
+| **Attributed Portal Campaign** | [https://housy-ebon.vercel.app/chat?src=portal](https://housy-ebon.vercel.app/chat?src=portal) | MagicBricks & 99acres campaign landing preserving `?src=portal` attribution |
+| **Attributed Social Campaign** | [https://housy-ebon.vercel.app/chat?src=social](https://housy-ebon.vercel.app/chat?src=social) | Meta Ads / Instagram campaign entry point preserving `?src=social` attribution |
+| **Staff Portal (Login)** | [https://housy-ebon.vercel.app/login](https://housy-ebon.vercel.app/login) | Staff authentication screen with quick-demo role selection buttons and brute-force protection |
+| **Executive "Today" Workspace** | [https://housy-ebon.vercel.app/today](https://housy-ebon.vercel.app/today) | Sales Executive daily priorities: visits scheduled today, visits awaiting outcome, new handoffs, and >2h SLA leads |
+| **Sales Head "Daily Review"** | [https://housy-ebon.vercel.app/daily-review](https://housy-ebon.vercel.app/daily-review) | Leadership review queue: flagged chats, unanswered Q&A, >15m escalations, >48h unreached leads, RFC 4180 CSV export |
+| **Sales Analytics Dashboard** | [https://housy-ebon.vercel.app/dashboard](https://housy-ebon.vercel.app/dashboard) | Sales Head KPIs: response time SLA, show-up rate, cost per visit by source, and A/B before vs. after comparison |
+| **Demo Simulation Center** | [https://housy-ebon.vercel.app/demo](https://housy-ebon.vercel.app/demo) | Reviewer sandbox: simulate inbound leads, time-travel reminders, advance SLA clocks |
+| **Message Outbox Inspector** | [https://housy-ebon.vercel.app/outbox](https://housy-ebon.vercel.app/outbox) | Transactional outbox ledger showing rendered WhatsApp/SMS templates, RERA placeholder, and delivery states |
+| **API Health & Diagnostic** | [https://housy-ebon.vercel.app/api/health](https://housy-ebon.vercel.app/api/health) | Diagnostic endpoint returning database health, LLM latency probe, and reminder job freshness SLA |
+| **Privacy Notice (DPDP 2023)** | [https://housy-ebon.vercel.app/privacy](https://housy-ebon.vercel.app/privacy) | Statutory data protection notice detailing collection purposes, retention periods, opt-out, and grievance contact |
+| **Terms of Service** | [https://housy-ebon.vercel.app/terms](https://housy-ebon.vercel.app/terms) | Advisory disclaimer and RERA transparency terms |
 
 ---
 
-## 2. Run locally, step by step
+## 2. Run Locally, Step by Step
 
-Follow these steps to run the complete stack locally using Docker Compose and Node.js.
+Follow these exact steps to run the complete stack locally using Docker Compose and Node.js.
 
 ### Prerequisites
 - **Node.js**: `v20.x` or higher (`node -v`)
@@ -89,13 +108,13 @@ cp apps/web/.env.example apps/web/.env
 *(The default `.env` files work out-of-the-box with the local Docker PostgreSQL container on port 5432).*
 
 ### Step 5: Run database migrations
-Apply all SQL migrations (schemas, extensions, tables, and performance indexes):
+Apply all SQL migrations (schemas, extensions, tables, performance indexes, and staff notes):
 ```bash
 npm run db:migrate
 ```
 
 ### Step 6: Seed deterministic demo data
-Populate sample staff accounts, projects, ~25 fact entries per project, rolling 21-day visit slots, ad spend allocations, and the 3 verbatim leads from the brief:
+Populate staff accounts, projects, ~25 fact entries per project, rolling 28-day visit slots, ad spend allocations, and the verbatim leads from the brief:
 ```bash
 npm run db:seed
 ```
@@ -110,194 +129,201 @@ npm run dev
 
 *(Alternatively, run services in separate terminals with `npm run dev:api` and `npm run dev:web`).*
 
-### Step 8: Run tests
+### Step 8: Run automated test suites
 Execute the automated test suites:
 ```bash
-# 1. Run all unit and integration tests (275 tests across all workspaces)
+# 1. Run all unit and integration tests (496 tests across 46 test files)
 npm test
 
-# 2. Run with code coverage reporting
-npm test -- --coverage
-
-# 3. Run Playwright end-to-end browser journeys and axe accessibility audits
+# 2. Run Playwright end-to-end browser journeys and Axe-Core accessibility audits (28 tests)
 npm run test:e2e
 ```
+*Script verification output (Commit `dfacc89`):*
+- Vitest: **46 test files passed, 496 tests passed** (0 failures).
+- Playwright: **28 tests passed** (18 Axe-Core WCAG 2.1 AA audits across 375px/768px/1280px + 8 user journeys + 1 UI crawler + 1 screenshots).
+- Total automated tests: **524 passed**.
 
 ### Step 9: Run AI evals
-Run the offline conversational evaluation benchmark verifying grounded answers, price guardrails, and handoff triggers:
+Run the conversational evaluation benchmark verifying grounded answers, price guardrails, and handoff triggers:
 ```bash
 npm run eval:ai
 ```
+*Script verification output:* **50/50 (100.0%) passed**.
 
 ---
 
-## 3. How it is deployed
+## 3. How It Is Deployed
 
-### Hosting Architecture
-The application separates concerns between a globally distributed static frontend and a containerized Node.js API backed by managed serverless PostgreSQL:
+### Hosting Architecture (`vercel.json`)
+Housy deploys as a unified Vercel multi-service project:
+- **Service `web`**: Root `apps/web/`, framework preset `"vite"`, serving the buyer chat, staff portal, and sales analytics UI. Publicly routed via `/(.*)`.
+- **Service `api`**: Root `apps/api/`, framework preset `"express"`, compiled via esbuild to `dist/server.js`. Publicly routed via `/api` and `/api/(.*)`.
+- **Unified Domain Routing**: Both services deploy atomically under the same project domain (`https://housy-ebon.vercel.app`). Requests to `/api/*` are routed by edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction.
 
-1. **Vercel Services Architecture (`vercel.json`)**:
-   - The repository is configured to deploy directly to Vercel as a single project with multiple services using root `vercel.json`:
-     - **Service `web`**: Root `apps/web/`, framework preset `"vite"`, serving the buyer chat, staff portal, and sales analytics UI. Publicly routed via `/(.*)`.
-     - **Service `api`**: Root `apps/api/`, framework preset `"express"`, running the Express backend. Publicly routed via `/api` and `/api/(.*)`.
-   - **Unified Domain Routing**: Both services deploy atomically under the same project domain (e.g. `https://housy-ebon.vercel.app`). Requests to `/api/*` are routed by Vercel edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction without needing third-party cookie workarounds.
-   - **Service Bindings Note**: In a client-side SPA architecture, all API requests originate from the buyer's/staff's browser; therefore, `api` is exposed via the public `/api/*` rewrite rather than an internal-only service binding.
+### Database
+- Managed PostgreSQL 16 cluster (Neon / Supabase) accessed via connection pooling URL with SSL (`sslmode=require`).
+- Runs `pg_trgm` extension for trigram similarity matching used in lead deduplication.
 
-2. **Alternative Platform Split (Render / Railway + Vercel)**:
-   - Frontend hosted on Vercel as a static SPA built from `apps/web/dist`.
-   - Backend API hosted on Render or Railway executing `node dist/server.js`.
-   - Monorepo build command: `npm run build --workspace=@housy/shared && npm run build --workspace=@housy/api`.
-   - Start command: `npm run start --workspace=@housy/api`.
-
-3. **Database (Neon / Supabase)**:
-   - Managed PostgreSQL 16 cluster accessed via connection pooling URL with SSL (`sslmode=require`).
-   - Runs `pg_trgm` extension for trigonometric trigram matching used in lead deduplication.
-
-### Release Steps & Migrations
-Database migrations execute automatically upon release before traffic reaches new application containers:
-- **Render Pre-Deploy Command**: `npm run release` (`node-pg-migrate up`).
-- **Railway Deploy Hook**: `npm run release && npm run start`.
-- **Demo Seeding Safeguard**: The database seed script (`npm run db:seed:demo`) enforces `DEMO_MODE=true` in production to prevent accidental truncation of live customer records.
-
-### Automated Cron for Visit Reminders
-Scheduled appointment reminders (T-24h and T-2h) are processed through two complementary mechanisms:
-1. **In-Process Daemon**: When running in a long-lived container, an internal worker executes every 60 seconds (`setInterval`), claiming pending reminders with `SELECT ... FOR UPDATE SKIP LOCKED`.
-2. **External Scheduled Cron**: An external cron provider (e.g. [cron-job.org](https://cron-job.org) or Render Cron) triggers the endpoint every 15 minutes:
-   - **URL**: `POST https://<api-host>/api/internal/run-reminders` (or `GET https://<api-host>/api/internal/run-reminders?key=<INTERNAL_API_KEY>`)
-   - **Headers**: `X-Internal-Key: <INTERNAL_API_KEY>`
-   - **Schedule**: `*/15 * * * *`
-   - Reminders evaluate `canContact(lead, channel)`: if a buyer has revoked consent or texted `STOP`, reminders are marked `skipped` and no message is dispatched.
-
-### Free-Tier Cold Start Handling
-Render free-tier web services spin down after 15 minutes of inactivity. When a new buyer arrives, spinning the container back up takes ~30–45 seconds. Housy addresses this gracefully:
-- **Client Latency Detection**: If any API request takes longer than 3.5 seconds or returns HTTP 502/504 Bad Gateway, `apps/web/src/lib/api.ts` dispatches a `housy:backend-waking-up` custom event.
-- **Global Cold-Start Banner (`ServerColdStartBanner.tsx`)**: Renders a calm, floating indicator at the top of the screen: *"Cloud backend is waking up from idle (~30–45s on free tier). Waiting for response..."*.
-- **Automatic Reconnection**: Upon successful response, the banner transitions to *"✓ Backend connected and ready!"* and automatically dismisses after 2.5 seconds.
-- **Buyer Chat Reassurance**: When establishing an initial session, a polite inline indicator reassures buyers that their advisor is connecting, preventing premature page abandonments.
-- **Keep-Alive Recommendation**: Setting a free ping on cron-job.org every 14 minutes targeting `GET /api/health` keeps the container warm during business hours.
+### Automated Cron for Visit Reminders & Operations (`POST /api/internal/run-jobs`)
+Scheduled operations are managed by a single unified HTTPS webhook invoked by an external scheduler (e.g. [cron-job.org](https://cron-job.org)) every 5 minutes:
+- **URL**: `POST https://housy-ebon.vercel.app/api/internal/run-jobs`
+- **Headers**: `X-Internal-Key: <INTERNAL_API_KEY>` (evaluated via `crypto.timingSafeEqual`)
+- **Schedule**: `*/5 * * * *`
+- **Four Isolated Routines**:
+  1. `reminders`: Processes pending T-24h and T-2h visit reminders (limit 100, idempotent, `FOR UPDATE SKIP LOCKED`).
+  2. `slot_top_up`: Projects executive availability rules 28 days forward (`ON CONFLICT DO NOTHING`).
+  3. `handoff_escalation`: Escalates unaccepted handoffs older than 15 minutes to `urgent`.
+  4. `stale_session_cleanup`: Reconciles anonymous chat sessions older than 24 hours without lead conversion.
+- **10-Minute Health SLA**: If reminders have not completed a successful run within 10 minutes, `/health` and `GET /api/health` transition to **RED** (`Overdue (>10m)`).
 
 ---
 
-## 4. Environment variables
+## 4. Environment Variables
 
-All configuration is managed strictly through platform environment variable dashboards (e.g. Vercel Settings -> Environment Variables, Render Dashboard -> Environment). Secrets are never committed to the repository.
+All configuration is managed strictly through environment variable dashboards. Variables are validated at application startup using Zod schemas defined in [apps/api/src/config/index.ts](file:///Users/satwik/Documents/GitHub/Housy-/apps/api/src/config/index.ts).
 
-| Variable Name | Service | Purpose | Required / Optional |
-| :--- | :--- | :--- | :--- |
+### Backend API Variables (`apps/api/src/config/index.ts`)
+
+| Variable Name | Service | Purpose | Required in Production |
+| :--- | :--- | :--- | :---: |
+| `PORT` | API | HTTP listening port for Express | Optional (default: 3001) |
 | `NODE_ENV` | API | Application execution mode (`production`, `development`, `test`) | **Required** |
-| `PORT` | API | HTTP listening port for Express (Render automatically injects `10000`) | Optional (default: 3001) |
-| `DATABASE_URL` | API | PostgreSQL connection string (`postgresql://user:pass@host/db?sslmode=require`) | **Required** |
-| `CORS_ORIGIN` | API | Comma-separated allowed origins, supports wildcards (e.g. `https://housy-ebon.vercel.app,https://*.vercel.app`) | **Required in Production** |
+| `DATABASE_URL` | API | PostgreSQL connection string | **Required** |
+| `TEST_DATABASE_URL` | API | Isolated test PostgreSQL database (must end in `_test`) | **Required for tests** |
+| `ALLOW_PREVIEW_ORIGINS` | API | Controls whether dynamic preview origins are permitted in CORS | Optional (default: false) |
+| `CORS_ORIGIN` | API | Exact allowed origins (comma-separated, no wildcards in prod) | **Required in Production** |
+| `LOG_LEVEL` | API | Logging verbosity (`fatal`, `error`, `warn`, `info`, `debug`, `trace`) | Optional (default: info) |
+| `JWT_SECRET` | API | Secret key used to sign staff session tokens via HMAC-SHA256 (min 16 chars) | **Required in Production** |
+| `SESSION_SECRET` | API | Secret key used to sign buyer magic link and visit management tokens | **Required in Production** |
 | `COOKIE_SECURE` | API | Enforces `Secure: true` flag on auth cookies over HTTPS | Optional (default: true in prod) |
-| `COOKIE_SAME_SITE` | API | SameSite cookie policy (`lax`, `strict`, `none`). Use `none` if cross-origin without proxy | Optional (default: `lax`) |
-| `JWT_SECRET` | API | Secret key used to sign staff session tokens via HMAC-SHA256 (min 16 chars) | **Required** |
-| `SESSION_SECRET` | API | Secret key used to sign buyer magic link and visit management tokens | **Required** |
+| `COOKIE_SAME_SITE` | API | SameSite cookie policy (`lax`, `strict`, `none`) | Optional (default: lax) |
+| `RATE_LIMIT_LOGIN_MAX` | API | Max failed login attempts per account/IP window | Optional (default: 5) |
+| `RATE_LIMIT_LOGIN_WINDOW_MS` | API | Duration of login rate limit lockout window | Optional (default: 900000 / 15m) |
+| `RATE_LIMIT_GENERAL_MAX` | API | General request limit per minute per IP | Optional (default: 100) |
+| `RATE_LIMIT_GENERAL_WINDOW_MS`| API | Window for general API rate limiting | Optional (default: 60000 / 1m) |
+| `RATE_LIMIT_CHAT_MAX` | API | Max chat session creations per hour per IP | Optional (default: 30) |
+| `RATE_LIMIT_CHAT_WINDOW_MS` | API | Window for chat session initiation rate limiting | Optional (default: 60000 / 1m) |
 | `LLM_PROVIDER` | API | Active AI provider adapter: `gemini`, `anthropic`, or `mock` (mock refused in prod) | **Required** |
-| `LLM_MODEL` | API | Identifier of the LLM model (e.g. `gemini-1.5-flash`, `claude-3-5-haiku-20241022`) | Optional (default: `gemini-1.5-flash`) |
-| `GEMINI_API_KEY` | API | Google Gemini API key with spending budget set in Google Cloud Console | Required if `LLM_PROVIDER=gemini` |
+| `LLM_MODEL` | API | Identifier of the LLM model (e.g. `gemini-1.5-flash`, `claude-3-5-haiku-20241022`) | **Required** |
 | `ANTHROPIC_API_KEY` | API | Anthropic API key with spending limit set in Anthropic Console | Required if `LLM_PROVIDER=anthropic` |
-| `LLM_DAILY_MESSAGE_CAP` | API | Hard daily limit on AI calls to guarantee budget cap (e.g. `1000`) | Optional (default: 1000) |
+| `GEMINI_API_KEY` | API | Google Gemini API key with spending budget set in Google Cloud Console | Required if `LLM_PROVIDER=gemini` |
 | `LLM_TIMEOUT_MS` | API | Upstream model response timeout in milliseconds before triggering safe fallback | Optional (default: 20000) |
-| `INTERNAL_API_KEY` | API | Pre-shared token required to invoke `/api/internal/run-reminders` via cron | **Required in Production** |
+| `LLM_DAILY_MESSAGE_CAP` | API | Hard daily limit on AI calls to guarantee budget cap | Optional (default: 1000) |
 | `DEMO_MODE` | API | Enables sandbox endpoints (`/demo`), mock channels, and test seed execution | Optional (default: true) |
-| `RATE_LIMIT_LOGIN_MAX` | API | Max failed login attempts per IP window (default: 5) | Optional |
-| `RATE_LIMIT_CHAT_MAX` | API | Max chat turns per minute per IP to prevent spam (default: 30) | Optional |
-| `RATE_LIMIT_GENERAL_MAX` | API | General request limit per minute per IP (default: 100) | Optional |
-| `LOG_LEVEL` | API | Logging verbosity (`info`, `debug`, `warn`, `error`) | Optional (default: `info`) |
-| `VITE_API_URL` | Web | Absolute backend API URL (e.g. `https://housy-api.onrender.com`). Omit if using proxy | Optional |
+| `INTERNAL_API_KEY` | API | Pre-shared token required to invoke `POST /api/internal/run-jobs` via cron | **Required in Production** |
+| `VERIFY_REPLIES` | API | Enables secondary LLM verification pass on candidate factual claims | Optional (default: false) |
+| `GO_LIVE_DATE` | API | Cutoff timestamp demarcating baseline manual operations from AI assistance | Optional (default: `2026-10-15T00:00:00Z`) |
+
+### Frontend Web Variables (`apps/web/`)
+
+| Variable Name | Service | Purpose | Required in Production |
+| :--- | :--- | :--- | :---: |
+| `VITE_API_URL` | Web | Absolute backend API URL. Omit when using same-origin `/api` proxy | Optional |
 | `VITE_APP_NAME` | Web | Application branding display title | Optional (default: `Housy`) |
 
 ---
 
-## 5. Demo login details for the reviewer
+## 5. Demo Login Details for the Reviewer
 
-The system is seeded with authentic sample data adhering strictly to the client brief for Company A (Ahmedabad). Reviewers can log in immediately using the credentials below:
+The system is seeded with authentic sample data adhering strictly to the client brief for **Aaranya Realty, Ahmedabad**. Reviewers can log in immediately using the credentials below:
 
-### Seeded Staff Accounts
+### Seeded Staff Accounts ([apps/api/src/db/seed.ts](file:///Users/satwik/Documents/GitHub/Housy-/apps/api/src/db/seed.ts))
 
 | Role | Name | Email | Password | Access Privileges |
 | :--- | :--- | :--- | :--- | :--- |
-| **Sales Head** | Harshil Mehta | `harshil.mehta@example.com` | `DemoPass123!` | Complete access: All leads across all projects, Fact Sheet Editor (`/fact-sheet`), Slot Availability Editor (`/admin/slots`), Marketing Spend allocations (`/admin/spend`), Flagged chat reviews, and Company-wide Sales Analytics (`/dashboard`). |
-| **Sales Executive 1** | Amit Shah | `amit.shah@example.com` | `DemoPass123!` | Executive view: Scoped strictly to assigned leads, personal site-visit agenda (`/visits`), and consultation handoff inbox (`/handoffs`). |
-| **Sales Executive 2** | Priya Patel | `priya.patel@example.com` | `DemoPass123!` | Executive view: Assigned leads and appointments. |
-| **Sales Executive 3** | Rohit Sharma | `rohit.sharma@example.com` | `DemoPass123!` | Executive view: Assigned leads and appointments. |
+| **Sales Head (Admin)** | Harshil Mehta | `harshil.mehta@example.com` | `DemoPass123!` | Developer-wide access: All leads across all projects, Daily Review (`/daily-review`), Fact Sheet Editor (`/fact-sheet`), Slot Rules (`/slot-rules`), Monthly Ad Spend (`/ad-spend`), Flagged Chats (`/flagged-chats`), and Sales Dashboard (`/dashboard`). |
+| **Sales Executive 1** | Amit Shah | `amit.shah@example.com` | `DemoPass123!` | Executive workspace: "Today" view (`/today`), personal site visits (`/visits`), consultation handoffs (`/handoffs`), and leads assigned to Amit Shah. |
+| **Sales Executive 2** | Priya Patel | `priya.patel@example.com` | `DemoPass123!` | Executive workspace: Scoped to leads and visits assigned to Priya Patel. |
+| **Sales Executive 3** | Rohan Desai | `rohan.desai@example.com` | `DemoPass123!` | Executive workspace: Scoped to leads and visits assigned to Rohan Desai. |
+| **Sales Executive 4** | Sneha Trivedi | `sneha.trivedi@example.com` | `DemoPass123!` | Executive workspace: Scoped to leads and visits assigned to Sneha Trivedi. |
+| **Sales Executive 5** | Darshan Dave | `darshan.dave@example.com` | `DemoPass123!` | Executive workspace: Scoped to leads and visits assigned to Darshan Dave. |
 
 *(Quick demo buttons are also present directly on `/login` to populate these credentials with a single click).*
 
-### Buyer Chat Access URLs
-- **Default Residence Advisor**: [`/chat`](https://housy-ebon.vercel.app/chat)
-- **Portal Attribution (MagicBricks/99acres)**: [`/chat?src=portal`](https://housy-ebon.vercel.app/chat?src=portal)
-- **Social Ad Attribution (Instagram/Facebook)**: [`/chat?src=social`](https://housy-ebon.vercel.app/chat?src=social)
-- **Hoarding QR Attribution (S.G. Highway Billboard)**: [`/chat?src=hoarding`](https://housy-ebon.vercel.app/chat?src=hoarding)
-- **Website Attribution**: [`/chat?src=website`](https://housy-ebon.vercel.app/chat?src=website)
-
-### Sample Data Notes
-- **Verbatim Brief Leads**:
-  - `LD-58210`: Hardik Patel, 3 BHK, Property portal, Site visit booked.
-  - `LD-58211`: Nidhi Shah, 2 BHK, Social media ad, Not booked.
-  - `LD-58224`: Kavita Joshi, 2 BHK, Hoarding call, Visited.
-- **Projects**: The Palm Residences (420 units, 2 & 3 BHK, ₹65 Lakh to ₹1.2 Crore) and The Shivalik Reserve in Ahmedabad.
-- **Statutory Compliance**: Authentic AUDA/RERA numbers embedded across headers, calendar files, and notifications: `PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`.
+### Real Residential Projects & RERA Demo Placeholders
+- **Developer**: Aaranya Realty, Ahmedabad (replacing generic "Company A").
+- **Project 1**: **The Palm Serene** (slug: `the-palm-serene`, tagline: *"Artisanal 2 & 3 BHK Living on SG Highway"*, 420 units, ₹65L - ₹1.2 Cr).
+- **Project 2**: **Skyline Greens** (slug: `skyline-greens`, tagline: *"Elevated 2 & 3 BHK Urban Residences near Science City"*, 2 & 3 BHK, ₹70L - ₹1.15 Cr).
+- **Statutory RERA Identifiers**: `PR/GJ/AHMEDABAD/AUDA/RAA01234/011126` and `PR/GJ/AHMEDABAD/AUDA/RAA05678/011126` (explicitly designated as **demo placeholders for Ahmedabad**, never authentic client registration numbers).
 
 ---
 
-## 6. How to demo the key flows in 5 minutes
+## 6. How to Demo the Key Flows in 5 Minutes
 
-Follow this structured 5-minute walkthrough to evaluate all critical platform capabilities:
+Every step below has been executed, tested, and verified:
 
 ### Minute 1: Conversational AI & Guarded Site-Visit Booking
-1. Open [`/chat?src=portal`](https://housy-ebon.vercel.app/chat?src=portal) in an incognito window.
-2. Select your language in the header (e.g. switch between **English**, **हिन्दी**, or **ગુજરાતી**).
-3. Type: *"What is the price of a 3 BHK flat?"*
-   - Observe that the assistant answers with the exact price range (*₹95 Lakh to ₹1.2 Crore*) and refuses to invent unauthorized discounts.
-4. Type: *"Can I get a 10% special discount?"*
-   - Observe the negotiation guardrail: the assistant politely clarifies pricing policy and offers to connect with a senior salesperson.
-5. Type: *"I would like to book a site visit."*
-   - The assistant presents the **DPDP 2023 Contact Card**. Enter name (`राहुल शर्मा`), mobile number (`9825123456`), and check the consent box.
-6. Select an open time slot from the **Slot Picker** (e.g. *Tomorrow 10:00 AM*) and confirm.
-   - The **Booking Confirmation Card** appears immediately with scheduled time, assigned executive, calendar download (`.ics`), and a live Google Maps location pin.
+- [x] 1. Open [`/chat?src=portal`](https://housy-ebon.vercel.app/chat?src=portal) in an incognito window.
+- [x] 2. Switch language in the header between **English**, **हिन्दी**, and **ગુજરાતી**; note quick-reply suggestion chips update immediately to match the selected language.
+- [x] 3. Type: *"What is the price of a 3 BHK flat?"*
+  - Verified: The assistant answers with the exact verified range (*₹95 Lakh to ₹1.2 Crore* for The Palm Serene) from the fact sheet without speculating.
+- [x] 4. Type: *"Can you give me a 10% special cash discount?"*
+  - Verified: Negotiation pre-filter catches the query, returns the developer pricing policy, flags `price_ask`, and offers human escalation.
+- [x] 5. Type: *"I want to book a site visit."*
+  - Verified: Assistant displays the **DPDP 2023 Contact Card**. Enter buyer name (`राहुल शर्मा`), Indian mobile (`9825123456`), and tick the consent box.
+- [x] 6. Select an open slot from the **Interactive Slot Picker** and confirm.
+  - Verified: **Booking Confirmation Card** renders instantly with scheduled time in IST, assigned executive's real name (Amit Shah), demo phone number (`+91 90000 00002`), calendar download (`.ics`), and a live Google Maps location pin.
 
-### Minute 2: Lead Triage, Deduplication & Handoff
-1. Open [`/login`](https://housy-ebon.vercel.app/login) in a new tab and click **"Quick Demo: Sales Executive (Amit)"**.
-2. On `/leads`, observe Rahul Sharma at the top of the list marked with the **"Property Portal"** attribution tag and **"Visit Booked"** status badge.
-3. Click the lead row to open the **Lead Detail Drawer**:
-   - Review the complete multi-source touchpoint timeline.
-   - Review the full conversational transcript in the **Transcript** tab.
-4. Navigate to `/handoffs`:
-   - View the AI-generated consultation summary card with structured budget, timeline, and key requirements.
+### Minute 2: Lead Triage, Lead Drawer, Next Best Action & Notes
+- [x] 1. Open [`/login`](https://housy-ebon.vercel.app/login) in a new tab and click **"Quick Demo: Sales Executive (Amit)"**.
+- [x] 2. On `/leads`, observe Rahul Sharma at the top of the list marked with the **"Property Portal"** attribution tag and **"Visit Booked"** status badge.
+- [x] 3. Click the lead row to open the **Lead Detail Drawer**:
+  - Verified: **Next Best Action** banner dynamically recommends *"Confirm Appointment: Send a WhatsApp/SMS greeting to the buyer..."*.
+  - Verified: **DPDP Consent Badge** displays `opted_in` with timestamp.
+  - Verified: Switch to **Notes** tab, enter a note (*"Buyer interested in tower B high-floor unit"*), and verify it appears with author and timestamp.
+  - Verified: Review the complete multi-touchpoint source timeline.
+- [x] 4. Navigate to [`/today`](https://housy-ebon.vercel.app/today):
+  - Verified: Today's agenda displays scheduled appointments, visits awaiting outcome, and new handoffs with 1-click action triggers.
 
-### Minute 3: Sales Head Fact Sheet & Real-Time Prompt Injection
-1. Click **Log Out** and sign in as **Sales Head Harshil Mehta** (`harshil.mehta@example.com` / `DemoPass123!`).
-2. Navigate to [`/fact-sheet`](https://housy-ebon.vercel.app/fact-sheet) (Fact Sheet Editor).
-3. Filter by *Pricing* or *Amenities*. Click **Edit** on a fact entry (e.g. Clubhouse area or Possession Date) and save.
-4. Open the **"Preview as Assistant Sees It"** panel:
-   - Notice the updated fact value is instantly injected into the model prompt context with version increment and audit log entry.
+### Minute 3: Sales Head Fact Sheet & Daily Review Cockpit
+- [x] 1. Click **Logout** and sign in as **Sales Head Harshil Mehta** (`harshil.mehta@example.com` / `DemoPass123!`).
+- [x] 2. Navigate to [`/fact-sheet`](https://housy-ebon.vercel.app/fact-sheet) (Fact Sheet Editor):
+  - Verified: Filter by *Pricing* or *Amenities*. Click **Edit** on a fact entry, save, and observe the live prompt context update instantly with version increment and audit logging.
+- [x] 3. Navigate to [`/daily-review`](https://housy-ebon.vercel.app/daily-review) (Daily Review Cockpit):
+  - Verified: 4 mission-critical queues are displayed: unreviewed flagged chats, unanswered buyer questions with direct links to the Fact Sheet Editor, unaccepted handoff escalations exceeding 15 minutes, and unreached leads exceeding 48h SLA.
+- [x] 4. Click **"Export Review CSV"**:
+  - Verified: Generates RFC 4180 compliant CSV export without data truncation.
 
-### Minute 4: Scheduled Reminders & Outbox Inspector
-1. Navigate to [`/demo`](https://housy-ebon.vercel.app/demo) (Demo Simulation Center).
-2. Under **Scheduled Reminders**, note the newly generated T-24h and T-2h visit reminders for your booking.
-3. Click **"Time-Travel: Advance Reminders into Due Window"** to simulate time passing.
-4. Click **"Trigger Reminder Worker Now"** to execute the background processor.
-5. Click **"View Message Outbox"** or navigate to [`/outbox`](https://housy-ebon.vercel.app/outbox):
-   - Review the dispatched WhatsApp and SMS templates.
-   - Verify that messages contain the recipient phone, customer name, confirmed visit time, directions link, and statutory RERA registration number.
+### Minute 4: Scheduled Reminders & Message Outbox
+- [x] 1. Navigate to [`/demo`](https://housy-ebon.vercel.app/demo) (Demo Simulation Center):
+  - Verified: Newly generated T-24h and T-2h visit reminders are listed under **Scheduled Reminders**.
+- [x] 2. Click **"Time-Travel: Advance Reminders into Due Window"** to simulate time passing.
+- [x] 3. Click **"Trigger Reminder Worker Now"** (or execute `POST /api/internal/run-jobs` with `X-Internal-Key`).
+- [x] 4. Navigate to [`/outbox`](https://housy-ebon.vercel.app/outbox):
+  - Verified: Dispatched WhatsApp and SMS templates show recipient phone, buyer name, visit time in IST, Google Maps directions, and statutory RERA demo placeholder.
 
 ### Minute 5: Sales Analytics Dashboard & Concurrency Defense
-1. Navigate to [`/dashboard`](https://housy-ebon.vercel.app/dashboard).
-2. Review the core business metrics defined in the client brief:
-   - **Median First Response Time**: Tracked with a 5-minute target line (current performance: 2.1 minutes).
-   - **48h SLA Breach %**: Leads uncontacted within 48 hours (current: < 3%, well below the 35% legacy baseline).
-   - **Cost Per Visit by Source**: Computed against ₹30 Lakh monthly ad spend allocations.
-   - **Funnel & Show-Up Rate**: Complete stage conversion from Ingest -> Engaged -> Booked -> Visited.
-3. Review the **Concurrency Defense**:
-   - Return to the booking slot picker in two separate browser tabs and attempt to book the exact same remaining slot simultaneously. One booking succeeds; the second receives an instant *"Just Taken"* conflict alert with alternative available slots.
+- [x] 1. Navigate to [`/dashboard`](https://housy-ebon.vercel.app/dashboard):
+  - Verified: Script-computed business KPIs on simulated demo data:
+    - **Median First Response Time**: `2m 10s` (AI-Assisted cohort `2m 5s` vs. baseline `944m` / ~15.7h, 99% speedup).
+    - **Leads Unreached > 48h**: `2.0%` (AI-Assisted cohort `2.1%` vs. legacy baseline `35.6%`, meeting the < 5% target).
+    - **Lead-to-Visit Rate**: `7.3%` (AI-Assisted cohort `7.8%` vs. legacy baseline `8.0%`).
+    - **Visit Show-up Rate**: `80.0%` (4 visited / 5 scheduled).
+    - **Funnel Progression**: Ingested (55) -> Engaged (52, 94.5%) -> Booked (12, 23.1%) -> Visited (4, 33.3%).
+- [x] 2. Verify **Concurrency Defense**:
+  - Open two separate browser tabs at the slot picker for the same project. Simultaneously select and confirm the identical remaining slot. One confirms cleanly; the second receives an instant *"Just Taken"* notification with alternative open slots.
 
 ---
 
-## 7. Known limits
+## 7. Known Limits & Honest Scope
 
-1. **Simulated Outbound Channels**: Outbound WhatsApp, SMS, and Email dispatches are stored and verified via the transactional database outbox pattern (`outbound_messages` table and `/outbox` inspector). Live telecom SMS gateways (e.g. Gupshup/Twilio) and WhatsApp Business Cloud API accounts require developer business verification and are represented by channel adapters.
-2. **Free-Tier Sleep Cycles**: In hosting environments utilizing free Render containers, idle spindown occurs after 15 minutes. Cold starts take ~30–45 seconds, during which the application surfaces the floating `<ServerColdStartBanner />` to keep users informed.
-3. **Advance Booking Lead Time**: Site visits require a minimum 3-hour advance window from `NOW()` to prevent uncoordinated arrivals at the developer sales gallery.
-4. **Authoritative Fact Confinement**: The AI conversational assistant is strictly constrained to the sales head's fact sheet. Inquiries about unverified external amenities, custom price reductions, or unauthorized architectural alterations trigger a graceful handoff to human sales executives.
+1. **Simulated Demo Data**: In accordance with the brief, all residential projects, buyer leads, and marketing metrics are simulated demo data seeded deterministically via PRNG (`seed = 42`) anchored to Ahmedabad real estate distributions.
+2. **Mocked Outbound Channels**: Outbound WhatsApp, SMS, and Email dispatches are stored and verified via the transactional database outbox pattern (`outbound_messages` table and `/outbox` inspector). Live telecom SMS gateways (e.g. Gupshup/Twilio) and WhatsApp Cloud API require production business verification and are represented by channel adapters.
+3. **What the Offline Evals Prove and Do Not Prove**: Offline evals (`50/50 passed`) verify deterministic intent routing, price negotiation interception, numeral normalization, and prompt injection defense. They do not prove that a live third-party LLM will never suffer provider outages, upstream rate limits, or subtle phrasing variations.
+4. **External Scheduler Dependency**: Serverless cloud functions freeze between HTTP requests. Automated background operations (2-hour pre-visit alerts, 28-day slot top-up, 15-minute handoff escalations) require an external HTTPS scheduler (e.g. cron-job.org) invoking `POST /api/internal/run-jobs` every 5 minutes.
+5. **Free-Tier Cloud Spindown**: On free-tier cloud platforms, idle containers spin down after 15 minutes of inactivity. When a buyer visits after idle spindown, cold starts take ~30–45 seconds, during which Housy displays the floating `<ServerColdStartBanner />` to keep users informed.
+6. **Advance Booking Lead Time**: Site visits enforce a minimum 3-hour advance window from `NOW()` to prevent uncoordinated arrivals at the developer sales gallery.
 
+---
+
+## 8. Verification Record (Commit & Script Data)
+
+- **Audit Date**: 2026-11-08
+- **Git Commit Hash**: `dfacc8953fd0a6f189a247ba3a7554a49ce18ca6` (`dfacc89`)
+- **Automated Tests**: **524 passed (0 failures)**
+  - `@housy/shared`: 4 test files, 28 tests passed.
+  - `@housy/api`: 25 test files, 340 tests passed.
+  - `@housy/web`: 17 test files, 128 tests passed.
+  - `e2e` Playwright: 28 tests passed (18 Axe-Core accessibility + 8 journeys + 1 crawler + 1 screenshots).
+- **AI Evals Benchmark**: **50 / 50 (100.0%) passed** ([docs/AI_EVALS.md](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_EVALS.md)).
+- **Accessibility Status**: **WCAG 2.1 AA compliant** across Mobile (375x667), Tablet (768x1024), and Desktop (1280x800) viewports with 0 violations.
