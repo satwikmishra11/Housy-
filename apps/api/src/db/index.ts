@@ -1,7 +1,16 @@
 import pg from 'pg';
-import { config } from '../config/index.js';
+import { config, extractDatabaseName } from '../config/index.js';
 
 const { Pool } = pg;
+
+if (config.NODE_ENV === 'test') {
+  const dbName = extractDatabaseName(config.DATABASE_URL);
+  if (!dbName.endsWith('_test')) {
+    throw new Error(
+      `FATAL: Test suite refusing to run against non-test database "${dbName}". Database name must end in "_test".`,
+    );
+  }
+}
 
 const isLocalhost =
   config.DATABASE_URL.includes('localhost') ||

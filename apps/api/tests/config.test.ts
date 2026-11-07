@@ -228,7 +228,32 @@ describe('Configuration & Strict Boolean Parsing', () => {
       if (result.success) {
         expect(result.data.NODE_ENV).toBe('test');
         expect(result.data.LLM_PROVIDER).toBe('mock');
-        expect(result.data.DATABASE_URL).toContain('housy_db');
+        expect(result.data.DATABASE_URL).toContain('housy_test');
+      }
+    });
+
+    it('refuses to run tests when DATABASE_URL does not end in _test in test mode', () => {
+      const result = evaluateConfig({
+        NODE_ENV: 'test',
+        DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.errors.some((e) => e.includes('Database name must end in "_test"'))).toBe(true);
+      }
+    });
+
+    it('prioritizes TEST_DATABASE_URL in test mode and validates it ends in _test', () => {
+      const result = evaluateConfig({
+        NODE_ENV: 'test',
+        DATABASE_URL: 'postgres://localhost:5432/ignored',
+        TEST_DATABASE_URL: 'postgres://localhost:5432/my_ci_suite_test',
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.DATABASE_URL).toBe('postgres://localhost:5432/my_ci_suite_test');
       }
     });
 

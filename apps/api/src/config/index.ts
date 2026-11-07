@@ -37,14 +37,32 @@ export const KNOWN_DEFAULT_SECRETS = new Set<string>([
 ]);
 
 /**
+ * Parses and returns the clean database name from a PostgreSQL connection string.
+ */
+export function extractDatabaseName(connectionString: string): string {
+  try {
+    const parsed = new URL(connectionString);
+    return parsed.pathname.replace(/^\//, '').split('?')[0];
+  } catch {
+    const lastSlash = connectionString.lastIndexOf('/');
+    return (lastSlash !== -1 ? connectionString.slice(lastSlash + 1) : connectionString).split('?')[0];
+  }
+}
+
+/**
  * Clearly named function containing development/test only defaults.
  * Strictly forbidden in production (NODE_ENV === 'production').
  */
 export function getDevelopmentDefaults(nodeEnv: string = process.env.NODE_ENV || 'development'): Record<string, string> {
+  const isTest = nodeEnv === 'test';
   return {
     PORT: '3001',
     NODE_ENV: nodeEnv,
-    DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+    DATABASE_URL: isTest
+      ? (process.env.TEST_DATABASE_URL || 'postgres://housy_user:housy_password@localhost:5432/housy_test')
+      : 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+    TEST_DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_test',
+    ALLOW_PREVIEW_ORIGINS: 'false',
     CORS_ORIGIN: 'http://localhost:5173',
     LOG_LEVEL: 'info',
     JWT_SECRET: DEV_JWT_SECRET,
@@ -72,6 +90,8 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  TEST_DATABASE_URL: z.string().optional(),
+  ALLOW_PREVIEW_ORIGINS: booleanSchema.default(false),
   CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN is required'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
@@ -177,7 +197,21 @@ export function evaluateConfig(rawEnv: Record<string, string | undefined>): Conf
     }
   }
 
-  // 2. Schema Parse
+  // 2. Test Environment Hard Isolation Rules
+  if (nodeEnv === 'test') {
+    if (rawEnv['TEST_DATABASE_URL']) {
+      effectiveEnv['DATABASE_URL'] = rawEnv['TEST_DATABASE_URL'];
+    }
+    const testDbUrl = String(effectiveEnv['DATABASE_URL'] || '');
+    if (testDbUrl) {
+      const dbName = extractDatabaseName(testDbUrl);
+      if (!dbName.endsWith('_test')) {
+        errors.push(`Refusing to run tests against non-test database "${dbName}". Database name must end in "_test".`);
+      }
+    }
+  }
+
+  // 3. Schema Parse
   const parseResult = EnvSchema.safeParse(effectiveEnv);
   if (!parseResult.success) {
     for (const issue of parseResult.error.issues) {

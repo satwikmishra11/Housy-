@@ -16,11 +16,11 @@ jobs:
         env:
           POSTGRES_USER: housy_user
           POSTGRES_PASSWORD: housy_password
-          POSTGRES_DB: housy_db
+          POSTGRES_DB: housy_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U housy_user -d housy_db"
+          --health-cmd "pg_isready -U housy_user -d housy_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -48,6 +48,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security Vulnerability Audit
+        run: npm audit --audit-level=high
+
       - name: Build shared package
         run: npm run build --workspace=@housy/shared
 
@@ -62,21 +65,24 @@ jobs:
 
       - name: Run database migrations
         env:
-          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          TEST_DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
           NODE_ENV: test
           LLM_PROVIDER: mock
         run: npm run db:migrate
 
       - name: Seed test database
         env:
-          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          TEST_DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
           NODE_ENV: test
           LLM_PROVIDER: mock
         run: npm run db:seed
 
       - name: Run tests
         env:
-          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          TEST_DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
           NODE_ENV: test
           LLM_PROVIDER: mock
           TZ: Asia/Kolkata
@@ -87,7 +93,8 @@ jobs:
 
       - name: Run Playwright E2E Tests
         env:
-          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_db
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          TEST_DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
           NODE_ENV: test
           LLM_PROVIDER: mock
           PORT: 3001
