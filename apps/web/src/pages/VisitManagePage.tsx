@@ -33,8 +33,11 @@ import { Skeleton } from '../components/Skeleton.js';
 import { ErrorState } from '../components/ErrorState.js';
 import { SlotPicker } from '../components/SlotPicker.js';
 import { useToast } from '../components/Toast.js';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '../components/LanguageSwitcher.js';
 
 export const VisitManagePage: React.FC = () => {
+  const { t } = useTranslation();
   const { token } = useParams<{ token: string }>();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -271,33 +274,34 @@ export const VisitManagePage: React.FC = () => {
         <header className="flex items-center justify-between border-b border-hairline pb-4">
           <div>
             <span className="text-xs uppercase tracking-widest text-muted font-semibold">
-              Housy Site Visits
+              {t('visitManage.siteVisits', 'Housy Site Visits')}
             </span>
             <h1 className="font-serif text-2xl font-semibold text-ink mt-0.5">
-              Appointment Details
+              {t('visitManage.title', 'Appointment Details')}
             </h1>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
             {isConfirmed && (
               <Badge variant="accent" className="flex items-center gap-1.5 px-3 py-1 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Confirmed</span>
+                <span>{t('visitManage.badgeConfirmed', 'Confirmed')}</span>
               </Badge>
             )}
             {isCancelled && (
               <Badge variant="neutral" className="flex items-center gap-1.5 px-3 py-1 text-xs text-muted">
                 <XCircle className="w-3.5 h-3.5" />
-                <span>Cancelled</span>
+                <span>{t('visitManage.badgeCancelled', 'Cancelled')}</span>
               </Badge>
             )}
             {isCompleted && (
               <Badge variant="accent" className="flex items-center gap-1.5 px-3 py-1 text-xs">
-                <span>Completed</span>
+                <span>{t('visitManage.badgeCompleted', 'Completed')}</span>
               </Badge>
             )}
             {isNoShow && (
               <Badge variant="warning" className="flex items-center gap-1.5 px-3 py-1 text-xs">
-                <span>No-Show</span>
+                <span>{t('visitManage.badgeNoShow', 'No-Show')}</span>
               </Badge>
             )}
           </div>
@@ -309,9 +313,11 @@ export const VisitManagePage: React.FC = () => {
             role="status"
             className="p-4 rounded-xl border border-hairline bg-surface text-muted text-sm space-y-1"
           >
-            <p className="font-medium text-ink">This site visit has been cancelled.</p>
+            <p className="font-medium text-ink">
+              {t('visitManage.cancelledBannerTitle', 'This site visit has been cancelled.')}
+            </p>
             <p className="text-xs leading-relaxed">
-              If you wish to schedule a new appointment, please reach out to our team or book through our property consultant.
+              {t('visitManage.cancelledBannerDesc', 'If you wish to schedule a new appointment, please reach out to our team or book through our property consultant.')}
             </p>
           </div>
         )}
@@ -324,7 +330,7 @@ export const VisitManagePage: React.FC = () => {
               <div>
                 <span className="text-xs uppercase tracking-wider text-muted font-semibold flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-accent" />
-                  Residential Property
+                  {t('visitManage.residentialProperty', 'Residential Property')}
                 </span>
                 <h2 className="font-serif text-xl sm:text-2xl font-bold text-ink mt-1">
                   {visit.projectName}
@@ -342,7 +348,7 @@ export const VisitManagePage: React.FC = () => {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline mt-1.5"
                 >
-                  <span>Open in Google Maps</span>
+                  <span>{t('visitManage.openGoogleMaps', 'Open in Google Maps')}</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -354,7 +360,7 @@ export const VisitManagePage: React.FC = () => {
             <div className="p-4 rounded-xl border border-hairline bg-surface space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-accent" />
-                Date & Time
+                {t('visitManage.dateTime', 'Date & Time')}
               </span>
               <p className="text-sm font-semibold text-ink pt-1">{formattedDate}</p>
               <p className="text-xs font-mono text-muted flex items-center gap-1">
@@ -365,7 +371,7 @@ export const VisitManagePage: React.FC = () => {
 
             <div className="p-4 rounded-xl border border-hairline bg-surface space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Your Dedicated Host
+                {t('visitManage.dedicatedHost', 'Your Dedicated Host')}
               </span>
               <p className="text-sm font-semibold text-ink pt-1">
                 {visit.executiveName}
@@ -373,7 +379,7 @@ export const VisitManagePage: React.FC = () => {
               {visit.executivePhone ? (
                 <p className="text-xs text-muted font-mono">{visit.executivePhone}</p>
               ) : (
-                <p className="text-xs text-muted">Site Relationship Manager</p>
+                <p className="text-xs text-muted">{t('visitManage.siteRelationshipManager', 'Site Relationship Manager')}</p>
               )}
             </div>
           </div>
@@ -398,7 +404,7 @@ export const VisitManagePage: React.FC = () => {
               leftIcon={<CalendarPlus className="w-4 h-4" />}
               className="flex-1 justify-center"
             >
-              Add to Calendar (.ics)
+              {t('visitManage.addToCalendar', 'Add to Calendar (.ics)')}
             </Button>
 
             <Button
@@ -411,7 +417,7 @@ export const VisitManagePage: React.FC = () => {
               leftIcon={<RefreshCw className="w-4 h-4" />}
               className="flex-1 justify-center"
             >
-              Reschedule Visit
+              {t('visitManage.rescheduleVisit', 'Reschedule Visit')}
             </Button>
 
             <Button
@@ -420,7 +426,7 @@ export const VisitManagePage: React.FC = () => {
               leftIcon={<XCircle className="w-4 h-4 text-danger/80" />}
               className="text-danger hover:text-danger hover:bg-danger/10 justify-center"
             >
-              Cancel Visit
+              {t('visitManage.cancelVisit', 'Cancel Visit')}
             </Button>
           </div>
         )}
@@ -429,8 +435,8 @@ export const VisitManagePage: React.FC = () => {
         <Modal
           isOpen={isRescheduleOpen}
           onClose={() => setIsRescheduleOpen(false)}
-          title="Reschedule Your Site Visit"
-          description="Choose a new available date and time slot. Your current slot will be freed automatically upon confirmation."
+          title={t('visitManage.rescheduleModalTitle', 'Reschedule Your Site Visit')}
+          description={t('visitManage.rescheduleModalDesc', 'Choose a new available date and time slot. Your current slot will be freed automatically upon confirmation.')}
           maxWidth="lg"
           footer={
             <div className="flex items-center justify-end gap-3 w-full">
@@ -439,7 +445,7 @@ export const VisitManagePage: React.FC = () => {
                 onClick={() => setIsRescheduleOpen(false)}
                 disabled={rescheduleMutation.isPending}
               >
-                Keep Current Time
+                {t('visitManage.keepCurrentTime', 'Keep Current Time')}
               </Button>
               <Button
                 variant="primary"
@@ -451,7 +457,7 @@ export const VisitManagePage: React.FC = () => {
                 disabled={!selectedSlot || rescheduleMutation.isPending}
                 isLoading={rescheduleMutation.isPending}
               >
-                Confirm New Slot
+                {t('visitManage.confirmNewSlot', 'Confirm New Slot')}
               </Button>
             </div>
           }
@@ -488,8 +494,8 @@ export const VisitManagePage: React.FC = () => {
         <Modal
           isOpen={isCancelOpen}
           onClose={() => setIsCancelOpen(false)}
-          title="Cancel Site Visit?"
-          description="Are you sure you want to cancel your scheduled site visit? Your assigned representative will be notified."
+          title={t('visitManage.cancelModalTitle', 'Cancel Site Visit?')}
+          description={t('visitManage.cancelModalDesc', 'Are you sure you want to cancel your scheduled site visit? Your assigned representative will be notified.')}
           maxWidth="md"
           footer={
             <div className="flex items-center justify-end gap-3 w-full">
@@ -498,14 +504,14 @@ export const VisitManagePage: React.FC = () => {
                 onClick={() => setIsCancelOpen(false)}
                 disabled={cancelMutation.isPending}
               >
-                Keep Visit
+                {t('visitManage.keepVisit', 'Keep Visit')}
               </Button>
               <Button
                 variant="danger"
                 onClick={() => cancelMutation.mutate(cancelReason || undefined)}
                 isLoading={cancelMutation.isPending}
               >
-                Confirm Cancellation
+                {t('visitManage.confirmCancel', 'Confirm Cancellation')}
               </Button>
             </div>
           }
@@ -523,6 +529,7 @@ export const VisitManagePage: React.FC = () => {
             />
           </div>
         </Modal>
+
         {/* DPDP 2023 Opt-Out & Re-consent Section */}
         <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row items-center justify-between text-xs text-muted gap-2">
           <span>DPDP Act 2023: You can revoke or restore messaging consent at any time.</span>
@@ -535,7 +542,7 @@ export const VisitManagePage: React.FC = () => {
                 disabled={reConsentMutation.isPending}
                 className="text-primary hover:underline font-medium focus:outline-none"
               >
-                {reConsentMutation.isPending ? 'Restoring...' : 'Re-consent'}
+                {reConsentMutation.isPending ? 'Restoring...' : t('visitManage.reConsentBtn', 'Re-consent')}
               </button>
             </div>
           ) : (
@@ -544,7 +551,7 @@ export const VisitManagePage: React.FC = () => {
               onClick={() => setIsOptOutOpen(true)}
               className="text-muted hover:text-ink underline transition-colors"
             >
-              Opt out of updates
+              {t('visitManage.optOutReminders', 'Opt out of updates')}
             </button>
           )}
         </div>
@@ -553,8 +560,8 @@ export const VisitManagePage: React.FC = () => {
         <Modal
           isOpen={isOptOutOpen}
           onClose={() => setIsOptOutOpen(false)}
-          title="Opt Out of Automated Updates"
-          description="Are you sure you want to unsubscribe from automated notifications? All pending visit reminders will be immediately cancelled."
+          title={t('visitManage.optOutModalTitle', 'Opt Out of Automated Updates')}
+          description={t('visitManage.optOutModalDesc', 'Are you sure you want to unsubscribe from automated notifications? All pending visit reminders will be immediately cancelled.')}
           maxWidth="md"
           footer={
             <div className="flex items-center justify-end gap-3 w-full">
@@ -563,14 +570,14 @@ export const VisitManagePage: React.FC = () => {
                 onClick={() => setIsOptOutOpen(false)}
                 disabled={optOutMutation.isPending}
               >
-                Keep Updates
+                {t('visitManage.keepReminders', 'Keep Updates')}
               </Button>
               <Button
                 variant="danger"
                 onClick={() => optOutMutation.mutate()}
                 isLoading={optOutMutation.isPending}
               >
-                Confirm Opt-Out
+                {t('visitManage.confirmOptOut', 'Confirm Opt-Out')}
               </Button>
             </div>
           }

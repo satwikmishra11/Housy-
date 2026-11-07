@@ -45,9 +45,9 @@ export class ChatService {
     const language: ChatLanguage = payload.language ?? 'en';
 
     const greetings: Record<ChatLanguage, string> = {
-      en: 'Namaste! Welcome to Company A. How may I assist you with your luxury home search today?',
-      hi: 'नमस्ते! कंपनी ए में आपका स्वागत है। आज मैं आपके गृह अनुसंधान में किस प्रकार सहायता कर सकता हूँ?',
-      gu: 'નમસ્તે! કંપની એ માં આપનું સ્વાગત છે. આજે હું આપની ઘરની શોધમાં કેવી રીતે મદદ કરી શકું?',
+      en: 'Namaste! Welcome to Aaranya Realty. How may I assist you with your luxury home search today?',
+      hi: 'नमस्ते! आरण्या रियल्टी में आपका स्वागत है। आज मैं आपके गृह अनुसंधान में किस प्रकार सहायता कर सकता हूँ?',
+      gu: 'નમસ્તે! આરણ્યા રિયલ્ટી માં આપનું સ્વાગત છે. આજે હું આપની ઘરની શોધમાં કેવી રીતે મદદ કરી શકું?',
     };
 
     const quickRepliesMap: Record<ChatLanguage, string[]> = {

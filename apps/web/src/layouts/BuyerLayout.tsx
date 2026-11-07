@@ -11,7 +11,7 @@ export interface BuyerLayoutProps {
 
 export const BuyerLayout: React.FC<BuyerLayoutProps> = ({
   children,
-  projectName = 'Project 1 & Project 2',
+  projectName = 'The Palm Serene & Skyline Greens',
   className = '',
 }) => {
   const { t } = useTranslation();
@@ -37,7 +37,7 @@ export const BuyerLayout: React.FC<BuyerLayoutProps> = ({
               </div>
               <span className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
                 <Building2 className="w-3 h-3 text-accent" />
-                {t('common.developer', 'Company A, Ahmedabad')}
+                {t('common.developer', 'Aaranya Realty, Ahmedabad')}
               </span>
             </div>
           </div>
@@ -72,7 +72,7 @@ export const BuyerLayout: React.FC<BuyerLayoutProps> = ({
           </div>
 
           <div className="pt-3 border-t border-hairline flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]">
-            <span>© 2026 Company A, Ahmedabad. All rights reserved.</span>
+            <span>© 2026 Aaranya Realty, Ahmedabad. All rights reserved.</span>
             <span>2 & 3 BHK Premium Residences · ₹65L – ₹1.2 Cr</span>
           </div>
         </div>

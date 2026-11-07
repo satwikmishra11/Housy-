@@ -205,7 +205,7 @@ export const CollectContactCard: React.FC<CollectContactCardProps> = ({
       >
         <div className="space-y-4 text-xs text-ink/80 leading-relaxed">
           <p>
-            <strong>Company A</strong> is committed to safeguarding your personal data in accordance with the <strong>Digital Personal Data Protection (DPDP) Act 2023</strong>.
+            <strong>Aaranya Realty, Ahmedabad</strong> is committed to safeguarding your personal data in accordance with the <strong>Digital Personal Data Protection (DPDP) Act 2023</strong>.
           </p>
           <ul className="list-disc pl-4 space-y-1.5 text-muted">
             <li><strong>Purpose Limitation:</strong> Your phone number is strictly used to coordinate your private site visit and deliver RERA-registered brochures.</li>

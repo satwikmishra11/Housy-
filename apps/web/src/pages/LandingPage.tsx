@@ -105,7 +105,7 @@ export const LandingPage: React.FC = () => {
           </h1>
 
           <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-normal">
-            A unified sales ecosystem for Company A: real-time multilingual AI chat for homebuyers, instant site-visit scheduling with conflict prevention, and CRM workspace for sales executives.
+            A unified sales ecosystem for Aaranya Realty, Ahmedabad: real-time multilingual AI chat for homebuyers, instant site-visit scheduling with conflict prevention, and CRM workspace for sales executives.
           </p>
         </div>
 
@@ -249,21 +249,21 @@ export const LandingPage: React.FC = () => {
                 Portfolio Showcase
               </span>
               <h2 className="text-2xl sm:text-3xl font-serif font-semibold text-ink mt-1">
-                Company A Signature Residences
+                Aaranya Signature Residences
               </h2>
             </div>
             <span className="text-xs text-muted">Ahmedabad, Gujarat</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Project 1 */}
-            <div className="p-6 rounded-2xl bg-surface border border-hairline hover:border-muted/50 transition-colors space-y-4">
+            {/* The Palm Serene */}
+            <div className="p-6 rounded-2xl bg-surface border border-hairline hover:border-accent/40 transition-colors space-y-4 shadow-xs">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-xl font-serif font-bold text-ink">The Palm Residences</h3>
-                  <p className="text-xs text-muted mt-0.5">Sales Gallery, SG Highway, Ahmedabad 380054</p>
+                  <h3 className="text-xl font-serif font-bold text-ink">The Palm Serene</h3>
+                  <p className="text-xs text-muted mt-0.5">SG Highway, Near Iscon Cross Road, Ahmedabad 380054</p>
                 </div>
-                <Badge variant="accent">Project 1</Badge>
+                <Badge variant="accent">SG Highway</Badge>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs bg-background p-3 rounded-xl border border-hairline">
@@ -287,40 +287,40 @@ export const LandingPage: React.FC = () => {
 
               <div className="flex items-center justify-between pt-2">
                 <Link
-                  to="/chat?project=The%20Palm%20Residences"
+                  to="/projects/the-palm-serene"
                   className="text-xs font-semibold text-accent hover:underline flex items-center gap-1"
                 >
-                  <span>Chat about The Palm Residences</span>
+                  <span>Explore Showcase</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  to="/chat?project=The%20Palm%20Residences"
+                  to="/chat?project=Project%201"
                   className="text-xs text-muted hover:text-ink flex items-center gap-1"
                 >
                   <Calendar className="w-3 h-3 text-accent" />
-                  <span>Schedule Site Visit</span>
+                  <span>Chat & Book Visit</span>
                 </Link>
               </div>
             </div>
 
-            {/* Project 2 */}
-            <div className="p-6 rounded-2xl bg-surface border border-hairline hover:border-muted/50 transition-colors space-y-4">
+            {/* Skyline Greens */}
+            <div className="p-6 rounded-2xl bg-surface border border-hairline hover:border-accent/40 transition-colors space-y-4 shadow-xs">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-xl font-serif font-bold text-ink">The Sky Villas</h3>
-                  <p className="text-xs text-muted mt-0.5">Ambli-Bopal Road, Ahmedabad 380058</p>
+                  <h3 className="text-xl font-serif font-bold text-ink">Skyline Greens</h3>
+                  <p className="text-xs text-muted mt-0.5">Science City Road, Sola, Ahmedabad 380060</p>
                 </div>
-                <Badge variant="neutral">Project 2</Badge>
+                <Badge variant="neutral">Science City</Badge>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs bg-background p-3 rounded-xl border border-hairline">
                 <div>
                   <span className="text-muted block">Typology</span>
-                  <strong className="text-ink font-medium">4 & 5 BHK Sky Mansions</strong>
+                  <strong className="text-ink font-medium">2 & 3 BHK Residences</strong>
                 </div>
                 <div>
                   <span className="text-muted block">Price Range</span>
-                  <strong className="text-ink font-medium">₹2.4 Cr – ₹3.8 Cr</strong>
+                  <strong className="text-ink font-medium">₹65L – ₹1.2 Cr</strong>
                 </div>
                 <div>
                   <span className="text-muted block">Possession</span>
@@ -334,18 +334,18 @@ export const LandingPage: React.FC = () => {
 
               <div className="flex items-center justify-between pt-2">
                 <Link
-                  to="/chat?project=The%20Sky%20Villas"
+                  to="/projects/skyline-greens"
                   className="text-xs font-semibold text-accent hover:underline flex items-center gap-1"
                 >
-                  <span>Chat about The Sky Villas</span>
+                  <span>Explore Showcase</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  to="/chat?project=The%20Sky%20Villas"
+                  to="/chat?project=Project%202"
                   className="text-xs text-muted hover:text-ink flex items-center gap-1"
                 >
                   <Calendar className="w-3 h-3 text-accent" />
-                  <span>Schedule Site Visit</span>
+                  <span>Chat & Book Visit</span>
                 </Link>
               </div>
             </div>
@@ -414,12 +414,20 @@ export const LandingPage: React.FC = () => {
             <div className="w-6 h-6 rounded-lg bg-accent text-white flex items-center justify-center font-serif font-bold text-xs">
               H
             </div>
-            <span>Company A Ahmedabad · RERA Registration: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126</span>
+            <span>Aaranya Realty, Ahmedabad · RERA Registration: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126</span>
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
             <Link to="/chat" className="hover:text-ink transition-colors">
               Buyer Chat
+            </Link>
+            <span>•</span>
+            <Link to="/privacy" className="hover:text-ink transition-colors">
+              Privacy Notice
+            </Link>
+            <span>•</span>
+            <Link to="/terms" className="hover:text-ink transition-colors">
+              Terms & RERA
             </Link>
             <span>•</span>
             <Link to="/login" className="hover:text-ink transition-colors">

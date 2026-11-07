@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DaySlots, SlotItem, SlotAlternative } from '@housy/shared';
 import { Skeleton } from './Skeleton.js';
 import { EmptyState } from './EmptyState.js';
@@ -31,6 +32,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
   onSelectAlternative,
   className = '',
 }) => {
+  const { t } = useTranslation();
   // Determine initial selected date: first day with open slots or first day
   const [selectedDate, setSelectedDate] = useState<string>('');
 
@@ -100,17 +102,17 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
 
     return (
       <EmptyState
-        title="No slots available this week"
+        title={t('slotPicker.noSlotsTitle', 'No slots available this week')}
         description={
           formattedNextDate
             ? `All appointments are fully booked for the selected period. The next available appointment date is ${formattedNextDate}.`
-            : 'All appointment slots are currently taken for this project. Please check back shortly or adjust your requested dates.'
+            : t('slotPicker.noSlotsDescription', 'All appointment slots are currently taken for this project. Please check back shortly or adjust your requested dates.')
         }
         icon={<Calendar className="w-6 h-6" />}
         action={
           formattedNextDate && onRetry
             ? {
-              label: `Check ${formattedNextDate}`,
+              label: t('slotPicker.checkNextDate', 'Check {{date}}', { date: formattedNextDate }),
               onClick: onRetry,
               icon: <ArrowRight className="w-4 h-4" />,
             }
@@ -135,9 +137,9 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-sm text-ink">That slot was just booked by another buyer</p>
+              <p className="font-semibold text-sm text-ink">{t('slotPicker.slotJustTaken', 'That slot was just booked by another buyer')}</p>
               <p className="text-xs text-muted mt-0.5">
-                Appointments are reserved instantly in real time. Please choose from the nearest available alternative times:
+                {t('slotPicker.slotJustTakenDesc', 'Appointments are reserved instantly in real time. Please choose from the nearest available alternative times:')}
               </p>
             </div>
           </div>
@@ -173,7 +175,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
       {/* Date Strip */}
       <div>
         <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
-          Select Date
+          {t('slotPicker.selectDate', 'Select Date')}
         </label>
         <div
           role="tablist"
@@ -224,7 +226,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                         : 'text-muted/50'
                     }`}
                 >
-                  {hasSlots ? `${slotCount} open` : 'Full'}
+                  {hasSlots ? t('slotPicker.slotsCount', '{{count}} open', { count: slotCount }) : t('slotPicker.full', 'Full')}
                 </span>
               </button>
             );
@@ -236,7 +238,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
       <div>
         <div className="flex items-center justify-between mb-2.5">
           <label className="text-xs font-semibold text-muted uppercase tracking-wider">
-            Available Times ({activeDay ? formatDayDisplay(activeDay.date).dayName : ''}{' '}
+            {t('slotPicker.availableSlots', 'Available Times')} ({activeDay ? formatDayDisplay(activeDay.date).dayName : ''}{' '}
             {activeDay?.date})
           </label>
           <span className="text-xs text-muted">All times in IST (UTC+05:30)</span>

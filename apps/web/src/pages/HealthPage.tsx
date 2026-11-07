@@ -46,7 +46,7 @@ export const HealthPage: React.FC = () => {
             </div>
             <div>
               <span className="font-semibold text-stone-900 tracking-tight text-base">Housy</span>
-              <span className="text-xs text-stone-600 ml-2 font-mono">Company A · Ahmedabad</span>
+              <span className="text-xs text-stone-600 ml-2 font-mono">Aaranya Realty · Ahmedabad</span>
             </div>
           </div>
           <div className="flex items-center gap-2">

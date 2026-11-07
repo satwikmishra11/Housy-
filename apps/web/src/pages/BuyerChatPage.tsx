@@ -57,6 +57,18 @@ interface ActiveBookingState {
   manageToken?: string;
 }
 
+const LOCALIZED_GREETINGS: Record<SupportedLanguageCode, string> = {
+  en: 'Namaste! Welcome to Aaranya Realty. How may I assist you with your luxury home search today?',
+  hi: 'नमस्ते! आरण्या रियल्टी में आपका स्वागत है। आज मैं आपके गृह अनुसंधान में किस प्रकार सहायता कर सकता हूँ?',
+  gu: 'નમસ્તે! આરણ્યા રિયલ્ટી માં આપનું સ્વાગત છે. આજે હું આપની ઘરની શોધમાં કેવી રીતે મદદ કરી શકું?',
+};
+
+const LOCALIZED_QUICK_REPLIES: Record<SupportedLanguageCode, string[]> = {
+  en: ['Explore 2 BHK', 'Explore 3 BHK Luxury', 'Schedule a Site Visit'],
+  hi: ['2 BHK देखें', '3 BHK लक्ज़री देखें', 'साइट विज़िट बुक करें'],
+  gu: ['2 BHK જુઓ', '3 BHK લક્ઝરી જુઓ', 'સાઇટ વિઝિટ બુક કરો'],
+};
+
 export const BuyerChatPage: React.FC = () => {
   const { i18n } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -111,6 +123,18 @@ export const BuyerChatPage: React.FC = () => {
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
   const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(() => (typeof navigator !== 'undefined' ? !navigator.onLine : false));
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -301,6 +325,24 @@ export const BuyerChatPage: React.FC = () => {
   // Language switch handler
   const handleLanguageChange = async (code: SupportedLanguageCode) => {
     await changeAppLanguage(code);
+    setMessages((prev) => {
+      if (prev.length <= 1 && prev[0]?.role === 'assistant') {
+        return [
+          {
+            ...prev[0],
+            content: LOCALIZED_GREETINGS[code] || LOCALIZED_GREETINGS.en,
+            quickReplies: LOCALIZED_QUICK_REPLIES[code] || LOCALIZED_QUICK_REPLIES.en,
+          },
+        ];
+      }
+      return prev;
+    });
+    setActiveQuickReplies((prev) => {
+      if (prev.length > 0) {
+        return LOCALIZED_QUICK_REPLIES[code] || LOCALIZED_QUICK_REPLIES.en;
+      }
+      return prev;
+    });
   };
 
   // Send message handler
@@ -570,12 +612,25 @@ export const BuyerChatPage: React.FC = () => {
   const activeProject =
     projects.find((p) => p.id === selectedProjectId) ||
     projects[0] || {
-      name: 'The Palm Residences',
+      name: 'The Palm Serene',
+      displayName: 'The Palm Serene',
       rera_number: 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126',
     };
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-background text-ink antialiased">
+      {/* Offline Warning Banner */}
+      {isOffline && (
+        <div
+          role="status"
+          aria-live="assertive"
+          className="bg-amber-600 text-white text-xs font-semibold py-1.5 px-4 text-center select-none flex items-center justify-center gap-2 z-50 flex-shrink-0"
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>You are currently offline. New messages will be sent once internet connection is restored.</span>
+        </div>
+      )}
+
       {/* 1. TOP HEADER */}
       <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-hairline px-4 py-3 flex-shrink-0 shadow-subtle">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
@@ -589,9 +644,9 @@ export const BuyerChatPage: React.FC = () => {
               H
             </Link>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-ink text-sm sm:text-base leading-none truncate">
-                  {activeProject.name}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-ink text-sm sm:text-base leading-none">
+                  {activeProject.displayName || (activeProject as { display_name?: string }).display_name || activeProject.name}
                 </span>
                 <span className="text-muted text-xs hidden sm:inline">·</span>
                 {conversationStatus === 'human' ? (
@@ -605,9 +660,9 @@ export const BuyerChatPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
+              <span className="text-[11px] text-muted flex items-center gap-1 mt-0.5 leading-tight">
                 <Building2 className="w-3 h-3 text-accent flex-shrink-0" />
-                Company A, Ahmedabad
+                Aaranya Realty, Ahmedabad
               </span>
             </div>
           </div>

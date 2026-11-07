@@ -1,8 +1,8 @@
 {
   "common": {
     "appName": "Housy",
-    "developer": "Company A, Ahmedabad",
-    "rera": "RERA No: PR/GJ/AHMEDABAD/CITY/AUDA/RAA00000/011126",
+    "developer": "Aaranya Realty, Ahmedabad",
+    "rera": "RERA No: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126",
     "dpdpConsent": "Your contact details are protected under the DPDP Act 2023. We only contact you regarding your explicit enquiry.",
     "continue": "Continue",
     "back": "Back",
@@ -17,8 +17,8 @@
   },
   "buyer": {
     "title": "Find Your Home in Ahmedabad",
-    "subtitle": "Direct enquiries with Company A. Instant answers, verified details, and effortless site visit booking.",
-    "welcome": "Namaste! Welcome to Company A. I can assist you with floor plans, pricing, amenities, and booking a site visit for Project 1 and Project 2.",
+    "subtitle": "Direct enquiries with Aaranya Realty. Instant answers, verified details, and effortless site visit booking.",
+    "welcome": "Namaste! Welcome to Aaranya Realty. I can assist you with floor plans, pricing, amenities, and booking a site visit for The Palm Serene and Skyline Greens.",
     "askQuestionPlaceholder": "Ask a question in English, Hindi, or Gujarati...",
     "bookVisit": "Book a Site Visit",
     "selectProject": "Select Project",
@@ -31,7 +31,7 @@
     "visitConfirmed": "Site Visit Confirmed",
     "visitDetails": "We have reserved your slot. A calendar invitation and location pin will be shared with you.",
     "talkToExecutive": "Speak with Sales Executive",
-    "executiveAssigned": "A dedicated executive from Company A has been assigned to your enquiry."
+    "executiveAssigned": "A dedicated executive from Aaranya Realty has been assigned to your enquiry."
   },
   "navigation": {
     "overview": "Overview",
@@ -40,6 +40,55 @@
     "factSheet": "Fact Sheet",
     "analytics": "Source Analytics",
     "styleguide": "Design System Styleguide"
+  },
+  "slotPicker": {
+    "selectDate": "Select Date",
+    "selectTime": "Select Time Slot",
+    "availableSlots": "Available Slots",
+    "noSlotsTitle": "No slots available this week",
+    "noSlotsDescription": "All appointment slots are currently taken for this project. Please check back shortly or adjust your requested dates.",
+    "checkNextDate": "Check {{date}}",
+    "slotJustTaken": "That slot was just booked by another buyer",
+    "slotJustTakenDesc": "Appointments are reserved instantly in real time. Please choose from the nearest available alternative times:",
+    "slotsCount": "{{count}} slots",
+    "full": "Full",
+    "minutesDuration": "60-min personalized tour"
+  },
+  "visitManage": {
+    "siteVisits": "Housy Site Visits",
+    "title": "Appointment Details",
+    "badgeConfirmed": "Confirmed",
+    "badgeCancelled": "Cancelled",
+    "badgeCompleted": "Completed",
+    "badgeNoShow": "No-Show",
+    "cancelledBannerTitle": "This site visit has been cancelled.",
+    "cancelledBannerDesc": "If you wish to schedule a new appointment, please reach out to our team or book through our property consultant.",
+    "residentialProperty": "Residential Property",
+    "openGoogleMaps": "Open in Google Maps",
+    "dateTime": "Date & Time",
+    "dedicatedHost": "Your Dedicated Host",
+    "siteRelationshipManager": "Site Relationship Manager",
+    "bookedFor": "Booked for: {{name}}",
+    "reference": "Reference: {{id}}",
+    "addToCalendar": "Add to Calendar (.ics)",
+    "rescheduleVisit": "Reschedule Visit",
+    "cancelVisit": "Cancel Visit",
+    "optOutReminders": "Opt Out of Reminders (DPDP)",
+    "reConsentTitle": "Re-enable Visit Reminders",
+    "reConsentDesc": "You previously opted out. Click below to re-consent and receive appointment reminders via WhatsApp.",
+    "reConsentBtn": "Re-Consent & Enable Updates",
+    "rescheduleModalTitle": "Reschedule Your Site Visit",
+    "rescheduleModalDesc": "Choose a new available date and time slot. Your current slot will be freed automatically upon confirmation.",
+    "keepCurrentTime": "Keep Current Time",
+    "confirmNewSlot": "Confirm New Slot",
+    "cancelModalTitle": "Cancel Site Visit?",
+    "cancelModalDesc": "Are you sure you want to cancel your scheduled site visit? Your assigned representative will be notified.",
+    "cancelReasonPlaceholder": "Optional reason for cancellation (e.g. traveling, family schedule change)...",
+    "keepVisit": "Keep My Visit",
+    "confirmCancel": "Confirm Cancellation",
+    "optOutModalTitle": "Opt Out of Automated Reminders?",
+    "optOutModalDesc": "Under the DPDP Act 2023, you can halt all automated WhatsApp and SMS appointment reminders. Your site visit remains confirmed.",
+    "keepReminders": "Keep Reminders",
+    "confirmOptOut": "Confirm Opt-Out"
   }
 }
-

@@ -49,9 +49,11 @@ import {
   type SalesDashboardData,
   type NotificationListResponse,
   type StaffNotification,
+  type ProjectDetail,
+  type ProjectDetailResponse,
 } from '@housy/shared';
 
-export type { StaffNotification, NotificationListResponse };
+export type { StaffNotification, NotificationListResponse, ProjectDetail, ProjectDetailResponse };
 
 const CSRF_HEADER_VALUE = 'XMLHttpRequest';
 
@@ -339,13 +341,26 @@ export async function commitCsv(
 export interface ProjectItem {
   id: string;
   name: string;
+  displayName?: string;
+  display_name?: string;
+  tagline?: string;
+  slug?: string;
+  reraNumber?: string;
   rera_number?: string;
   address?: string;
+  bhkTypes?: string[];
   bhk_types?: string[];
 }
 
 export async function fetchProjects(): Promise<ProjectItem[]> {
   const res = await apiFetch<{ success: boolean; data: ProjectItem[] }>('/api/projects');
+  return res.data;
+}
+
+export async function fetchProjectBySlug(slug: string): Promise<ProjectDetail> {
+  const res = await apiFetch<{ success: boolean; data: ProjectDetail }>(
+    `/api/projects/by-slug/${encodeURIComponent(slug)}`,
+  );
   return res.data;
 }
 

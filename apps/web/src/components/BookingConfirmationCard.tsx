@@ -29,7 +29,7 @@ export interface BookingConfirmationCardProps {
 export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = ({
   bookingId,
   startsAt,
-  projectName = 'The Palm Residences (Project 1)',
+  projectName = 'The Palm Serene',
   executiveName = 'Priya Patel',
   executivePhone = '+91 90000 00003',
   address = 'Sales Gallery, SG Highway, Ahmedabad, Gujarat 380054',
@@ -62,7 +62,7 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
     downloadIcsCalendar(
       {
         title: `Private Site Visit: ${projectName}`,
-        description: `Your private appointment with ${resolvedExecutiveName} (${resolvedExecutivePhone}) at Company A Sales Gallery.\nAppointment ID: ${bookingId}\nHost Contact: ${resolvedExecutivePhone}\nRERA Reg: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`,
+        description: `Your private appointment with ${resolvedExecutiveName} (${resolvedExecutivePhone}) at Aaranya Realty Sales Gallery.\nAppointment ID: ${bookingId}\nHost Contact: ${resolvedExecutivePhone}\nRERA Reg: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`,
         location: address,
         startsAt: startDate.toISOString(),
         endsAt: endDate.toISOString(),

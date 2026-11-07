@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/Badge.js';
 import { NotificationBell } from '../components/NotificationBell.js';
+import { DemoRibbon } from '../components/DemoRibbon.js';
 import { useAuth } from '../context/AuthContext.js';
 
 export interface StaffLayoutProps {
@@ -132,25 +133,27 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
     effectiveUserRole === 'sales_head' ? 'Sales Head (Admin)' : 'Sales Executive';
 
   return (
-    <div className="min-h-screen bg-background text-ink flex flex-col md:flex-row antialiased">
-      {/* Desktop Sidebar (>= md) */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-hairline bg-surface p-5 flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-        {/* Brand */}
-        <div className="flex items-center justify-between mb-4 px-2">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-lg select-none shadow-subtle">
-              H
+    <div className="min-h-screen bg-background text-ink flex flex-col antialiased">
+      <DemoRibbon />
+      <div className="flex-1 flex flex-col md:flex-row min-w-0">
+        {/* Desktop Sidebar (>= md) */}
+        <aside className="hidden md:flex flex-col w-64 border-r border-hairline bg-surface p-5 flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+          {/* Brand */}
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-lg select-none shadow-subtle">
+                H
+              </div>
+              <div>
+                <h1 className="font-semibold text-ink text-base tracking-tight leading-none">Housy</h1>
+                <p className="text-xs text-muted flex items-center gap-1 mt-1 font-medium">
+                  <Building2 className="w-3 h-3 text-accent" />
+                  Aaranya Realty · Ahmedabad
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-semibold text-ink text-base tracking-tight leading-none">Housy</h1>
-              <p className="text-xs text-muted flex items-center gap-1 mt-1 font-medium">
-                <Building2 className="w-3 h-3 text-accent" />
-                Company A · Ahmedabad
-              </p>
-            </div>
+            <NotificationBell />
           </div>
-          <NotificationBell />
-        </div>
 
         {/* Ambient AI Health Status Chip */}
         {health?.llm && (
@@ -255,7 +258,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
           </div>
           <div>
             <span className="font-semibold text-ink text-sm">Housy</span>
-            <span className="text-xs text-muted ml-1.5">Company A</span>
+            <span className="text-xs text-muted ml-1.5">Aaranya Realty</span>
           </div>
         </div>
 
@@ -363,19 +366,20 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
   )
 }
 
-{/* Main Content Area */ }
-<div className="flex-1 flex flex-col min-w-0">
-  <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
 
-  <footer className="border-t border-hairline bg-surface py-4 px-6 text-xs text-muted flex flex-col sm:flex-row items-center justify-between gap-2">
-    <span>Company A Ahmedabad · Internal Sales Management Platform</span>
-    <span className="flex items-center gap-1.5">
-      <ShieldAlert className="w-3.5 h-3.5 text-accent" />
-      RERA & DPDP Compliant Data Handling
-    </span>
-  </footer>
-</div>
-    </div >
+        <footer className="border-t border-hairline bg-surface py-4 px-6 text-xs text-muted flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>Aaranya Realty, Ahmedabad · Internal Sales Management Platform</span>
+          <span className="flex items-center gap-1.5">
+            <ShieldAlert className="w-3.5 h-3.5 text-accent" />
+            RERA & DPDP Compliant Data Handling
+          </span>
+        </footer>
+      </div>
+      </div>
+    </div>
   );
 };
 

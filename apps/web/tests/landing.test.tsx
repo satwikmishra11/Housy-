@@ -64,8 +64,8 @@ describe('LandingPage Component & Navigation', () => {
     expect(screen.getByRole('button', { name: /Executive/i })).toBeInTheDocument();
 
     // Project showcases
-    expect(screen.getByText('The Palm Residences')).toBeInTheDocument();
-    expect(screen.getByText('The Sky Villas')).toBeInTheDocument();
+    expect(screen.getByText('The Palm Serene')).toBeInTheDocument();
+    expect(screen.getByText('Skyline Greens')).toBeInTheDocument();
 
     // Footer
     expect(screen.getByText(/RERA Registration: PR\/GJ\/AHMEDABAD/i)).toBeInTheDocument();

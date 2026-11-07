@@ -102,7 +102,7 @@ export const LoginPage: React.FC = () => {
                 Staff Sign In
               </CardTitle>
               <CardDescription className="text-muted text-sm mt-1">
-                Company A · Ahmedabad Sales Workspace
+                Aaranya Realty · Ahmedabad Sales Workspace
               </CardDescription>
             </CardHeader>
 
