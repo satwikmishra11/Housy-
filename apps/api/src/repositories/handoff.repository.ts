@@ -55,9 +55,15 @@ export class HandoffRepository {
       return slotExecRes.rows[0];
     }
 
-    // 2. Query lead language preference
+    // 2. Query lead language preference (active conversation preferred, then lead record)
     const leadRes = await dbCaller<{ language: string | null }>(
-      `SELECT language FROM leads WHERE id = $1`,
+      `SELECT COALESCE(
+         (SELECT c.language FROM conversations c WHERE c.lead_id = l.id ORDER BY c.created_at DESC LIMIT 1),
+         l.language,
+         'en'
+       ) AS language
+       FROM leads l
+       WHERE l.id = $1`,
       [leadId],
     );
     const leadLang = leadRes.rows[0]?.language;

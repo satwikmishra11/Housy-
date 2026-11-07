@@ -227,14 +227,15 @@ describe('Handoff Lifecycle, SLA Escalations, and Human Takeover', () => {
 
   describe('3. Language-Matched Routing', () => {
     it('routes Gujarati lead to executive speaking Gujarati and least loaded', async () => {
-      // Set languages for executive A (hi, en) and executive B (gu, en)
+      // Isolate languages across executives so executiveBId is the only active Gujarati-speaking executive
+      await query(`UPDATE users SET languages = $1 WHERE role = 'executive'`, [['en']]);
       await query(`UPDATE users SET languages = $1 WHERE id = $2`, [['hi', 'en'], executiveAId]);
       await query(`UPDATE users SET languages = $1 WHERE id = $2`, [['gu', 'en'], executiveBId]);
 
       // Create a lead with Gujarati language preference
       const leadRes = await query<{ id: string }>(
-        `INSERT INTO leads (name, phone_e164, source, project_id, wants, status)
-         VALUES ('Gujarati Lead', $1, 'website', $2, '3 BHK', 'new')
+        `INSERT INTO leads (name, phone_e164, source, project_id, wants, language, status)
+         VALUES ('Gujarati Lead', $1, 'website', $2, '3 BHK', 'gu', 'new')
          RETURNING id`,
         [randomPhone(), projectId],
       );
@@ -249,6 +250,9 @@ describe('Handoff Lifecycle, SLA Escalations, and Human Takeover', () => {
       // Route lead
       const matchedExec = await handoffRepository.findBestExecutiveForLead(leadId);
       expect(matchedExec.id).toBe(executiveBId);
+
+      // Restore seed executive languages
+      await query(`UPDATE users SET languages = $1 WHERE role = 'executive'`, [['en', 'hi', 'gu']]);
     });
   });
 
