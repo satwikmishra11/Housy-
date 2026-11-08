@@ -143,12 +143,21 @@ npm run test:e2e
 - Playwright: **28 tests passed** (18 Axe-Core WCAG 2.1 AA audits across 375px/768px/1280px + 8 user journeys + 1 UI crawler + 1 screenshots).
 - Total automated tests: **579 passed**.
 
-### Step 9: Run AI evals
+### Step 9: Run AI evals and transcripts
 Run the conversational evaluation benchmark verifying grounded answers, price guardrails, and handoff triggers:
 ```bash
+# 1. Offline deterministic pipeline tests (MockProvider, 56/56 passed)
 npm run eval:ai
+
+# 2. Live model evaluation with real AI provider (Google Gemini gemini-3.5-flash)
+LLM_PROVIDER=gemini LLM_MODEL=gemini-3.5-flash GEMINI_API_KEY="..." npm run eval:ai:live
+
+# 3. Capture 8 authentic trilingual buyer transcripts with verifier latency metrics
+npm run capture:transcripts
 ```
-*Script verification output:* **56/56 (100.0%) passed**.
+*Script verification output:*
+- Pipeline tests: **56/56 (100.0%) passed**.
+- Live transcripts: **8 dialogues captured** across English, Hindi, and Gujarati in [`docs/AI_TRANSCRIPTS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_TRANSCRIPTS.md).
 
 ---
 
