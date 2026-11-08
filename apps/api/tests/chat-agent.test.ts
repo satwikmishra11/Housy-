@@ -277,6 +277,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
               name: 'send_reply',
               arguments: {
                 text: 'We have registered your preference for a 3 BHK residence with 1,180 sq.ft carpet area.',
+                answer_type: 'fact',
                 cited_fact_ids: [testFact.id],
                 confidence: 0.95,
                 language: 'en',
@@ -322,6 +323,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
             name: 'send_reply',
             arguments: {
               text: 'Our penthouses feature an enormous 5500 sq.ft layout with private pool.',
+              answer_type: 'fact',
               cited_fact_ids: [testFact.id], // cited fact only has 1,180
               confidence: 0.9,
               language: 'en',
@@ -362,6 +364,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
             name: 'send_reply',
             arguments: {
               text: 'This project offers guaranteed returns and 1,180 sq.ft.',
+              answer_type: 'fact',
               cited_fact_ids: [testFact.id],
               confidence: 0.9,
               language: 'en',
@@ -422,6 +425,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
             name: 'send_reply',
             arguments: {
               text: 'The residences offer 1,180 sq.ft carpet area.',
+              answer_type: 'fact',
               cited_fact_ids: [testFact.id],
               confidence: 0.95,
               language: 'en',
@@ -455,6 +459,7 @@ describe('Phase 7a: AI Chat Assistant Server-Side & Guardrails', () => {
             name: 'send_reply',
             arguments: {
               text: 'I would be delighted to arrange a private tour. Please select a time.',
+              answer_type: 'conversational',
               cited_fact_ids: [],
               confidence: 0.9,
               language: 'en',

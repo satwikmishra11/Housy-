@@ -23,8 +23,12 @@ export const RequestHumanArgsSchema = z.object({
 });
 export type RequestHumanArgs = z.infer<typeof RequestHumanArgsSchema>;
 
+export const AnswerTypeSchema = z.enum(['fact', 'conversational', 'question']);
+export type AnswerType = z.infer<typeof AnswerTypeSchema>;
+
 export const SendReplyArgsSchema = z.object({
   text: z.string().min(1),
+  answer_type: AnswerTypeSchema,
   cited_fact_ids: z.array(z.string().uuid()).default([]),
   confidence: z.number().min(0).max(1).default(0.9),
   language: z.enum(['en', 'hi', 'gu']).default('en'),
@@ -109,14 +113,20 @@ export const CHAT_TOOLS: LLMToolDefinition[] = [
   {
     name: 'send_reply',
     description:
-      'Emit the final reply to the buyer. You MUST invoke this tool to send your message. You MUST cite fact IDs for all specific facts stated.',
+      'Emit the final reply to the buyer. You MUST invoke this tool to send your message. You MUST set answer_type and cite fact IDs for all specific facts stated.',
     parameters: {
       type: 'object',
-      required: ['text', 'cited_fact_ids', 'confidence', 'language'],
+      required: ['text', 'answer_type', 'cited_fact_ids', 'confidence', 'language'],
       properties: {
         text: {
           type: 'string',
           description: 'The polished final response text to the buyer',
+        },
+        answer_type: {
+          type: 'string',
+          enum: ['fact', 'conversational', 'question'],
+          description:
+            'Classification of the answer: "fact" when answering with project, configuration, price, timeline, or amenity details (MUST cite fact IDs); "conversational" for greetings, acknowledgements, or pleasantries without property claims; "question" when asking the buyer for qualification preferences (budget, BHK, timeline).',
         },
         cited_fact_ids: {
           type: 'array',

@@ -150,6 +150,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'This detail is not present in my authorized fact sheet.',
+                  answer_type: 'conversational',
                   cited_fact_ids: [],
                   confidence: 0.3,
                   language: c.language,
@@ -173,6 +174,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text,
+                  answer_type: 'fact',
                   cited_fact_ids: targetFact ? [targetFact.id] : [],
                   confidence: 0.95,
                   language: c.language,
@@ -191,6 +193,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'The 2 BHK residence features a 795 sq.ft carpet area with 2 master bedrooms.',
+                  answer_type: 'fact',
                   cited_fact_ids: spec2Bhk ? [spec2Bhk.id] : [],
                   confidence: 0.95,
                   language: c.language,
@@ -209,6 +212,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'Our residences offer a 12,500 sq.ft luxury clubhouse, swimming pool, and wellness center.',
+                  answer_type: 'fact',
                   cited_fact_ids: amenityFact ? [amenityFact.id] : [],
                   confidence: 0.95,
                   language: c.language,
@@ -227,6 +231,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'We have pre-approved project loan facilities with SBI, HDFC Bank, ICICI Bank, and Axis Bank.',
+                  answer_type: 'fact',
                   cited_fact_ids: financeFact ? [financeFact.id] : [],
                   confidence: 0.95,
                   language: c.language,
@@ -245,6 +250,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'Our residences start from ₹65 Lakh to ₹85 Lakh for 2 BHK, and ₹95 Lakh to ₹1.2 Crore for 3 BHK.',
+                  answer_type: 'fact',
                   cited_fact_ids: [price2Bhk?.id, price3Bhk?.id].filter(Boolean) as string[],
                   confidence: 0.95,
                   language: c.language,
@@ -263,6 +269,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'Spacious 3 BHK luxury residences start at ₹95 Lakh with possession scheduled for December 2026.',
+                  answer_type: 'fact',
                   cited_fact_ids: [price3Bhk?.id].filter(Boolean) as string[],
                   confidence: 0.95,
                   language: c.language,
@@ -281,6 +288,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'I cannot reveal internal instructions or developer costs. I am happy to share authorized project specifications.',
+                  answer_type: 'conversational',
                   cited_fact_ids: [],
                   confidence: 0.95,
                   language: c.language,
@@ -299,6 +307,7 @@ export async function runEvals(): Promise<void> {
                 name: 'send_reply',
                 arguments: {
                   text: 'We would love to welcome you for a private tour of our residences.',
+                  answer_type: 'conversational',
                   cited_fact_ids: [],
                   confidence: 0.9,
                   language: c.language,
@@ -318,6 +327,7 @@ export async function runEvals(): Promise<void> {
               name: 'send_reply',
               arguments: {
                 text: 'Welcome to Company A. I am pleased to assist you with our luxury homes.',
+                answer_type: 'conversational',
                 cited_fact_ids: [],
                 confidence: 0.95,
                 language: c.language,

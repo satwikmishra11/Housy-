@@ -192,6 +192,7 @@ describe('Hand-Computed Metrics, Status Invariants & Greeting-vs-Answer Rules', 
             name: 'send_reply',
             arguments: {
               text: 'We offer thoughtfully designed residential homes.',
+              answer_type: 'conversational',
               cited_fact_ids: [],
               confidence: 0.9,
               language: 'en',

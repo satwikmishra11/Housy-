@@ -71,6 +71,7 @@ export class MockProvider implements LLMProvider {
             name: 'send_reply',
             arguments: {
               text: replyText,
+              answer_type: 'conversational',
               ui_action: 'show_slots',
               quick_replies: isHindi
                 ? ['2 BHK देखें', '3 BHK लक्ज़री देखें']

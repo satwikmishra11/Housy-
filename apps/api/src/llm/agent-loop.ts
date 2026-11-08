@@ -235,7 +235,7 @@ export async function runAgentLoop(params: AgentLoopParams): Promise<AgentLoopRe
           messages.push({
             role: 'user',
             content:
-              'System instruction: You must formulate your response by calling the send_reply tool with cited_fact_ids, confidence, and language. Do not output plain text.',
+              'System instruction: You must formulate your response by calling the send_reply tool with answer_type ("fact" | "conversational" | "question"), cited_fact_ids, confidence, and language. Do not output plain text.',
           });
           continue;
         }
