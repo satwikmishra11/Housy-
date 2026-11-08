@@ -1,7 +1,12 @@
 import type { Fact } from '@housy/shared';
 import { logger } from '../utils/logger.js';
 import { llmService } from './llm.service.js';
-import { extractNumericTokens, normalizeNumerals } from './guardrails.js';
+import {
+  normalizeNumerals,
+  statesPropertyDetails,
+  getLocalClause,
+  detectNumberCategory,
+} from './guardrails.js';
 
 export interface VerifyReplyClaimsParams {
   replyText: string;
@@ -22,12 +27,7 @@ export function isConversationalReply(replyText: string, citedFacts: Fact[]): bo
   if (citedFacts.length > 0) {
     return false;
   }
-  const normalized = normalizeNumerals(replyText.toLowerCase());
-  const hasFactualTokens =
-    /\b(\d+|bhk|carpet|sq\s*ft|square\s*feet|crore|cr|lakh|lac|₹|rs|possession|rera|tower|floor|price|pricing|cost)\b/i.test(
-      normalized,
-    );
-  return !hasFactualTokens;
+  return !statesPropertyDetails(replyText);
 }
 
 /**
@@ -40,6 +40,10 @@ export async function verifyReplyClaims(params: VerifyReplyClaimsParams): Promis
 
   // 1. Skip purely conversational replies
   if (isConversationalReply(replyText, citedFacts)) {
+    logger.info(
+      { conversationId, replyText },
+      'Verifier skipped for purely conversational reply (no facts cited or claimed)',
+    );
     return { supported: true, unsupportedClaims: [] };
   }
 
@@ -51,26 +55,55 @@ export async function verifyReplyClaims(params: VerifyReplyClaimsParams): Promis
   // 3. If mock provider is active, run deterministic verification
   const provider = llmService.getProvider();
   if (provider.constructor.name === 'MockProvider') {
-    const numbersInReply = extractNumericTokens(replyText);
-    const factsCombinedText = normalizeNumerals(
-      citedFacts.map((f) => `${f.title} ${f.value}`).join(' ').toLowerCase(),
-    );
+    const normalizedReply = normalizeNumerals(replyText);
+    const replyMatches = [...normalizedReply.matchAll(/\b\d+(?:\.\d+)?\b/g)];
     const unsupportedClaims: string[] = [];
 
-    for (const num of numbersInReply) {
-      const tokenRegex = new RegExp(`(?:^|[^0-9a-zA-Z])${num}(?:$|[^0-9a-zA-Z])`, 'i');
-      if (!tokenRegex.test(factsCombinedText)) {
-        unsupportedClaims.push(num);
+    const factsWithNormalized = citedFacts.map((fact) => ({
+      fact,
+      text: normalizeNumerals(`${fact.title}: ${fact.value}`),
+    }));
+
+    for (const match of replyMatches) {
+      const num = match[0];
+      const matchIndex = match.index ?? 0;
+      const replyClause = getLocalClause(normalizedReply, matchIndex, num.length);
+      const replyCategory = detectNumberCategory(replyClause);
+
+      let found = false;
+      for (const { text: factText } of factsWithNormalized) {
+        const factTokenRegex = new RegExp(`(?:^|[^0-9a-zA-Z])(${num})(?:$|[^0-9a-zA-Z])`, 'gi');
+        const factMatches = [...factText.matchAll(factTokenRegex)];
+
+        for (const fMatch of factMatches) {
+          const fMatchIndex = (fMatch.index ?? 0) + (fMatch[0].startsWith(num) ? 0 : 1);
+          const factClause = getLocalClause(factText, fMatchIndex, num.length);
+          const factCategory = detectNumberCategory(factClause);
+
+          if (!replyCategory || !factCategory || replyCategory === factCategory) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          break;
+        }
+      }
+
+      if (!found) {
+        unsupportedClaims.push(
+          `Number token "${num}" (${replyCategory ?? 'unclassified'}) not grounded in cited facts`,
+        );
       }
     }
 
     const supported = unsupportedClaims.length === 0;
-    if (!supported) {
-      logger.warn(
-        { unsupportedClaims, replyText, conversationId },
-        'Verifier flagged unsupported numeric claims in reply',
-      );
-    }
+    logger.info(
+      { supported, unsupportedClaims, conversationId, replyText },
+      supported
+        ? 'Verifier evaluation passed: claims grounded in cited facts'
+        : 'Verifier flagged unsupported claims in reply',
+    );
     return { supported, unsupportedClaims };
   }
 
@@ -109,17 +142,18 @@ or
         ? parsed.unsupportedClaims
         : [];
 
-      if (!supported) {
-        logger.warn(
-          { unsupportedClaims, replyText, conversationId },
-          'Live verifier flagged unsupported claims',
-        );
-      }
+      logger.info(
+        { supported, unsupportedClaims, conversationId, replyText },
+        supported
+          ? 'Live verifier passed: all claims supported by cited facts'
+          : 'Live verifier flagged unsupported claims',
+      );
       return { supported, unsupportedClaims };
     }
 
     // Default safe fallback if JSON parse fails
-    return { supported: true, unsupportedClaims: [] };
+    logger.warn({ conversationId, text }, 'Verifier response not JSON parseable; failing safe');
+    return { supported: false, unsupportedClaims: ['Verifier response could not be verified'] };
   } catch (err) {
     logger.error({ err, conversationId }, 'Verifier execution error; failing safe');
     return { supported: false, unsupportedClaims: ['Verifier evaluation failed'] };

@@ -66,7 +66,7 @@ describe('Configuration & Strict Boolean Parsing', () => {
       DEMO_MODE: 'false',
     };
 
-    it('passes with fully configured valid production environment', () => {
+    it('passes with fully configured valid production environment and defaults VERIFY_REPLIES to true for real providers', () => {
       const result = evaluateConfig(validProdEnv);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -74,6 +74,7 @@ describe('Configuration & Strict Boolean Parsing', () => {
         expect(result.data.LLM_PROVIDER).toBe('gemini');
         expect(result.data.COOKIE_SECURE).toBe(true);
         expect(result.data.DEMO_MODE).toBe(false);
+        expect(result.data.VERIFY_REPLIES).toBe(true);
       }
     });
 

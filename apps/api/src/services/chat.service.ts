@@ -492,6 +492,7 @@ export class ChatService {
       citedFactIds: reply.cited_fact_ids,
       activeFacts,
       confidence: reply.confidence,
+      answerType: reply.answer_type,
     });
 
     if (!postCheck.passed) {
@@ -533,13 +534,29 @@ export class ChatService {
       };
     }
 
-    // 9. Independent claim verification behind VERIFY_REPLIES=true
-    if (config.VERIFY_REPLIES || process.env.VERIFY_REPLIES === 'true') {
+    // 9. Independent claim verification (enabled by default when LLM_PROVIDER is real and NODE_ENV=production, or via VERIFY_REPLIES)
+    const shouldVerify =
+      config.VERIFY_REPLIES ||
+      process.env.VERIFY_REPLIES === 'true' ||
+      (config.NODE_ENV === 'production' && config.LLM_PROVIDER !== 'mock');
+
+    if (shouldVerify) {
       const verifierResult = await verifyReplyClaims({
         replyText: reply.text,
         citedFacts: activeFacts.filter((f) => reply.cited_fact_ids.includes(f.id)),
         conversationId: conversation.id,
       });
+
+      logger.info(
+        {
+          conversationId: conversation.id,
+          supported: verifierResult.supported,
+          unsupportedClaims: verifierResult.unsupportedClaims,
+        },
+        verifierResult.supported
+          ? 'Independent verifier passed: all reply claims supported by cited facts'
+          : 'Independent verifier rejected: reply contains unsupported claims',
+      );
 
       if (!verifierResult.supported) {
         if (!lead) {
@@ -588,6 +605,7 @@ export class ChatService {
       reply.cited_fact_ids,
       {
         confidence: reply.confidence,
+        answerType: reply.answer_type,
         uiAction: reply.ui_action,
         quickReplies: reply.quick_replies,
       },

@@ -196,6 +196,15 @@ export function evaluateConfig(rawEnv: Record<string, string | undefined>): Conf
     if (!model || model.trim() === '') {
       errors.push('LLM_MODEL must be set in production');
     }
+
+    // Enable verifier by default in production whenever using a real provider (gemini or anthropic)
+    const effectiveProvider = rawEnv['LLM_PROVIDER'] || effectiveEnv['LLM_PROVIDER'];
+    if (
+      (effectiveProvider === 'gemini' || effectiveProvider === 'anthropic') &&
+      rawEnv['VERIFY_REPLIES'] === undefined
+    ) {
+      effectiveEnv['VERIFY_REPLIES'] = 'true';
+    }
   }
 
   // 2. Test Environment Hard Isolation Rules
