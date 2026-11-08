@@ -6,7 +6,7 @@ This document reports evaluation outcomes for both the deterministic regression 
 
 ## 1. Pipeline Tests (Mock Provider)
 
-- **Execution Date**: 2026-11-08T12:47:21.700Z  
+- **Execution Date**: 2026-11-08T16:17:14.218Z  
 - **Test Harness**: `npm run eval:ai -- --provider=mock`  
 - **Provider**: `MockProvider (eval-mock-model)`  
 - **Total Cases Evaluated (n)**: 56  

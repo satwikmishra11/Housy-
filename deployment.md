@@ -166,7 +166,7 @@ npm run capture:transcripts
 ### Hosting Architecture (`vercel.json`)
 Housy deploys as a unified Vercel multi-service project:
 - **Service `web`**: Root `apps/web/`, framework preset `"vite"`, serving the buyer chat, staff portal, and sales analytics UI. Publicly routed via `/(.*)`.
-- **Service `api`**: Root `apps/api/`, framework preset `"express"`, compiled via esbuild to `dist/server.js`. Publicly routed via `/api` and `/api/(.*)`.
+- **Service `api`**: Root `apps/api/`, framework preset `"express"`, automatically resolving the single tracked bundle `apps/api/index.js` as root entrypoint (matching `vercel.json` without any custom `entrypoint` property). Publicly routed via `/api` and `/api/(.*)`.
 - **Unified Domain Routing**: Both services deploy atomically under the same project domain (`https://housy-ebon.vercel.app`). Requests to `/api/*` are routed by edge infrastructure directly to the Express service, providing same-origin cookie security (`SameSite=Lax`) and zero CORS friction.
 
 ### Database
@@ -178,11 +178,12 @@ Scheduled operations are managed by a single unified HTTPS webhook invoked by an
 - **URL**: `POST https://housy-ebon.vercel.app/api/internal/run-jobs`
 - **Headers**: `X-Internal-Key: <INTERNAL_API_KEY>` (evaluated via `crypto.timingSafeEqual`)
 - **Schedule**: `*/5 * * * *`
-- **Four Isolated Routines**:
+- **Five Isolated Routines**:
   1. `reminders`: Processes pending T-24h and T-2h visit reminders (limit 100, idempotent, `FOR UPDATE SKIP LOCKED`).
   2. `slot_top_up`: Projects executive availability rules 28 days forward (`ON CONFLICT DO NOTHING`).
   3. `handoff_escalation`: Escalates unaccepted handoffs older than 15 minutes to `urgent`.
   4. `stale_session_cleanup`: Reconciles anonymous chat sessions older than 24 hours without lead conversion.
+  5. `data_retention`: Enforces DPDP 2023 90-day retention policies by anonymizing non-consented sessions.
 - **10-Minute Health SLA**: If reminders have not completed a successful run within 10 minutes, `/health` and `GET /api/health` transition to **RED** (`Overdue (>10m)`).
 
 ---

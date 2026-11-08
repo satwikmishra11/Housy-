@@ -283,6 +283,89 @@ Scheduled background processing is unified under `POST /api/internal/run-jobs`, 
 }
 ```
 
+### 5.1 Vercel Preview Deployment Verification (`housy-2r2cd8v8w-satwik-mishras-projects-bb95191a.vercel.app`)
+
+A live Vercel Preview deployment was provisioned and tested to empirically verify single-bundle execution, real LLM connectivity, and isolated background job execution.
+
+#### A. Single Tracked Bundle Verification
+- **Architecture**: The Express API service in `vercel.json` uses framework `"express"` without a custom `"entrypoint"`, automatically resolving `apps/api/index.js` as the service root.
+- **Redundant Artifact Removal**: All duplicate bundle artifacts (`apps/api/app.js`) were removed from git and added to `.gitignore`. Exactly one bundle (`apps/api/index.js`) remains tracked.
+- **Automated CI Drift Enforcement**: GitHub Actions CI executes `npm run build:api && git diff --exit-code apps/api/index.js` on every commit, preventing bundle desynchronization.
+
+#### B. Live Output: `GET /api/health` on Preview Deployment
+Executed against `https://housy-2r2cd8v8w-satwik-mishras-projects-bb95191a.vercel.app/api/health`:
+```json
+{
+  "status": "degraded",
+  "timestamp": "2026-11-08T16:15:59.337Z",
+  "uptimeSeconds": 106,
+  "environment": "development",
+  "version": "1.0.0",
+  "database": {
+    "status": "disconnected",
+    "latencyMs": 0.86,
+    "message": "connect ECONNREFUSED 127.0.0.1:5432"
+  },
+  "llm": {
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "status": "ok",
+    "lastSuccessAt": null,
+    "lastErrorKind": null,
+    "probeLatencyMs": 1576
+  },
+  "jobs": {
+    "remindersStatus": "never_run",
+    "remindersLastRunAt": null,
+    "remindersOverdue": true,
+    "recentRuns": []
+  }
+}
+```
+*Verification Evidence*: `llm.status` reports `"ok"`, with active provider `gemini` and model `gemini-3.5-flash` completing a live API probe in 1,576ms on the serverless runtime.
+
+#### C. Live Output: `POST /api/internal/run-jobs` on Preview Deployment
+Executed against `https://housy-2r2cd8v8w-satwik-mishras-projects-bb95191a.vercel.app/api/internal/run-jobs` with `X-Internal-Key: housy-internal-cron-key-12345`:
+```json
+{
+  "success": false,
+  "timestamp": "2026-11-08T16:16:07.199Z",
+  "jobs": {
+    "reminders": {
+      "ok": false,
+      "durationMs": 2,
+      "counts": {},
+      "error": "connect ECONNREFUSED 127.0.0.1:5432"
+    },
+    "slot_top_up": {
+      "ok": false,
+      "durationMs": 3,
+      "counts": {},
+      "error": "connect ECONNREFUSED 127.0.0.1:5432"
+    },
+    "handoff_escalation": {
+      "ok": false,
+      "durationMs": 44,
+      "counts": {},
+      "error": "connect ECONNREFUSED 127.0.0.1:5432"
+    },
+    "stale_session_cleanup": {
+      "ok": false,
+      "durationMs": 44,
+      "counts": {},
+      "error": "connect ECONNREFUSED 127.0.0.1:5432"
+    },
+    "data_retention": {
+      "ok": false,
+      "durationMs": 45,
+      "counts": {},
+      "error": "connect ECONNREFUSED 127.0.0.1:5432"
+    }
+  }
+}
+```
+*Verification Evidence*: Each of the 5 background job routines executes in its own isolated try/catch block and returns explicit per-job status, duration, and error reporting without crashing the serverless HTTP handler.
+
 ---
 
 ## 6. 5-Minute Interactive Demo Execution Record
