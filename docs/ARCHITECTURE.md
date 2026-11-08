@@ -18,7 +18,7 @@ To keep documentation modular, maintainable, and cohesive, technical specificati
 | **[`docs/DATA_MODEL.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/DATA_MODEL.md)** | PostgreSQL relational schema, 19 entity catalog, ER diagram, constraints, zero double-booking indexes, and Migration 005 performance indexes. |
 | **[`docs/AI_PIPELINE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_PIPELINE.md)** | AI chat assistant architecture, LLM provider adapters, `detectIntent` pre-filters, script-first language detection, numeral normalization, token-boundary grounding, verifier, failure modes, and evals. |
 | **[`docs/OPERATIONS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/OPERATIONS.md)** | Production topology, Vercel multi-service project (`vercel.json`), background reminder workers, channel outbox, DPDP 2023 opt-out & re-consent, and observability. |
-| **[`docs/ASSUMPTIONS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/ASSUMPTIONS.md)** | Complete product, legal, technical, and operational assumptions log (`A1`–`A96`). |
+| **[`docs/ASSUMPTIONS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/ASSUMPTIONS.md)** | Complete product, legal, technical, and operational assumptions log (`A1`–`A97`). |
 | **[`docs/HARDENING.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/HARDENING.md)** | Security audits, rate limit enforcement, automated secret scanning, and WCAG AA accessibility verification. |
 | **[`docs/VERIFICATION.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/VERIFICATION.md)** | Fresh-clone test execution logs, comprehensive test counts (574 tests), and live AI model evaluation matrix. |
 

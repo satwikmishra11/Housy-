@@ -30,25 +30,57 @@
 
 ---
 
-## 5-Command Quickstart
+## Quickstart & Local Setup
 
-Get a complete local development environment running against PostgreSQL in 5 commands:
-
+### 1. Prerequisites & Environment Setup
+Clone the repository, install dependencies, and start PostgreSQL:
 ```bash
 git clone https://github.com/satwikmishra11/Housy-.git && cd Housy-
 npm install
 cp apps/api/.env.example apps/api/.env
-npm run db:test:reset
-npm run dev
+npm run db:up   # Starts PostgreSQL container (creates housy_db and housy_test)
 ```
 
-The API backend starts on `http://localhost:3001` and the React frontend on `http://localhost:5173` (with `/api` requests proxied to the backend).
+### 2. Run the App (Development Database — `housy_db`)
+Initialize the development database and launch both API and Web applications:
+```bash
+npm run db:reset    # Runs migrations and seeds demo accounts & projects into housy_db
+npm run dev         # Launches Express API (http://localhost:3001) & Vite UI (http://localhost:5173)
+```
+- API backend: `http://localhost:3001`
+- React frontend: `http://localhost:5173` (proxies `/api` requests to backend)
 
-### Quick Demo Accounts
+#### Demo Accounts
 | Role | Email | Password | Scope |
 |---|---|---|---|
 | **Sales Head (Admin)** | `harshil.mehta@example.com` | `DemoPass123!` | Developer-wide analytics, fact sheet editor, slot rules, ad spend |
 | **Sales Executive** | `amit.shah@example.com` | `DemoPass123!` | Assigned lead triage, executive handoff inbox, visit outcome verification |
+
+### 3. Run the Tests (Test Database — `housy_test`)
+Tests run in strict isolation against `housy_test` (resolved via `TEST_DATABASE_URL`). The test runner and setup hooks fail fast and refuse to run if pointed at a non-test database:
+```bash
+npm run db:test:reset   # Runs migrations and seeds fresh test data into housy_test (NODE_ENV=test)
+npm test                # Executes full unit and integration test suite across all workspaces
+```
+> [!NOTE]
+> Vitest includes a `globalSetup` hook (`apps/api/tests/global-setup.ts`) that inspects `housy_test` before test suites execute, automatically running migrations and seeding fixtures if the test database is empty. You can also run `npm run db:test:reset` at any time to wipe and reset the test database on demand.
+
+### 4. AI Chat Assistant Configuration & Live Responses
+To power live conversational responses from the residential fact sheet, configure the following in `apps/api/.env`:
+```env
+LLM_PROVIDER=gemini        # 'gemini' or 'anthropic'
+LLM_MODEL=gemini-2.5-flash # provider model ID
+GEMINI_API_KEY=your_key_here
+```
+
+**What the user sees without an API key or model:**
+- Without `LLM_PROVIDER`, `LLM_MODEL`, and a valid key (or when third-party provider APIs encounter rate limits or outages), the AI sales assistant does **not** crash or display raw error stack traces to the home buyer.
+- Instead, the deterministic guardrail pipeline safely returns a polite, localized fallback reassurance:
+  - **English**: *"A member of our team will confirm this with you shortly. In the meantime, would you like to schedule a site visit or speak with a sales advisor?"*
+  - **Hindi**: *"हमारी टीम का एक सदस्य शीघ्र ही आपसे इस बारे में पुष्टि करेगा। इस बीच, क्या आप साइट विजिट बुक करना चाहेंगे या किसी सलाहकार से बात करना चाहेंगे?"*
+  - **Gujarati**: *"અમારી ટીમના સભ્ય ટૂંક સમયમાં તમારી સાથે આની પુષ્ટિ કરશે. તે દરમિયાન, શું તમે સાઇટ મુલાકાત શેડ્યૂલ કરવા માંગો છો કે સલાહકાર સાથે વાત કરવા માંગો છો?"*
+- Behind the scenes, the system logs the buyer's query into `unanswered_questions`, flags the chat session for Sales Head review, and escalates the lead to a human sales executive handoff queue.
+- *(Note: During automated test execution under `NODE_ENV=test`, the system automatically uses `LLM_PROVIDER=mock` so all test suites run deterministically without requiring live third-party API credentials).*
 
 ---
 
@@ -97,6 +129,6 @@ Detailed technical documentation is available in `docs/`:
 - **[Data Model & Constraints](docs/DATA_MODEL.md)**: 19 PostgreSQL tables, ER diagram, partial unique indexes, and Migration 005 performance indexing.
 - **[AI Pipeline & Guardrails](docs/AI_PIPELINE.md)**: Autonomous agent loop, tool schemas, multilingual regex pre-filters, failure mitigations, and evals.
 - **[Operations & Deployment](docs/OPERATIONS.md)**: Vercel multi-service project (`vercel.json`), serverless runtime, background reminder workers, and outbox.
-- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A60`).
+- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A97`).
 - **[Hardening & Security](docs/HARDENING.md)**: Rate limiting benchmarks, CSRF/CSP protections, secret scanning, and WCAG AA audits.
-- **[AI Evaluation Suite](docs/AI_EVALS.md)**: 48-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.
+- **[AI Evaluation Suite](docs/AI_EVALS.md)**: 56-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.
