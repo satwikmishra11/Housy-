@@ -63,15 +63,91 @@ const LOCALIZED_GREETINGS: Record<SupportedLanguageCode, string> = {
   gu: 'નમસ્તે! આરણ્યા રિયલ્ટી માં આપનું સ્વાગત છે. આજે હું આપની ઘરની શોધમાં કેવી રીતે મદદ કરી શકું?',
 };
 
-const LOCALIZED_QUICK_REPLIES: Record<SupportedLanguageCode, string[]> = {
-  en: ['Explore 2 BHK', 'Explore 3 BHK Luxury', 'Schedule a Site Visit'],
-  hi: ['2 BHK देखें', '3 BHK लक्ज़री देखें', 'साइट विज़िट बुक करें'],
-  gu: ['2 BHK જુઓ', '3 BHK લક્ઝરી જુઓ', 'સાઇટ વિઝિટ બુક કરો'],
+const SERVER_MAP_CHIPS = new Set([
+  'Explore 2 BHK',
+  'Explore 3 BHK Luxury',
+  'Schedule a Site Visit',
+  '2 BHK देखें',
+  '3 BHK लक्ज़री देखें',
+  'साइट विज़िट बुक करें',
+  '2 BHK જુઓ',
+  '3 BHK લક્ઝરી જુઓ',
+  'સાઇટ વિઝિટ બુક કરો',
+]);
+
+const isDefaultServerMap = (chips?: string[]): boolean => {
+  if (!chips || chips.length === 0) return true;
+  return chips.every((c) => SERVER_MAP_CHIPS.has(c));
+};
+
+const translateChip = (
+  chip: string,
+  lang: SupportedLanguageCode,
+  t: (key: string, opts?: { lng?: string }) => string,
+): string => {
+  const lower = chip.trim().toLowerCase();
+
+  // 1. Explore 2 BHK
+  if (
+    /^(explore\s+)?2\s*bhk(\s+(luxury|floor\s*plans|residences))?$/i.test(lower) ||
+    lower === '2 bhk देखें' ||
+    lower === '2 bhk જુઓ'
+  ) {
+    return t('buyer.quickReplies.explore2Bhk', { lng: lang }) || 'Explore 2 BHK';
+  }
+
+  // 2. Explore 3 BHK
+  if (
+    /^(explore\s+)?3\s*bhk(\s+(luxury|floor\s*plans|residences))?$/i.test(lower) ||
+    lower === '3 bhk लक्ज़री देखें' ||
+    lower === '3 bhk લક્ઝરી જુઓ'
+  ) {
+    return t('buyer.quickReplies.explore3Bhk', { lng: lang }) || 'Explore 3 BHK Luxury';
+  }
+
+  // 3. Schedule Visit
+  if (
+    /^(schedule|book)(\s+a)?\s+(site\s+)?visit$/i.test(lower) ||
+    lower === 'साइट विज़िट बुक करें' ||
+    lower === 'સાઇટ વિઝિટ બુક કરો' ||
+    lower === 'સાઇટ મુલાકાત બુક કરો' ||
+    lower.includes('મુલાકાત') ||
+    lower.includes('વિઝિટ')
+  ) {
+    return t('buyer.quickReplies.scheduleVisit', { lng: lang }) || 'Schedule a Site Visit';
+  }
+
+  // 4. Connect Executive
+  if (
+    /^connect(\s+with)?\s+executive$/i.test(lower) ||
+    lower === 'एग्जीक्यूटिव से बात करें' ||
+    lower === 'એક્ઝિક્યુટિવ સાથે વાત કરો'
+  ) {
+    return t('buyer.quickReplies.connectExecutive', { lng: lang }) || 'Connect with executive';
+  }
+
+  // 5. Ask Price
+  if (
+    /^(what\s+is\s+the\s+)?price(\s+range)?\??$/i.test(lower) ||
+    lower === 'कीमत क्या है?' ||
+    lower === 'ભાવ શું છે?'
+  ) {
+    return t('buyer.quickReplies.askPrice', { lng: lang }) || 'What is the price range?';
+  }
+
+  return chip;
 };
 
 export const BuyerChatPage: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
+  const prevLangRef = useRef<string>(i18n.language);
+
+  const getDefaultQuickReplies = (lang: SupportedLanguageCode): string[] => [
+    t('buyer.quickReplies.explore2Bhk', { lng: lang }) || 'Explore 2 BHK',
+    t('buyer.quickReplies.explore3Bhk', { lng: lang }) || 'Explore 3 BHK Luxury',
+    t('buyer.quickReplies.scheduleVisit', { lng: lang }) || 'Schedule a Site Visit',
+  ];
 
   const currentLang = (i18n.language?.slice(0, 2) as ChatLanguage) || 'en';
 
@@ -141,7 +217,7 @@ export const BuyerChatPage: React.FC = () => {
 
   // Auto scroll to bottom smoothly
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    messagesEndRef.current?.scrollIntoView?.({ behavior });
   };
 
   useEffect(() => {
@@ -254,16 +330,21 @@ export const BuyerChatPage: React.FC = () => {
           }
           sessionStorage.setItem('housy_chat_buyer_token', startRes.sessionToken);
 
+          const defaultChips = getDefaultQuickReplies(currentLang as SupportedLanguageCode);
+          const initialChips = isDefaultServerMap(startRes.quickReplies)
+            ? defaultChips
+            : (startRes.quickReplies || defaultChips);
+
           const greetingMsg: UiChatMessage = {
             id: `msg_init_${Date.now()}`,
             role: 'assistant',
             content: startRes.greeting,
             createdAt: new Date().toISOString(),
-            quickReplies: startRes.quickReplies,
+            quickReplies: initialChips,
           };
 
           setMessages([greetingMsg]);
-          setActiveQuickReplies(startRes.quickReplies || []);
+          setActiveQuickReplies(initialChips);
           setIsInitializing(false);
         }
       } catch (err) {
@@ -322,16 +403,49 @@ export const BuyerChatPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [isHandoff, conversationStatus, conversationId]);
 
+  // Recompute quick-reply chips when the UI language changes
+  useEffect(() => {
+    const code = (i18n.language?.slice(0, 2) as SupportedLanguageCode) || 'en';
+    if (prevLangRef.current === code) {
+      return;
+    }
+    prevLangRef.current = code;
+
+    setActiveQuickReplies((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      if (isDefaultServerMap(prev)) {
+        return getDefaultQuickReplies(code);
+      }
+      return prev.map((chip) => translateChip(chip, code, t));
+    });
+
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0]?.role === 'assistant') {
+        const translatedChips = getDefaultQuickReplies(code);
+        return [
+          {
+            ...prev[0],
+            content: LOCALIZED_GREETINGS[code] || LOCALIZED_GREETINGS.en,
+            quickReplies: translatedChips,
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [i18n.language, t]);
+
   // Language switch handler
   const handleLanguageChange = async (code: SupportedLanguageCode) => {
+    prevLangRef.current = code;
     await changeAppLanguage(code);
+    const newChips = getDefaultQuickReplies(code);
     setMessages((prev) => {
       if (prev.length <= 1 && prev[0]?.role === 'assistant') {
         return [
           {
             ...prev[0],
             content: LOCALIZED_GREETINGS[code] || LOCALIZED_GREETINGS.en,
-            quickReplies: LOCALIZED_QUICK_REPLIES[code] || LOCALIZED_QUICK_REPLIES.en,
+            quickReplies: newChips,
           },
         ];
       }
@@ -339,7 +453,10 @@ export const BuyerChatPage: React.FC = () => {
     });
     setActiveQuickReplies((prev) => {
       if (prev.length > 0) {
-        return LOCALIZED_QUICK_REPLIES[code] || LOCALIZED_QUICK_REPLIES.en;
+        if (isDefaultServerMap(prev)) {
+          return newChips;
+        }
+        return prev.map((chip) => translateChip(chip, code, t));
       }
       return prev;
     });
@@ -612,10 +729,25 @@ export const BuyerChatPage: React.FC = () => {
   const activeProject =
     projects.find((p) => p.id === selectedProjectId) ||
     projects[0] || {
+      id: 'p1',
       name: 'The Palm Serene',
       displayName: 'The Palm Serene',
+      display_name: 'The Palm Serene',
       rera_number: 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126',
     };
+
+  const rawActiveName =
+    activeProject.displayName ||
+    (activeProject as { display_name?: string }).display_name ||
+    activeProject.name ||
+    'The Palm Serene';
+
+  const activeProjectDisplayName =
+    rawActiveName === 'Project 1'
+      ? 'The Palm Serene'
+      : rawActiveName === 'Project 2'
+        ? 'Skyline Greens'
+        : rawActiveName;
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-background text-ink antialiased">
@@ -646,7 +778,7 @@ export const BuyerChatPage: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-semibold text-ink text-sm sm:text-base leading-none">
-                  {activeProject.displayName || (activeProject as { display_name?: string }).display_name || activeProject.name}
+                  {activeProjectDisplayName}
                 </span>
                 <span className="text-muted text-xs hidden sm:inline">·</span>
                 {conversationStatus === 'human' ? (
@@ -788,7 +920,7 @@ export const BuyerChatPage: React.FC = () => {
                     <BookingConfirmationCard
                       bookingId={msg.bookingId}
                       startsAt={msg.startsAt}
-                      projectName={activeProject.name}
+                      projectName={activeProjectDisplayName}
                       executiveName={msg.executiveName || activeBooking?.executiveName}
                       executivePhone={msg.executivePhone || activeBooking?.executivePhone}
                       manageToken={msg.manageToken || activeBooking?.manageToken}
@@ -826,7 +958,7 @@ export const BuyerChatPage: React.FC = () => {
                 <BookingConfirmationCard
                   bookingId={activeBooking.bookingId}
                   startsAt={activeBooking.startsAt}
-                  projectName={activeProject.name}
+                  projectName={activeProjectDisplayName}
                   executiveName={activeBooking.executiveName}
                   executivePhone={activeBooking.executivePhone}
                   manageToken={activeBooking.manageToken}

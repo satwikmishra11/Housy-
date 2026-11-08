@@ -31,7 +31,14 @@
     "visitConfirmed": "Site Visit Confirmed",
     "visitDetails": "We have reserved your slot. A calendar invitation and location pin will be shared with you.",
     "talkToExecutive": "Speak with Sales Executive",
-    "executiveAssigned": "A dedicated executive from Aaranya Realty has been assigned to your enquiry."
+    "executiveAssigned": "A dedicated executive from Aaranya Realty has been assigned to your enquiry.",
+    "quickReplies": {
+      "explore2Bhk": "Explore 2 BHK",
+      "explore3Bhk": "Explore 3 BHK Luxury",
+      "scheduleVisit": "Schedule a Site Visit",
+      "connectExecutive": "Connect with executive",
+      "askPrice": "What is the price range?"
+    }
   },
   "navigation": {
     "overview": "Overview",
