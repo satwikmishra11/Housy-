@@ -20,7 +20,7 @@
     "db:seed:demo": "DEMO_MODE=true tsx src/db/seed.ts",
     "seed:demo": "DEMO_MODE=true node dist/db/seed.js",
     "db:reset": "tsx src/db/reset.ts",
-    "db:test:reset": "npm run db:reset",
+    "db:test:reset": "NODE_ENV=test tsx src/db/reset.ts",
     "release": "node-pg-migrate up",
     "migrate:create": "node-pg-migrate create",
     "migrate:up": "node-pg-migrate up --envPath .env",
