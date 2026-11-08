@@ -38,6 +38,14 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
   onReschedule,
   onCancel,
 }) => {
+  // Enforce display name: never allow generic "Project 1" or "Project 2"
+  const resolvedProjectName =
+    projectName === 'Project 1'
+      ? 'The Palm Serene'
+      : projectName === 'Project 2'
+        ? 'Skyline Greens'
+        : projectName || 'The Palm Serene';
+
   // Enforce named executive: eliminate generic placeholder
   const resolvedExecutiveName =
     !executiveName || executiveName === 'Dedicated Sales Executive'
@@ -61,7 +69,7 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
 
     downloadIcsCalendar(
       {
-        title: `Private Site Visit: ${projectName}`,
+        title: `Private Site Visit: ${resolvedProjectName}`,
         description: `Your private appointment with ${resolvedExecutiveName} (${resolvedExecutivePhone}) at Aaranya Realty Sales Gallery.\nAppointment ID: ${bookingId}\nHost Contact: ${resolvedExecutivePhone}\nRERA Reg: PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`,
         location: address,
         startsAt: startDate.toISOString(),
@@ -72,7 +80,7 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
   };
 
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${projectName}, ${address}`,
+    `${resolvedProjectName}, ${address}`,
   )}`;
 
   return (
@@ -126,7 +134,7 @@ export const BookingConfirmationCard: React.FC<BookingConfirmationCardProps> = (
         <div className="flex items-start gap-2.5">
           <Building className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
           <span>
-            <strong className="text-ink">Project:</strong> {projectName}
+            <strong className="text-ink">Project:</strong> {resolvedProjectName}
           </span>
         </div>
 

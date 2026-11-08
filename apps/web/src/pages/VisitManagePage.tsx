@@ -179,12 +179,21 @@ export const VisitManagePage: React.FC = () => {
     },
   });
 
+  // Resolved display name enforcing brand guidelines (no generic Project 1 / Project 2)
+  const rawProjectName = visit?.projectName || '';
+  const resolvedProjectName =
+    rawProjectName === 'Project 1'
+      ? 'The Palm Serene'
+      : rawProjectName === 'Project 2'
+        ? 'Skyline Greens'
+        : rawProjectName || 'The Palm Serene';
+
   // Handle Add to Calendar
   const handleAddToCalendar = () => {
     if (!visit) return;
     downloadIcsCalendar({
-      title: `Site Visit: ${visit.projectName}`,
-      description: `Appointment for site visit at ${visit.projectName} with representative ${visit.executiveName}. Lead ID: ${visit.leadPublicId || ''}. Manage appointment: ${window.location.href}`,
+      title: `Site Visit: ${resolvedProjectName}`,
+      description: `Appointment for site visit at ${resolvedProjectName} with representative ${visit.executiveName}. Lead ID: ${visit.leadPublicId || ''}. Manage appointment: ${window.location.href}`,
       location: visit.projectAddress,
       startsAt: visit.startsAt,
       endsAt: visit.endsAt,
@@ -333,7 +342,7 @@ export const VisitManagePage: React.FC = () => {
                   {t('visitManage.residentialProperty', 'Residential Property')}
                 </span>
                 <h2 className="font-serif text-xl sm:text-2xl font-bold text-ink mt-1">
-                  {visit.projectName}
+                  {resolvedProjectName}
                 </h2>
               </div>
             </div>

@@ -46,7 +46,7 @@ export class ReminderService {
               vs.starts_at AS slot_starts_at,
               l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
               l.consent_status, l.opted_out_at,
-              p.name AS project_name, p.rera_number, p.address AS project_address,
+              COALESCE(p.display_name, p.name) AS project_name, p.rera_number, p.address AS project_address,
               u.name AS executive_name, u.phone AS executive_phone
        FROM reminders r
        JOIN visit_bookings vb ON r.booking_id = vb.id
@@ -114,8 +114,15 @@ export class ReminderService {
       }).format(new Date(r.slot_starts_at));
 
       const templateName = r.kind === '24h' ? 'reminder_24h' : 'reminder_2h';
+      const resolvedProjectName =
+        r.project_name === 'Project 1'
+          ? 'The Palm Serene'
+          : r.project_name === 'Project 2'
+            ? 'Skyline Greens'
+            : r.project_name || 'The Palm Serene';
+
       const payload: Record<string, string | number> = {
-        projectName: r.project_name,
+        projectName: resolvedProjectName,
         startsAt: istTimeStr,
         executiveName: r.executive_name,
         executivePhone: r.executive_phone || '+91 90000 00002',

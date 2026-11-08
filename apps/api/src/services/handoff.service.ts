@@ -77,14 +77,20 @@ export class HandoffService {
     const openQuestions = unansweredRes.rows.map((r) => r.question);
 
     // 4. Retrieve project info
-    let projectName = 'The Palm Residences';
+    let projectName = 'The Palm Serene';
     if (lead.project_id) {
-      const projRes = await query<{ name: string }>(
-        `SELECT name FROM projects WHERE id = $1`,
+      const projRes = await query<{ name: string; display_name?: string }>(
+        `SELECT name, COALESCE(display_name, name) as display_name FROM projects WHERE id = $1`,
         [lead.project_id],
       );
-      if (projRes.rows[0]?.name) {
-        projectName = projRes.rows[0].name;
+      const rawName = projRes.rows[0]?.display_name || projRes.rows[0]?.name;
+      if (rawName) {
+        projectName =
+          rawName === 'Project 1'
+            ? 'The Palm Serene'
+            : rawName === 'Project 2'
+              ? 'Skyline Greens'
+              : rawName;
       }
     }
 

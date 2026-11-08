@@ -217,15 +217,21 @@ export class VisitService {
       const token = await signMagicLinkToken({ bookingId: booking.id, leadId });
 
       // 9. Queue approved outbound confirmation template with RERA registration number
-      const projRes = await client.query<{ name: string; rera_number: string }>(
-        `SELECT name, rera_number FROM projects WHERE id = $1`,
+      const projRes = await client.query<{ name: string; display_name?: string; rera_number: string }>(
+        `SELECT name, COALESCE(display_name, name) as display_name, rera_number FROM projects WHERE id = $1`,
         [projectId],
       );
       const execRes = await client.query<{ name: string; phone: string | null }>(
         `SELECT name, phone FROM users WHERE id = $1`,
         [slot.executive_id],
       );
-      const projectName = projRes.rows[0]?.name || 'The Palm Residences';
+      const rawName = projRes.rows[0]?.display_name || projRes.rows[0]?.name || 'The Palm Serene';
+      const projectName =
+        rawName === 'Project 1'
+          ? 'The Palm Serene'
+          : rawName === 'Project 2'
+            ? 'Skyline Greens'
+            : rawName;
       const reraNumber = projRes.rows[0]?.rera_number || 'PR/GJ/AHMEDABAD/AUDA/RAA01234/011126';
       const executiveName = execRes.rows[0]?.name || 'Harshil Mehta';
       const executivePhone = execRes.rows[0]?.phone || '+91 90000 00002';
@@ -545,6 +551,14 @@ export class VisitService {
   }
 
   private formatVisitDetail(row: DbVisitDetailsRow, token: string): VisitDetail {
+    const rawName = row.project_name || 'The Palm Serene';
+    const resolvedProjectName =
+      rawName === 'Project 1'
+        ? 'The Palm Serene'
+        : rawName === 'Project 2'
+          ? 'Skyline Greens'
+          : rawName;
+
     return {
       id: row.booking_id,
       leadId: row.lead_id,
@@ -552,7 +566,7 @@ export class VisitService {
       leadPhone: row.lead_phone,
       leadPublicId: row.lead_public_id,
       projectId: row.project_id,
-      projectName: row.project_name,
+      projectName: resolvedProjectName,
       projectAddress: row.project_address,
       lat: Number(row.project_lat),
       lng: Number(row.project_lng),
