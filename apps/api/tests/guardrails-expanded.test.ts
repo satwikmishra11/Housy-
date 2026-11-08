@@ -43,8 +43,12 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       { input: 'kaink ochhu karo ne', expected: 'negotiation', desc: 'gu kaink ochhu' },
       { input: 'rokhad payment par discount malshe?', expected: 'negotiation', desc: 'gu discount malshe' },
       { input: 'chhello bhav shu aapsho?', expected: 'negotiation', desc: 'gu chhello bhav' },
+      { input: 'Can you offer a concession or waive the floor rise charges?', expected: 'negotiation', desc: 'concession and waive phrasing' },
+      { input: 'ભાવમાં થોડી બાંધછોડ કરો, જો આજે ટોકન આપું તો શું છૂટછાટ મળશે?', expected: 'negotiation', desc: 'gu negotiation with bandhchhod and chhutchhat' },
+      { input: 'थोड़ी रियायत या छूट मिलेगी क्या? अगर आज फाइनल करें तो कुछ गुंजाइश है?', expected: 'negotiation', desc: 'hi negotiation with rihayat and gunjaish' },
 
       // --- PRICE INFO (NOT NEGOTIATION) ---
+      { input: '3 BHK का दाम कितना है', expected: 'price_info', desc: 'hi 3 BHK ka daam kitna hai' },
       { input: 'What is the price range of a 3 BHK?', expected: 'price_info', desc: 'price range enquiry' },
       { input: 'What is the cost of 2 BHK apartment?', expected: 'price_info', desc: 'cost of 2 BHK' },
       { input: 'home loan rate', expected: 'price_info', desc: 'home loan rate enquiry' },

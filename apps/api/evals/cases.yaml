@@ -100,6 +100,30 @@ cases:
     expected_text_contains: ["अंतिम मूल्य"]
     must_flag: "price_ask"
 
+  - id: "PRC-07"
+    category: "Price Policy"
+    language: "en"
+    input: "Can you offer a concession or waive the floor rise charges on booking?"
+    expected_action: "prefilter_price"
+    expected_text_contains: ["Final pricing is confirmed by our sales team"]
+    must_flag: "price_ask"
+
+  - id: "PRC-08"
+    category: "Price Policy"
+    language: "gu"
+    input: "ભાવમાં થોડી બાંધછોડ કરો, જો આજે ટોકન આપું તો શું છૂટછાટ મળશે?"
+    expected_action: "prefilter_price"
+    expected_text_contains: ["અંતિમ કિંમત"]
+    must_flag: "price_ask"
+
+  - id: "PRC-09"
+    category: "Price Policy"
+    language: "hi"
+    input: "थोड़ी रियायत या छूट मिलेगी क्या? अगर आज फाइनल करें तो कुछ गुंजाइश है?"
+    expected_action: "prefilter_price"
+    expected_text_contains: ["अंतिम मूल्य"]
+    must_flag: "price_ask"
+
   # =====================================================================
   # 3. Out-of-Scope & Missing Fact Questions (Cases 13 - 18)
   # =====================================================================
@@ -149,6 +173,15 @@ cases:
     input: "સોસાયટીમાં ગેસ લાઈન ક્યારે શરૂ થશે અને કેટલો ખર્ચ થશે?"
     expected_action: "safe_fallback"
     expected_text_contains: ["અમારી ટીમનો એક સભ્ય ટૂંક સમયમાં તમારી સાથે આની પુષ્ટિ કરશે."]
+    must_handoff: true
+
+  - id: "OOS-07"
+    category: "Missing Fact"
+    language: "en"
+    input: "Does the tower have a private helipad and a heated rooftop infinity pool on the 40th floor?"
+    expected_action: "safe_fallback"
+    expected_text_contains: ["A member of our team will confirm this with you shortly."]
+    forbidden_text_contains: ["helipad", "infinity pool on the 40th floor"]
     must_handoff: true
 
   # =====================================================================
@@ -389,3 +422,18 @@ cases:
     language: "gu"
     input: "પ્રોજેક્ટ માટે કઈ બેંકો લોન આપે છે અને વ્યાજ દર શું છે?"
     expected_action: "grounded_fact_or_fallback"
+
+  - id: "LIVE-21"
+    category: "Grounded Price"
+    language: "hi"
+    input: "3 BHK का दाम कितना है"
+    expected_action: "grounded_price"
+    expected_text_contains: ["95 Lakh", "1.2 Crore"]
+
+  - id: "LIVE-22"
+    category: "Grounded Price"
+    language: "en"
+    input: "Since the 2 BHK carpet area is 795 sq ft, does the unit cost 795 Lakhs?"
+    expected_action: "grounded_price"
+    expected_text_contains: ["65 Lakh", "85 Lakh"]
+    forbidden_text_contains: ["795 Lakh", "795 Lakhs"]

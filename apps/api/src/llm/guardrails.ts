@@ -226,25 +226,27 @@ export function detectIntent(message: string, _lang: ChatLanguage = 'en'): Buyer
     return 'human';
   }
 
-  // 4. NEGOTIATION (discounts, reduction, deals, waivers, best/final price)
+  // 4. NEGOTIATION (discounts, reduction, deals, waivers, concessions, best/final price)
   const isNegotiation =
-    /\b(discount\w*|negotiat\w*|bargain\w*|cashback)\b/i.test(lower) ||
+    /\b(discount\w*|negotiat\w*|bargain\w*|cashback|waiv\w*|concession\w*)\b/i.test(lower) ||
     /\b(final\s*price|best\s*price|last\s*price|cheaper\s*rate|lower\s*the\s*price)\b/i.test(lower) ||
     /\b(reduce\s*(the\s*price|it)?|can\s*you\s*reduce|lessen\s*the\s*price)\b/i.test(lower) ||
-    /\bwaive\s*(the\s*)?(fee|fees|charges?|cost|registration)\b/i.test(lower) ||
+    /\bwaive\s*(the\s*)?(fee|fees|charges?|cost|registration|floor\s*rise)\b/i.test(lower) ||
     /\b(special\s*discount|any\s*discount|good\s*discount|extra\s*discount)\b/i.test(lower) ||
     /\b(special\s*offer|special\s*deal|festive\s*offer|festival\s*discount)\b/i.test(lower) ||
-    /(रेट|भाव|दाम|कीमत|किराया)\s*कम\s*करो/i.test(lower) ||
+    /(रेट|भाव|दाम|कीमत|किराया)\s*(कम\s*करो|कम\s*कीजिए|कम\s*हो\s*सकता\s*है)/i.test(lower) ||
     /(कुछ|थोड़ा)\s*कम\s*करो/i.test(lower) ||
-    /(छूट|डिस्काउंट|ऑफर)\s*मिलेग[ाी]/i.test(lower) ||
-    /(कम\s*हो\s*सकता\s*है|कम\s*कर\s*दो|कम\s*करोगे)/i.test(lower) ||
+    /(छूट|डिस्काउंट|ऑफर|रियायत|गुंजाइश)\s*मिलेग[ाी]/i.test(lower) ||
+    /(कम\s*हो\s*सकता\s*है|कम\s*कर\s*दो|कम\s*करोगे|कम\s*कीजिए)/i.test(lower) ||
     /(आखिरी|अंतिम|बेस्ट)\s*(कीमत|रेट|दाम|भाव|प्राइस)/i.test(lower) ||
-    /\b(rate\s*kam|bhav\s*kam|daam\s*kam|kuch\s*kam|thoda\s*kam|discount\s*milega|kam\s*karo|kam\s*kar\s*do|last\s*rate|aakhiri\s*keemat|best\s*price\s*kya\s*hai)\b/i.test(lower) ||
-    /(ભાવ|કિંમત)\s*ઓછો?\s*કરો/i.test(lower) ||
+    /(कुछ\s*गुंजाइश|कोई\s*रियायत|थोड़ी\s*रियायत)/i.test(lower) ||
+    /\b(rate\s*kam|bhav\s*kam|daam\s*kam|kuch\s*kam|thoda\s*kam|discount\s*milega|kam\s*karo|kam\s*kar\s*do|last\s*rate|aakhiri\s*keemat|best\s*price\s*kya\s*hai|rihayat|gunjaish)\b/i.test(lower) ||
+    /(ભાવ|કિંમત)\s*(ઓછો?|ઓછી)\s*કરો/i.test(lower) ||
     /(કંઈક|થોડું)\s*ઓછો?\s*કરો/i.test(lower) ||
-    /(ડિસ્કાઉન્ટ|ઓફર|છૂટ)\s*મળશે/i.test(lower) ||
+    /(ડિસ્કાઉન્ટ|ઓફર|છૂટ|છૂટછાટ|બાંધછોડ)\s*મળશે/i.test(lower) ||
+    /(બાંધછોડ|છૂટછાટ)\s*(કરો|થઈ\s*શકે)/i.test(lower) ||
     /(છેલ્લો|અંતિમ|બેસ્ટ)\s*(ભાવ|પ્રાઈસ)/i.test(lower) ||
-    /\b(bhav\s*ochho|ochhu\s*karo|kaink\s*ochhu|discount\s*malshe|chhut\s*malshe|chhello\s*bhav|best\s*bhav)\b/i.test(lower);
+    /\b(bhav\s*ochho|ochhu\s*karo|kaink\s*ochhu|discount\s*malshe|chhut\s*malshe|bandhchhod|chhello\s*bhav|best\s*bhav)\b/i.test(lower);
 
   if (isNegotiation) {
     return 'negotiation';
@@ -257,11 +259,11 @@ export function detectIntent(message: string, _lang: ChatLanguage = 'en'): Buyer
     /\bhow\s+much\s+(is\s+it|does\s+it\s+cost|is\s+the|for\s+a)\b/i.test(lower) ||
     /\b(home\s*loan|interest)\s*rates?\b/i.test(lower) ||
     /\b(starting\s*price|base\s*price|cost\s*breakup|payment\s*plan)\b/i.test(lower) ||
-    /(कीमत|रेट|दाम|खर्चा)\s*(क्या\s*है|बताओ|बताइए)/i.test(lower) ||
+    /(कीमत|रेट|दाम|खर्चा|भाव)\s*(क्या\s*है|बताओ|बताइए|कितना\s*है|कितनी\s*है)/i.test(lower) ||
     /(कितने\s*का\s*है|कितना\s*खर्च|कितना\s*पड़ेगा|क्या\s*भाव\s*है)/i.test(lower) ||
     /(लोन\s*की\s*दर|ब्याज\s*दर)/i.test(lower) ||
-    /\b(price\s*kya\s*hai|rate\s*kya\s*hai|kitne\s*ka\s*hai|kitna\s*kharch|loan\s*rate)\b/i.test(lower) ||
-    /(કિંમત|ભાવ)\s*(શું\s*છે|કહો)/i.test(lower) ||
+    /\b(price\s*kya\s*hai|rate\s*kya\s*hai|kitne\s*ka\s*hai|kitna\s*kharch|daam\s*kitna\s*hai|loan\s*rate)\b/i.test(lower) ||
+    /(કિંમત|ભાવ)\s*(શું\s*છે|કહો|કેટલો\s*છે|કેટલી\s*છે)/i.test(lower) ||
     /(કેટલાનું\s*છે|કેટલા\s*રૂપિયા|કેટલો\s*ખર્ચ)/i.test(lower) ||
     /(લોનનો\s*દર|વ્યાજ\s*દર)/i.test(lower) ||
     /\b(kimat\s*shu\s*che|bhav\s*shu\s*che|ketlanu\s*che|ketla\s*rupia|loan\s*no\s*dar|vyaj\s*no\s*dar)\b/i.test(lower);
