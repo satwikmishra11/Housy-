@@ -514,7 +514,6 @@ ${tableRowsMd}
     const sec2Match = existingContent.match(/(## 2\. Live Model Evaluation \(Real Model\)[\s\S]*$)/);
     if (
       sec2Match &&
-      !sec2Match[1].includes('LIVE-14') &&
       !sec2Match[1].includes('48 / 50 (96.0%)') &&
       !sec2Match[1].includes('Not yet run')
     ) {

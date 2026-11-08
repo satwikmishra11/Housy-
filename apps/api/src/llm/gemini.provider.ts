@@ -109,34 +109,12 @@ export class GeminiProvider implements LLMProvider {
       };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
-
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-goog-api-key': this.apiKey,
-        },
-        body: JSON.stringify(body),
-        signal: params.signal,
-      });
-    } catch (err: unknown) {
-      if (err instanceof LLMError) throw err;
-      const error = err as Error;
-      if (error.name === 'AbortError') {
-        throw new LLMError('Gemini request timed out or was aborted', 'timeout');
-      }
-      throw new LLMError(`Gemini network failure: ${redactApiKey(error.message, [this.apiKey])}`, 'server');
-    }
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'Unknown error');
-      const safeErrText = redactApiKey(errText, [this.apiKey]);
-      const kind = mapStatusToErrorKind(response.status);
-      throw new LLMError(`Gemini API error (${response.status}): ${safeErrText}`, kind, response.status);
-    }
+    const candidateModels = [
+      this.model,
+      ...(this.model.startsWith('gemini-3')
+        ? ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite-preview', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'].filter((m) => m !== this.model)
+        : []),
+    ];
 
     interface GeminiPart {
       text?: string;
@@ -161,7 +139,63 @@ export class GeminiProvider implements LLMProvider {
       };
     }
 
-    const data = (await response.json()) as GeminiResponse;
+    let data: GeminiResponse | null = null;
+
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i]!;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent`;
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-goog-api-key': this.apiKey,
+          },
+          body: JSON.stringify(body),
+          signal: params.signal,
+        });
+      } catch (err: unknown) {
+        if (err instanceof LLMError) throw err;
+        const error = err as Error;
+        if (error.name === 'AbortError') {
+          throw new LLMError('Gemini request timed out or was aborted', 'timeout');
+        }
+        throw new LLMError(`Gemini network failure: ${redactApiKey(error.message, [this.apiKey])}`, 'server');
+      }
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => 'Unknown error');
+        const safeErrText = redactApiKey(errText, [this.apiKey]);
+        const kind = mapStatusToErrorKind(response.status);
+
+        // If quota was exhausted on this model and we have another candidate model, rotate
+        if (
+          response.status === 429 &&
+          (safeErrText.includes('QuotaFailure') || safeErrText.includes('rate-limits') || safeErrText.includes('quota') || safeErrText.includes('RESOURCE_EXHAUSTED')) &&
+          i < candidateModels.length - 1
+        ) {
+          const nextModel = candidateModels[i + 1]!;
+          logger.warn(
+            { currentModel: activeModel, nextModel, error: safeErrText.slice(0, 120) },
+            'Gemini model quota exhausted; falling back to continued model',
+          );
+          this.model = nextModel;
+          continue;
+        }
+
+        throw new LLMError(`Gemini API error (${response.status}): ${safeErrText}`, kind, response.status);
+      }
+
+      this.model = activeModel;
+      data = (await response.json()) as GeminiResponse;
+      break;
+    }
+
+    if (!data) {
+      throw new LLMError('Gemini returned empty response', 'server');
+    }
     const candidate = data.candidates?.[0];
     const parts = candidate?.content?.parts ?? [];
 

@@ -6,5 +6,8 @@ export default defineConfig({
     globalSetup: ['./tests/global-setup.ts'],
     testTimeout: 20000,
     fileParallelism: false,
+    env: {
+      LLM_PROVIDER: 'mock',
+    },
   },
 });
