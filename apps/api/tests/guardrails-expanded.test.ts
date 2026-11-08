@@ -17,7 +17,7 @@ import type { Fact } from '@housy/shared';
 
 describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Suite', () => {
   // ============================================================================
-  // 1. TABLE-DRIVEN INTENT DETECTION (60+ PHRASES & FALSE POSITIVE TESTS)
+  // 1. TABLE-DRIVEN INTENT DETECTION (100+ PHRASES & FALSE POSITIVE TESTS)
   // ============================================================================
   describe('detectIntent() table-driven matrix', () => {
     const testCases: Array<{
@@ -25,30 +25,55 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       expected: BuyerIntent;
       desc: string;
     }> = [
-      // --- NEGOTIATION ---
+      // --- NEGOTIATION (en / hi / gu / Hinglish / Gujlish) ---
       { input: 'What is your best price?', expected: 'negotiation', desc: 'best price request' },
       { input: 'Can I get a 10% discount on booking?', expected: 'negotiation', desc: 'discount percentage' },
       { input: 'Can you reduce it?', expected: 'negotiation', desc: 'can you reduce it' },
       { input: 'Please reduce the price of 2 BHK', expected: 'negotiation', desc: 'reduce the price' },
       { input: 'Will you waive the fee for registration?', expected: 'negotiation', desc: 'waive the fee' },
+      { input: 'Can you waive the floor rise charges on booking?', expected: 'negotiation', desc: 'waive floor rise' },
+      { input: 'Can you offer a concession on the down payment?', expected: 'negotiation', desc: 'concession phrasing' },
+      { input: 'Are there any concessions available for early buyers?', expected: 'negotiation', desc: 'concessions available' },
+      { input: 'Can I get 5% off if I pay in full?', expected: 'negotiation', desc: '% off phrase' },
+      { input: 'Is there a 10 % off festive deal?', expected: 'negotiation', desc: 'spaced % off phrase' },
+      { input: 'Give me 15% discount', expected: 'negotiation', desc: '% discount' },
+      { input: 'What percentage off can you offer today?', expected: 'negotiation', desc: 'percentage off' },
       { input: 'Is there any cashback or special deal?', expected: 'negotiation', desc: 'cashback / deal' },
+      { input: 'Do you provide cash back on early token payment?', expected: 'negotiation', desc: 'cash back separated' },
       { input: 'Any festive offer or special discount available?', expected: 'negotiation', desc: 'festive discount' },
       { input: 'I want a cheaper rate than 95 lakhs', expected: 'negotiation', desc: 'cheaper rate' },
       { input: 'kuch kam karo bhai', expected: 'negotiation', desc: 'hi/Hinglish kuch kam karo' },
       { input: 'rate thoda kam kar do', expected: 'negotiation', desc: 'hi/Hinglish rate kam kar do' },
+      { input: 'छूट कर दो भाई', expected: 'negotiation', desc: 'hi छूट कर दो' },
+      { input: 'कुछ छूट कर दो अगर आज बुक करें', expected: 'negotiation', desc: 'hi कुछ छूट कर दो' },
+      { input: 'chhoot kar do thoda', expected: 'negotiation', desc: 'Hinglish chhoot kar do' },
+      { input: 'chhut de do token pe', expected: 'negotiation', desc: 'Hinglish chhut de do' },
       { input: 'booking pe koi discount milega kya?', expected: 'negotiation', desc: 'hi/Hinglish discount milega' },
       { input: 'aakhiri keemat batao', expected: 'negotiation', desc: 'hi/Hinglish aakhiri keemat' },
       { input: '3 BHK ka daam kam ho sakta hai?', expected: 'negotiation', desc: 'hi daam kam' },
-      { input: 'bhav ochho karo', expected: 'negotiation', desc: 'gu bhav ochho' },
+      { input: 'थोड़ी रियायत या छूट मिलेगी क्या? अगर आज फाइनल करें तो कुछ गुंजाइश है?', expected: 'negotiation', desc: 'hi negotiation with rihayat and gunjaish' },
+      { input: 'ઓછું કરો ભાવ', expected: 'negotiation', desc: 'gu explicit ઓછું કરો ભાવ' },
+      { input: 'ઓછું કરો ભાવ થોડો', expected: 'negotiation', desc: 'gu ઓછું કરો ભાવ થોડો' },
+      { input: 'ભાવ ઘટાડો', expected: 'negotiation', desc: 'gu explicit ભાવ ઘટાડો' },
+      { input: 'ભાવમાં ઘટાડો કરો જો આજે ટોકન આપું', expected: 'negotiation', desc: 'gu ભાવ ઘટાડો ટોકન' },
+      { input: 'કિંમત ઘટાડો', expected: 'negotiation', desc: 'gu કિંમત ઘટાડો' },
+      { input: 'bhav ochho karo', expected: 'negotiation', desc: 'gu Latin bhav ochho' },
+      { input: 'ochhu karo bhav', expected: 'negotiation', desc: 'Gujlish ochhu karo bhav' },
+      { input: 'bhav ghatado thodo', expected: 'negotiation', desc: 'Gujlish bhav ghatado' },
       { input: 'kaink ochhu karo ne', expected: 'negotiation', desc: 'gu kaink ochhu' },
       { input: 'rokhad payment par discount malshe?', expected: 'negotiation', desc: 'gu discount malshe' },
       { input: 'chhello bhav shu aapsho?', expected: 'negotiation', desc: 'gu chhello bhav' },
-      { input: 'Can you offer a concession or waive the floor rise charges?', expected: 'negotiation', desc: 'concession and waive phrasing' },
       { input: 'ભાવમાં થોડી બાંધછોડ કરો, જો આજે ટોકન આપું તો શું છૂટછાટ મળશે?', expected: 'negotiation', desc: 'gu negotiation with bandhchhod and chhutchhat' },
-      { input: 'थोड़ी रियायत या छूट मिलेगी क्या? अगर आज फाइनल करें तो कुछ गुंजाइश है?', expected: 'negotiation', desc: 'hi negotiation with rihayat and gunjaish' },
 
       // --- PRICE INFO (NOT NEGOTIATION) ---
       { input: '3 BHK का दाम कितना है', expected: 'price_info', desc: 'hi 3 BHK ka daam kitna hai' },
+      { input: '3 BHK का दाम कितना', expected: 'price_info', desc: 'hi दाम कितना without hai' },
+      { input: 'दाम कितना है 2 BHK का?', expected: 'price_info', desc: 'hi inverted daam kitna hai' },
+      { input: 'रेट कितना है Project 1 का', expected: 'price_info', desc: 'hi rate kitna hai' },
+      { input: 'भाव कितना है', expected: 'price_info', desc: 'hi bhav kitna hai' },
+      { input: 'daam kitna hai 3 BHK flat ka?', expected: 'price_info', desc: 'Hinglish daam kitna hai' },
+      { input: 'daam kitna', expected: 'price_info', desc: 'Hinglish bare daam kitna' },
+      { input: 'rate kitna hai?', expected: 'price_info', desc: 'Hinglish rate kitna hai' },
       { input: 'What is the price range of a 3 BHK?', expected: 'price_info', desc: 'price range enquiry' },
       { input: 'What is the cost of 2 BHK apartment?', expected: 'price_info', desc: 'cost of 2 BHK' },
       { input: 'home loan rate', expected: 'price_info', desc: 'home loan rate enquiry' },
@@ -60,7 +85,11 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       { input: '3 BHK kitne ka hai?', expected: 'price_info', desc: 'hi kitne ka hai' },
       { input: '2 BHK ki price kya hai bataye', expected: 'price_info', desc: 'hi price kya hai' },
       { input: 'loan rate kya chal raha hai?', expected: 'price_info', desc: 'hi loan rate' },
+      { input: 'ભાવ કેટલો છે 2 BHK નો?', expected: 'price_info', desc: 'gu bhav ketlo che' },
+      { input: 'ભાવ કેટલો', expected: 'price_info', desc: 'gu bhav ketlo without che' },
+      { input: 'કિંમત કેટલી છે', expected: 'price_info', desc: 'gu kimat ketli che' },
       { input: 'kimat shu che 2 BHK ni?', expected: 'price_info', desc: 'gu kimat shu che' },
+      { input: 'bhav ketlo che', expected: 'price_info', desc: 'Gujlish bhav ketlo che' },
       { input: 'ketla rupia thashe 3 BHK na?', expected: 'price_info', desc: 'gu ketla rupia' },
       { input: 'loan no dar shu che?', expected: 'price_info', desc: 'gu loan no dar' },
 
@@ -72,6 +101,7 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       { input: "I don't want to visit anymore", expected: 'cancel_visit', desc: "don't want to visit" },
       { input: 'visit cancel karni hai', expected: 'cancel_visit', desc: 'hi visit cancel karni hai' },
       { input: 'meri site visit radd karo', expected: 'cancel_visit', desc: 'hi visit radd karo' },
+      { input: 'अपॉइंटमेंट रद्द करो', expected: 'cancel_visit', desc: 'hi appointment radd karo' },
       { input: 'appointment cancel karvi che', expected: 'cancel_visit', desc: 'gu appointment cancel' },
       { input: 'visit rad karo', expected: 'cancel_visit', desc: 'gu visit rad karo' },
 
@@ -96,20 +126,28 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       { input: 'Can I speak with a sales executive?', expected: 'human', desc: 'speak with sales executive' },
       { input: 'call me back on my phone', expected: 'human', desc: 'call me back' },
       { input: 'human please', expected: 'human', desc: 'human please' },
+      { input: 'connect me with your sales manager', expected: 'human', desc: 'connect with manager' },
       { input: 'mujhe kisi insan se baat karni hai', expected: 'human', desc: 'hi insan se baat' },
       { input: 'sales executive se baat karwao', expected: 'human', desc: 'hi executive se baat' },
       { input: 'mane koi manas sathe vaat karavi che', expected: 'human', desc: 'gu manas sathe vaat' },
       { input: 'call karo mane', expected: 'human', desc: 'gu call karo mane' },
 
-      // --- FALSE POSITIVE PROTECTION (MUST BE 'OTHER', NOT HUMAN OR OPT-OUT) ---
+      // --- FALSE POSITIVE PROTECTION (MUST BE 'OTHER', NOT HUMAN, OPT-OUT, OR NEGOTIATION) ---
       { input: 'Which executive is assigned to my file?', expected: 'other', desc: 'isolated executive word' },
       { input: 'Is there an agent available at the project site?', expected: 'other', desc: 'isolated agent query' },
       { input: 'Who is the sales manager for Project 1?', expected: 'other', desc: 'isolated manager query' },
       { input: 'How many persons can visit the flat?', expected: 'other', desc: 'isolated person word' },
+      { input: 'Can a person with a wheelchair access the lift?', expected: 'other', desc: 'wheelchair access' },
       { input: 'I want to cancel my visit', expected: 'cancel_visit', desc: 'never treated as opt_out' },
       { input: 'Tell me about the clubhouse and amenities', expected: 'other', desc: 'amenities enquiry' },
       { input: 'When is possession expected for Tower A?', expected: 'other', desc: 'possession enquiry' },
       { input: 'Can I see the 3 BHK floor plan?', expected: 'other', desc: 'floor plan enquiry' },
+      { input: 'Where is the site located on SG Highway?', expected: 'other', desc: 'location query' },
+      { input: 'What is the RERA registration number?', expected: 'other', desc: 'RERA query' },
+      { input: 'Are there 4 BHK penthouse units available?', expected: 'other', desc: 'penthouse query' },
+      { input: 'Is visitor parking provided in the basement?', expected: 'other', desc: 'parking query' },
+      { input: 'How many towers are currently under construction?', expected: 'other', desc: 'construction status' },
+      { input: 'My brother visited last month and loved the swimming pool', expected: 'other', desc: 'past visit narration' },
     ];
 
     for (const tc of testCases) {
