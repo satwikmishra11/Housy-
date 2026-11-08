@@ -135,7 +135,8 @@ Detailed technical documentation is available in `docs/`:
 - **[Data Model & Constraints](docs/DATA_MODEL.md)**: 19 PostgreSQL tables, ER diagram, partial unique indexes, and Migration 005 performance indexing.
 - **[AI Pipeline & Guardrails](docs/AI_PIPELINE.md)**: Autonomous agent loop, tool schemas, multilingual regex pre-filters, failure mitigations, and evals.
 - **[Operations & Deployment](docs/OPERATIONS.md)**: Vercel multi-service project (`vercel.json`), serverless runtime, background reminder workers, and outbox.
-- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A97`).
+- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A102`).
+- **[Demo Script & Walkthrough](docs/DEMO_SCRIPT.md)**: 5-minute walkthrough script with exact inputs/outputs and 15 grounded technical interview defenses.
 - **[Hardening & Security](docs/HARDENING.md)**: Rate limiting benchmarks, CSRF/CSP protections, secret scanning, and WCAG AA audits.
 - **[AI Evaluation Suite](docs/AI_EVALS.md)**: 56-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.
 
