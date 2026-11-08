@@ -10,7 +10,7 @@ This document details the production deployment architecture, local development 
 
 ## 1. Overview and Live URLs
 
-Housy is a production-grade conversational sales assistant, site-visit scheduling platform, and lead intelligence system engineered for **Aaranya Realty, Ahmedabad** (residential portfolio: **The Palm Serene** and **Skyline Greens**). The platform unifies intake across four marketing channels (Property Portals, Social Media Ads, Hoarding Phone Calls, and Website Inquiries), provides real-time duplicate detection, answers buyer questions exclusively from an authoritative developer fact sheet in English, Hindi, and Gujarati, coordinates visit bookings against real-time executive calendars with conflict defenses, and surfaces first-touch attribution analytics to sales leadership.
+Housy is a production-grade conversational sales assistant, site-visit scheduling platform, and lead intelligence system engineered for **Company A (demo brand assumption: Aaranya Realty, Ahmedabad, per A89)** (residential portfolio: **The Palm Serene** and **Skyline Greens**, demo display names for Project 1 and Project 2 per A89). The platform unifies intake across four marketing channels (Property Portals, Social Media Ads, Hoarding Phone Calls, and Website Inquiries), provides real-time duplicate detection, answers buyer questions exclusively from an authoritative developer fact sheet in English, Hindi, and Gujarati, coordinates visit bookings against real-time executive calendars with conflict defenses, and surfaces first-touch attribution analytics to sales leadership.
 
 ### Exactly One Production Topology: Vercel Multi-Service + Managed PostgreSQL
 
@@ -225,7 +225,7 @@ All configuration is managed strictly through environment variable dashboards. V
 
 ## 5. Demo Login Details for the Reviewer
 
-The system is seeded with authentic sample data adhering strictly to the client brief for **Aaranya Realty, Ahmedabad**. Reviewers can log in immediately using the credentials below:
+The system is seeded with deterministic demo sample data adhering strictly to the client brief for **Company A (demo brand assumption: Aaranya Realty, Ahmedabad, per A89)**. Reviewers can log in immediately using the credentials below:
 
 ### Seeded Staff Accounts ([apps/api/src/db/seed.ts](file:///Users/satwik/Documents/GitHub/Housy-/apps/api/src/db/seed.ts))
 
@@ -241,10 +241,10 @@ The system is seeded with authentic sample data adhering strictly to the client 
 *(Quick demo buttons are also present directly on `/login` to populate these credentials with a single click).*
 
 ### Real Residential Projects & RERA Demo Placeholders
-- **Developer**: Aaranya Realty, Ahmedabad (replacing generic "Company A").
-- **Project 1**: **The Palm Serene** (slug: `the-palm-serene`, tagline: *"Artisanal 2 & 3 BHK Living on SG Highway"*, 420 units, ₹65L - ₹1.2 Cr).
-- **Project 2**: **Skyline Greens** (slug: `skyline-greens`, tagline: *"Elevated 2 & 3 BHK Urban Residences near Science City"*, 2 & 3 BHK, ₹70L - ₹1.15 Cr).
-- **Statutory RERA Identifiers**: `PR/GJ/AHMEDABAD/AUDA/RAA01234/011126` and `PR/GJ/AHMEDABAD/AUDA/RAA05678/011126` (explicitly designated as **demo placeholders for Ahmedabad**, never authentic client registration numbers).
+- **Developer**: Company A (demo brand assumption: **Aaranya Realty, Ahmedabad**, per A89).
+- **Project 1**: Project 1 (demo display name assumption: **The Palm Serene**, slug: `the-palm-serene`, tagline: *"Artisanal 2 & 3 BHK Living on SG Highway"*, 420 units, ₹65L - ₹1.2 Cr, per A89).
+- **Project 2**: Project 2 (demo display name assumption: **Skyline Greens**, slug: `skyline-greens`, tagline: *"Elevated 2 & 3 BHK Urban Residences near Science City"*, 2 & 3 BHK, ₹70L - ₹1.15 Cr, per A89).
+- **Statutory RERA Identifiers**: `PR/GJ/AHMEDABAD/AUDA/RAA01234/011126` and `PR/GJ/AHMEDABAD/AUDA/RAA05678/011126` (explicitly designated as **demo placeholders for Ahmedabad**, not real client registration numbers).
 
 ---
 

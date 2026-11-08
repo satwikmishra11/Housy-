@@ -311,7 +311,7 @@ export function ProjectShowcasePage() {
               Residence Configurations & Floor Plans
             </h2>
             <p className="text-sm text-muted">
-              Authentic unit dimensions and carpet areas certified under AUDA RERA guidelines.
+              Verified unit dimensions and carpet areas certified under AUDA RERA guidelines.
             </p>
           </div>
 

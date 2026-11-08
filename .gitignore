@@ -10,7 +10,6 @@ build/
 *.tsbuildinfo
 submission.zip
 apps/api/app.js
-apps/api/index.js
 apps/api/server.js
 apps/api/index.cjs
 apps/api/server.cjs
