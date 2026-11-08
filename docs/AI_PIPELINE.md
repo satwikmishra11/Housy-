@@ -113,16 +113,16 @@ Incoming messages are scanned by a multi-phase pre-filter using script-first lan
 ### 3. Output Grounding & Guardrail Verification (`verifyPostChecks`)
 Before any assistant reply is delivered to the buyer, it undergoes automated post-checks:
 1. **Fact ID Verification**: Every cited fact ID must map to an active row in `fact_entries`.
-2. **Numeral & Word Normalization**: Converts Devanagari (`०-९`) and Gujarati (`૦-૯`) numerals as well as number words (`one`, `two`, `ek`, `do`, `tran`, `char`) into Arabic digits.
-3. **Token-Boundary Grounding**: Extracts numbers, currency figures (₹, Lakh, Crore), and dates, verifying that each token exists within word boundaries in cited facts (preventing `"5"` from falsely matching `"2025"`).
-4. **Property Fact Citation Requirement**: Assertions of property dimensions, prices, configurations, or amenities require at least one cited fact ID. Replies stating property facts without citations fail as `grounding_failed`.
+2. **Answer Type & Property Citation Contract**: The `send_reply` tool strictly requires `answer_type: 'fact' | 'conversational' | 'question'`. If `answer_type === 'fact'`, at least one active cited fact ID is required. Any reply stating property details (configurations, pricing, area, possession/launch timelines, amenities, floors) without cited facts is rejected (`grounding_failed`).
+3. **Numeral & Word Normalization**: Converts Devanagari (`०-९`) and Gujarati (`૦-૯`) numerals as well as number words (`one`, `two`, `ek`, `do`, `tran`, `char`) into Arabic digits.
+4. **Contextual Token & Directional Unit Grounding**: Extracts numbers and their directional units/labels (`detectNumberCategoryAt`: BHK, currency, sq ft area, floor height, percentage, distance/time, launch vs possession timeline). Each number and its matching contextual unit/label must coexist within the same cited fact entry (preventing cross-clause or wrong-context claims like claiming 795 sq ft as ₹795 Lakhs, or claiming 2025 possession when the fact states 2025 launch).
 5. **Expanded Banned Claims**: Prohibits speculative claims, artificial urgency, and guarantees across English, Hindi, and Gujarati:
    - ROI, rental yield, return on investment (`ROI`, `rental yield`, `bhadu`, `munafa`)
    - Price appreciation (`price will rise`, `bhav vadhshe`, `keemat badhegi`)
    - Safe investment (`safe investment`, `surefire`, `surakshit nivesh`)
    - Artificial urgency (`selling fast`, `few units left`, `kharidi lo fatfat`)
 6. **Plain-Text Rejection & Re-Ask**: Plain-text replies lacking structured `send_reply` tool calls are rejected; the agent prompts the model once to invoke `send_reply`, falling back cleanly on repeated failure (`plain_text_rejected`).
-7. **Independent Verifier (`VERIFY_REPLIES=true`)**: An optional secondary verification pass (`apps/api/src/llm/verifier.ts`) evaluates candidate claims against cited facts. Unsupported factual assertions trigger an immediate fallback and executive handoff.
+7. **Production Verifier Default (`VERIFY_REPLIES`)**: Enabled by default whenever `NODE_ENV === 'production'` and `LLM_PROVIDER !== 'mock'` (or when `VERIFY_REPLIES=true`). Evaluates candidate claims against cited facts with structured logger telemetry (`supported`, `unsupportedClaims`). Unsupported factual assertions trigger an immediate fallback and executive handoff.
 
 If any check fails, the candidate text is discarded. The assistant returns the safe localized fallback, appends the buyer's query to `unanswered_questions`, flags the conversation for daily sales head review, and triggers executive handoff. All replies shown to buyers are recorded in the `messages` table.
 
@@ -150,7 +150,7 @@ export const AGENT_TOOLS: LLMToolDefinition[] = [
   },
   {
     name: 'get_open_slots',
-    description: 'Fetch real open site-visit slots for a project within the rolling 21-day window',
+    description: 'Fetch real open site-visit slots for a project within the rolling 28-day window',
     parameters: {
       type: 'object',
       properties: {
@@ -180,9 +180,10 @@ export const AGENT_TOOLS: LLMToolDefinition[] = [
         citedFactIds: { type: 'array', items: { type: 'string' } },
         suggestedReplies: { type: 'array', items: { type: 'string' } },
         confidence: { type: 'number' },
+        answer_type: { type: 'string', enum: ['fact', 'conversational', 'question'] },
         uiAction: { type: 'string', enum: ['none', 'collect_contact', 'show_slots'] },
       },
-      required: ['reply', 'citedFactIds', 'confidence'],
+      required: ['reply', 'citedFactIds', 'confidence', 'answer_type'],
     },
   },
 ];
