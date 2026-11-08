@@ -17,6 +17,9 @@ import {
 export function createApp(): Express {
   const app = express();
 
+  // Trust first proxy hop (Vercel Edge, Cloudflare, NGINX reverse proxies)
+  app.set('trust proxy', 1);
+
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 

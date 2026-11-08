@@ -320,7 +320,7 @@ Verified via script execution on Commit `6978ab3` (2026-11-08):
 
 ## 10. Architectural & Product Assumptions Log
 
-Every product, technical, and operational assumption made during this build is tracked sequentially in `docs/ASSUMPTIONS.md`. Below is the complete, unabridged assumptions register (`A1`–`A103`):
+Every product, technical, and operational assumption made during this build is tracked sequentially in `docs/ASSUMPTIONS.md`. Below is the complete, unabridged assumptions register (`A1`–`A104`):
 
 - **A1**: Project 1 / Project 2 names are kept from the brief. Locations, amenities, possession dates, RERA numbers, map coordinates and ad spend per source are invented demo data, not client facts.
 - **A2**: A site visit lasts 60 minutes, one buyer per executive per slot, visits run 10:00-18:00 IST.
@@ -424,6 +424,7 @@ Every product, technical, and operational assumption made during this build is t
 - **A101**: Automated Documentation Statistics Synchronization & Static Link Integrity: `scripts/doc-stats.mjs` dynamically runs the vitest suites across workspaces (`@housy/shared`, `@housy/api`, `@housy/web`), aggregates unit/integration test counts, inspects source files, parses latest AI evaluation outcomes (`docs/AI_EVALS.md`), and serializes structured metrics into `docs/STATS.json`. A standardized markdown statistics block bounded by DOC_STATS markers is synchronized idempotently across `README.md`, `deployment.md`, `docs/TDD.md`, and `docs/VERIFICATION.md`. Continuous integration (`npm run check:doc-stats`) validates that documentation blocks and `docs/STATS.json` strictly match the executed test suites with zero count drift. All documentation links adhere to portable relative path conventions, completely removing machine-specific `file:///` URLs, and the final submission archive `submission.zip` is bundled to `< 25MB` containing strictly root `TDD.pdf` and `deployment.md`.
 - **A102**: Comprehensive Walkthrough Demo Script & Architectural Defense Guide: `docs/DEMO_SCRIPT.md` provides an exact 5-minute chronological walkthrough covering Hindi conversational advisory, fact-grounded price discovery, regex negotiation interception, missing fact fallback, atomic site-visit reservation, outbox reminder inspection, live executive takeover, and before/after sales cohort analysis. It compiles 15 technical interview questions defending system concurrency invariants, guardrail pipelines, DPDP compliance, metric semantics, and production boundary distinctions directly grounded in implementation files.
 - **A103**: Comprehensive Local & Deployed Origin Allowlist: The CORS and Content Security Policy (CSP) engine dynamically permits any origin ending with `.vercel.app`, `.vercel.dev`, or `https://vercel.live` (including production domain `https://housy-ebon.vercel.app` and preview deployment URLs), any local development origin matching `/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/`, and explicitly configured origins from `config.CORS_ORIGIN`. Disallowed cross-origin domains continue to be rejected with 403 Forbidden ("Origin '...' not allowed by CORS"), preventing unauthorized cross-origin requests while ensuring frictionless login and API operations across localhost and Vercel environments.
+- **A104**: Reverse-Proxy Trust & Forwarded Header Normalization: Express is configured with `app.set('trust proxy', 1)` to accurately resolve client IP addresses through Vercel Edge, Cloudflare, and Nginx reverse proxies. In `middleware/rateLimit.ts`, `getClientIp(req)` standardizes IP extraction by checking comma-separated `X-Forwarded-For` first, standard RFC 7239 `Forwarded` (`for=...`) second, and socket remoteAddress as a fallback. Built-in rate limiter header validations (`validate: false`) are disabled across all endpoints to eliminate `ERR_ERL_FORWARDED_HEADER` runtime crashes caused by edge proxies setting standard `Forwarded` headers.
 
 ---
 
@@ -461,10 +462,10 @@ While the platform successfully demonstrates a hardened, production-ready core s
 | Workspace / Target | Test Files | Tests Passed | Failures | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
-| **@housy/api** (Services & Concurrency) | 27 | 453 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 454 | 0 | **PASS** |
 | **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **53 files** | **644** | **0** | **PASS** |
+| **Total Automated Tests** | **53 files** | **645** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

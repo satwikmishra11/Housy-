@@ -38,5 +38,23 @@ describe('Login Rate Limiting', () => {
     expect(rateLimitedRes.body.error.statusCode).toBe(429);
     expect(rateLimitedRes.body.error.message).toContain('rate limited');
   });
+
+  it('handles Forwarded and X-Forwarded-For headers from reverse proxies without throwing ValidationError', async () => {
+    // Standard RFC 7239 Forwarded header
+    const resForwarded = await request(app)
+      .get('/api/ping')
+      .set('Forwarded', 'for=203.0.113.195;proto=https;host=housy-ebon.vercel.app');
+
+    expect(resForwarded.status).toBe(200);
+    expect(resForwarded.body.status).toBe('ok');
+
+    // De facto standard X-Forwarded-For header
+    const resXForwarded = await request(app)
+      .get('/api/ping')
+      .set('X-Forwarded-For', '203.0.113.195, 70.41.3.18');
+
+    expect(resXForwarded.status).toBe(200);
+    expect(resXForwarded.body.status).toBe('ok');
+  });
 });
 

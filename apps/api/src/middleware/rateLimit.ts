@@ -4,6 +4,24 @@ import { config } from '../config/index.js';
 import type { ApiErrorResponse } from '@housy/shared';
 
 /**
+ * Robustly extracts the real client IP address from proxy headers (Forwarded, X-Forwarded-For)
+ * or socket remoteAddress, avoiding express-rate-limit proxy validation errors on cloud platforms.
+ */
+export function getClientIp(req: Request): string {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    const first = forwardedFor.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const forwarded = req.headers['forwarded'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    const match = /for="?([^";, ]+)/i.exec(forwarded);
+    if (match?.[1]) return match[1].replace(/[[\]]/g, '');
+  }
+  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
+}
+
+/**
  * Standard 429 response formatter matching our ApiErrorResponse schema.
  */
 function createRateLimitHandler(message: string) {
@@ -36,6 +54,8 @@ export const generalRateLimiter = rateLimit({
   limit: config.RATE_LIMIT_GENERAL_MAX,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  keyGenerator: (req: Request): string => getClientIp(req),
+  validate: false,
   handler: createRateLimitHandler('Too many requests, please slow down'),
 });
 
@@ -47,10 +67,8 @@ export const loginRateLimiter = rateLimit({
   limit: config.RATE_LIMIT_LOGIN_MAX,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  keyGenerator: (req: Request): string => {
-    return (req.headers['x-forwarded-for'] as string) || req.ip || req.socket.remoteAddress || 'unknown-ip';
-  },
-  validate: { keyGeneratorIpFallback: false, xForwardedForHeader: false },
+  keyGenerator: (req: Request): string => getClientIp(req),
+  validate: false,
   handler: createRateLimitHandler(
     'Too many login attempts. Your IP has been temporarily rate limited, please try again later.',
   ),
@@ -66,8 +84,8 @@ export const chatStartRateLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.NODE_ENV === 'test' && !process.env.ENFORCE_RATE_LIMIT,
-  validate: { keyGeneratorIpFallback: false },
-  keyGenerator: (req: Request): string => req.ip || req.socket.remoteAddress || 'unknown-ip',
+  validate: false,
+  keyGenerator: (req: Request): string => getClientIp(req),
   handler: createRateLimitHandler(
     'Chat start rate limit exceeded. You may only initiate up to 10 chat sessions per hour.',
   ),
@@ -82,10 +100,10 @@ export const chatRateLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.NODE_ENV === 'test',
-  validate: { keyGeneratorIpFallback: false },
+  validate: false,
   keyGenerator: (req: Request): string => {
     const sessionToken = (req.headers['x-buyer-session'] || req.cookies?.['buyer_session']) as string | undefined;
-    const ip = req.ip || req.socket.remoteAddress || 'unknown-ip';
+    const ip = getClientIp(req);
     return sessionToken ? `${ip}:${sessionToken}` : ip;
   },
   handler: createRateLimitHandler(
@@ -102,9 +120,9 @@ export const ingestRateLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.NODE_ENV === 'test',
-  validate: { keyGeneratorIpFallback: false },
+  validate: false,
   keyGenerator: (req: Request): string => {
-    const rawKey = (req.headers['x-source-key'] as string | undefined) || req.ip || 'unknown-ip';
+    const rawKey = (req.headers['x-source-key'] as string | undefined) || getClientIp(req);
     return rawKey;
   },
   handler: createRateLimitHandler(

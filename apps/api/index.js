@@ -83079,6 +83079,19 @@ var DAY = 24 * HOUR;
 
 // src/middleware/rateLimit.ts
 init_config();
+function getClientIp(req) {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    const first = forwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const forwarded = req.headers["forwarded"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    const match = /for="?([^";, ]+)/i.exec(forwarded);
+    if (match?.[1]) return match[1].replace(/[[\]]/g, "");
+  }
+  return req.ip || req.socket?.remoteAddress || "127.0.0.1";
+}
 function createRateLimitHandler(message2) {
   return (req, res) => {
     const timestamp = (/* @__PURE__ */ new Date()).toISOString();
@@ -83101,6 +83114,8 @@ var generalRateLimiter = rate_limit_default({
   limit: config2.RATE_LIMIT_GENERAL_MAX,
   standardHeaders: "draft-7",
   legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
+  validate: false,
   handler: createRateLimitHandler("Too many requests, please slow down")
 });
 var loginRateLimiter = rate_limit_default({
@@ -83108,10 +83123,8 @@ var loginRateLimiter = rate_limit_default({
   limit: config2.RATE_LIMIT_LOGIN_MAX,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.headers["x-forwarded-for"] || req.ip || req.socket.remoteAddress || "unknown-ip";
-  },
-  validate: { keyGeneratorIpFallback: false, xForwardedForHeader: false },
+  keyGenerator: (req) => getClientIp(req),
+  validate: false,
   handler: createRateLimitHandler(
     "Too many login attempts. Your IP has been temporarily rate limited, please try again later."
   )
@@ -83123,8 +83136,8 @@ var chatStartRateLimiter = rate_limit_default({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   skip: () => config2.NODE_ENV === "test" && !process.env.ENFORCE_RATE_LIMIT,
-  validate: { keyGeneratorIpFallback: false },
-  keyGenerator: (req) => req.ip || req.socket.remoteAddress || "unknown-ip",
+  validate: false,
+  keyGenerator: (req) => getClientIp(req),
   handler: createRateLimitHandler(
     "Chat start rate limit exceeded. You may only initiate up to 10 chat sessions per hour."
   )
@@ -83135,10 +83148,10 @@ var chatRateLimiter = rate_limit_default({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   skip: () => config2.NODE_ENV === "test",
-  validate: { keyGeneratorIpFallback: false },
+  validate: false,
   keyGenerator: (req) => {
     const sessionToken = req.headers["x-buyer-session"] || req.cookies?.["buyer_session"];
-    const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
+    const ip = getClientIp(req);
     return sessionToken ? `${ip}:${sessionToken}` : ip;
   },
   handler: createRateLimitHandler(
@@ -83152,9 +83165,9 @@ var ingestRateLimiter = rate_limit_default({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   skip: () => config2.NODE_ENV === "test",
-  validate: { keyGeneratorIpFallback: false },
+  validate: false,
   keyGenerator: (req) => {
-    const rawKey2 = req.headers["x-source-key"] || req.ip || "unknown-ip";
+    const rawKey2 = req.headers["x-source-key"] || getClientIp(req);
     return rawKey2;
   },
   handler: createRateLimitHandler(
@@ -92238,6 +92251,7 @@ async function csrfProtection(req, _res, next) {
 // src/app.ts
 function createApp() {
   const app2 = (0, import_express15.default)();
+  app2.set("trust proxy", 1);
   app2.use(requestIdMiddleware);
   const allowedOrigins = config2.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
   const isOriginAllowed = (origin) => {
