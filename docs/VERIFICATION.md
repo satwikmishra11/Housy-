@@ -6,29 +6,29 @@ This document records the literal, end-to-end execution of the setup instruction
 
 ## 1. Verification Metadata
 
-- **Verification Date**: 2026-11-08 (Executed 17:15–17:23 IST / 11:45–11:53 UTC)
+- **Verification Date**: 2026-11-08 (Final fresh-clone run executed 23:30–23:32 IST / 18:00–18:02 UTC)
 - **Target Repository**: `https://github.com/satwikmishra11/Housy-.git`
-- **Verified Commit Hash**: `62d795df934f55e09f537021eb3dfdf44be25a4a`
-- **Commit Message**: `fix(llm): use nullish coalescing in provider options constructor to respect empty string model override`
-- **Clean Clone Path**: `/tmp/housy-fresh-clone-test`
+- **Verified Commit Hash**: `903164a3952d7ee4a174cf309e4554b5dfa51508` (`903164a`)
+- **Commit Message**: `docs: update TDD honest limitations, regenerate TDD.pdf and submission.zip`
+- **Clean Clone Path**: `/tmp/housy-fresh-clone-final`
 - **Execution Host**: macOS (Darwin 24.2.0, arm64 Apple Silicon)
 - **Runtime Environment**:
   - Node.js: `v22.20.0`
   - npm: `10.9.3`
   - PostgreSQL: `PostgreSQL 16.8 (Debian 16.8-1.pgdg120+1)` via Docker Compose
   - Playwright: `1.51.1` (Chromium headless shell 1254)
-- **Overall Status**: **PASS (643/643 Tests, 56/56 AI Evals, 0 Lint Errors, 0 Typecheck Errors)**
+- **Overall Status**: **PASS (643/643 Tests, 56/56 AI Pipeline Evals, 43/56 Live Gemini Evals, 0 Lint Errors, 0 Typecheck Errors, Clean Build)**
 
 ---
 
 ## 2. Literal Execution Sequence
 
-The following commands were executed sequentially in `/tmp/housy-fresh-clone` strictly adhering to `deployment.md`:
+The following commands were executed sequentially in `/tmp/housy-fresh-clone-final` strictly adhering to `deployment.md`:
 
 ```bash
 # 1. Clone into isolated temporary directory
-git clone https://github.com/satwikmishra11/Housy-.git /tmp/housy-fresh-clone
-cd /tmp/housy-fresh-clone
+git clone https://github.com/satwikmishra11/Housy-.git /tmp/housy-fresh-clone-final
+cd /tmp/housy-fresh-clone-final
 
 # 2. Clean dependency installation
 npm ci
@@ -40,25 +40,30 @@ cp apps/web/.env.example apps/web/.env
 # 4. Database infrastructure provisioning
 npm run db:up
 
-# 5. Schema migration & demo seeding
-npm run db:migrate
-npm run db:seed:demo
+# 5. Schema migration & test database reset
+npm run db:test:reset
 
 # 6. Static code quality & type verification
 npm run lint
 npm run typecheck
 
-# 7. Unit and integration test suites
+# 7. Unit and integration test suites (615 tests across 49 test files)
 npm test
 
-# 8. AI Chat Assistant evaluation pipeline
+# 8. AI Chat Assistant evaluation pipeline (56/56 passed)
 npm run eval:ai
 
-# 9. Playwright end-to-end browser test suites
+# 9. Documentation statistics consistency check
+npm run check:doc-stats
+
+# 10. Monorepo production build
+npm run build
+
+# 11. Playwright end-to-end browser test suites (28 tests across 4 spec files)
 npm run test:e2e
 ```
 
-All 9 steps completed with return code `0`.
+All 11 steps completed with return code `0`.
 
 ---
 
