@@ -132,23 +132,23 @@ npm run dev
 ### Step 8: Run automated test suites
 Execute the automated test suites:
 ```bash
-# 1. Run all unit and integration tests (496 tests across 46 test files)
+# 1. Run all unit and integration tests (551 tests across 48 test files)
 npm test
 
 # 2. Run Playwright end-to-end browser journeys and Axe-Core accessibility audits (28 tests)
 npm run test:e2e
 ```
-*Script verification output (Commit `dfacc89`):*
-- Vitest: **46 test files passed, 496 tests passed** (0 failures).
+*Script verification output (Commit `62d795d`, 2026-11-08):*
+- Vitest: **48 test files passed, 551 tests passed** (0 failures).
 - Playwright: **28 tests passed** (18 Axe-Core WCAG 2.1 AA audits across 375px/768px/1280px + 8 user journeys + 1 UI crawler + 1 screenshots).
-- Total automated tests: **524 passed**.
+- Total automated tests: **579 passed**.
 
 ### Step 9: Run AI evals
 Run the conversational evaluation benchmark verifying grounded answers, price guardrails, and handoff triggers:
 ```bash
 npm run eval:ai
 ```
-*Script verification output:* **50/50 (100.0%) passed**.
+*Script verification output:* **56/56 (100.0%) passed**.
 
 ---
 

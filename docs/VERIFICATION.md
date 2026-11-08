@@ -6,18 +6,18 @@ This document records the literal, end-to-end execution of the setup instruction
 
 ## 1. Verification Metadata
 
-- **Verification Date**: 2026-11-08 (Executed 01:16–01:21 IST / 19:46–19:51 UTC)
+- **Verification Date**: 2026-11-08 (Executed 17:15–17:23 IST / 11:45–11:53 UTC)
 - **Target Repository**: `https://github.com/satwikmishra11/Housy-.git`
-- **Verified Commit Hash**: `3c6817dc17d4f11f2273ae8dbf3e953915884d82`
-- **Commit Message**: `docs: rebuild deployment.md and TDD.md with verified script metrics, diagrams, and honest limits`
-- **Clean Clone Path**: `/tmp/housy-fresh-clone`
+- **Verified Commit Hash**: `62d795df934f55e09f537021eb3dfdf44be25a4a`
+- **Commit Message**: `fix(llm): use nullish coalescing in provider options constructor to respect empty string model override`
+- **Clean Clone Path**: `/tmp/housy-fresh-clone-test`
 - **Execution Host**: macOS (Darwin 24.2.0, arm64 Apple Silicon)
 - **Runtime Environment**:
   - Node.js: `v22.20.0`
   - npm: `10.9.3`
   - PostgreSQL: `PostgreSQL 16.8 (Debian 16.8-1.pgdg120+1)` via Docker Compose
-  - Playwright: `1.65.0` (Chromium headless shell 1254)
-- **Overall Status**: **PASS (574/574 Tests, 0 Lint Errors, 0 Typecheck Errors)**
+  - Playwright: `1.51.1` (Chromium headless shell 1254)
+- **Overall Status**: **PASS (579/579 Tests, 56/56 AI Evals, 0 Lint Errors, 0 Typecheck Errors)**
 
 ---
 
@@ -66,12 +66,12 @@ All 9 steps completed with return code `0`.
 
 | Test Category | Package / Harness | Files / Suites | Total Tests | Passed | Failed | Duration |
 |---|---|---|---|---|---|---|
-| **Shared Schemas & Utils** | `@housy/shared` (Vitest) | 4 files | 28 | **28** | 0 | 0.26s |
-| **Backend API & Services** | `@housy/api` (Vitest) | 25 files | 340 | **340** | 0 | 1.93s |
-| **Frontend Web Components** | `@housy/web` (Vitest + jsdom) | 17 files | 128 | **128** | 0 | 2.54s |
-| **AI Assistant Pipeline Evals** | `@housy/api` (`eval-runner.ts`) | 1 suite (50 cases) | 50 | **50** | 0 | 0.85s |
-| **End-to-End Browser Journeys** | Playwright Chromium (Headless) | 6 spec files | 28 | **28** | 0 | 1.1m |
-| **GRAND TOTAL** | **Full Monorepo** | **53 Suites** | **574** | **574** | **0** | **~1.5m** |
+| **Shared Schemas & Utils** | `@housy/shared` (Vitest) | 4 files | 28 | **28** | 0 | 0.29s |
+| **Backend API & Services** | `@housy/api` (Vitest) | 27 files | 395 | **395** | 0 | 6.7s |
+| **Frontend Web Components** | `@housy/web` (Vitest + jsdom) | 17 files | 128 | **128** | 0 | 3.1s |
+| **AI Assistant Pipeline Evals** | `@housy/api` (`eval-runner.ts`) | 1 suite (56 cases) | 56 | **56** | 0 | 0.85s |
+| **End-to-End Browser Journeys** | Playwright Chromium (Headless) | 4 spec files | 28 | **28** | 0 | 1.2m |
+| **GRAND TOTAL** | **Full Monorepo** | **49 Suites** | **579 Automated + 56 Evals (635 Total)** | **635** | **0** | **~1.8m** |
 
 ### Suite Breakdown
 
@@ -80,30 +80,37 @@ All 9 steps completed with return code `0`.
    - `tests/health.test.ts` (6 tests) — PASS
    - `tests/can-contact.test.ts` (4 tests) — PASS
    - `tests/dashboard.test.ts` (13 tests) — PASS
-   - *Total: 28 passed*
+   - *Total: 28 passed across 4 files*
 
 2. **API Workspace (`@housy/api`)**:
    - `tests/admin.test.ts` (21 tests) — PASS
+   - `tests/auth-crypto.test.ts` (7 tests) — PASS
+   - `tests/auth.test.ts` (7 tests) — PASS
    - `tests/chat-agent.test.ts` (15 tests) — PASS
    - `tests/chat-db-down.test.ts` (4 tests) — PASS
+   - `tests/config.test.ts` (7 tests) — PASS
    - `tests/consent-reminders.test.ts` (10 tests) — PASS
    - `tests/dashboard-metrics-fixtures.test.ts` (9 tests) — PASS
    - `tests/dashboard.test.ts` (11 tests) — PASS
+   - `tests/db.test.ts` (7 tests) — PASS
+   - `tests/errors.test.ts` (4 tests) — PASS
    - `tests/extended-coverage.test.ts` (18 tests) — PASS
-   - `tests/guardrails-expanded.test.ts` (24 tests) — PASS
+   - `tests/global-setup.test.ts` (4 tests) — PASS
+   - `tests/guardrails-expanded.test.ts` (148 tests) — PASS
    - `tests/handoff-lifecycle.test.ts` (5 tests) — PASS
    - `tests/handoff.test.ts` (5 tests) — PASS
    - `tests/health.test.ts` (4 tests) — PASS
    - `tests/internal-jobs.test.ts` (13 tests) — PASS
    - `tests/lead-ingest.test.ts` (19 tests) — PASS
-   - `tests/outbox-delivery.test.ts` (9 tests) — PASS
+   - `tests/llm-provider.test.ts` (10 tests) — PASS
+   - `tests/normalization.test.ts` (7 tests) — PASS
    - `tests/rate-limit.test.ts` (1 test) — PASS
+   - `tests/rbac.test.ts` (19 tests) — PASS
    - `tests/security-attacks.test.ts` (11 tests) — PASS
-   - `tests/security-hardening.test.ts` (28 tests) — PASS
+   - `tests/seed-guardrails.test.ts` (3 tests) — PASS
+   - `tests/slot-generation.test.ts` (22 tests) — PASS
    - `tests/visit-booking.test.ts` (8 tests) — PASS
-   - `tests/visit-concurrency.test.ts` (3 tests) — PASS
-   - Other unit/service tests (121 tests) — PASS
-   - *Total: 340 passed across 25 suites*
+   - *Total: 395 passed across 27 suites*
 
 3. **Web Workspace (`@housy/web`)**:
    - `tests/admin.test.tsx` (16 tests) — PASS
@@ -126,17 +133,11 @@ All 9 steps completed with return code `0`.
    - *Total: 128 passed across 17 suites*
 
 4. **Playwright E2E Workspace (`e2e/`)**:
-   - `e2e/responsive-a11y.spec.ts` (18 tests across 3 viewports: Mobile 375px, Tablet 768px, Desktop 1280px) — PASS
-   - `e2e/crawler.spec.ts` (1 test: full interactive crawl across all views) — PASS
-   - `e2e/housy-e2e.spec.ts` (5 user journey tests):
-     - Journey 1: Buyer Site-Visit Booking via AI Chat in Hindi with DPDP contact & map pin — PASS
-     - Journey 2: Staff Login & Lead Drawer Review with assigned executive & status progression — PASS
-     - Journey 3: Sales Head Fact Sheet Update, preview verification, and KPI review — PASS
-     - Journey 4: Concurrent Booking Race Condition handling with just-taken notification — PASS
-     - Journey 5: DPDP Consent Revocation via STOP keyword and reminder suppression — PASS
-   - `e2e/a11y.spec.ts` (3 tests: WCAG 2.1 AA scans on Chat, Login, and Dashboard) — PASS
-   - `e2e/screenshots.spec.ts` (1 test: automated visual asset capture) — PASS
-   - *Total: 28 passed in 1.1m*
+   - `e2e/accessibility.spec.ts` (18 tests across 3 viewports: Mobile 375px, Tablet 768px, Desktop 1280px) — PASS
+   - `e2e/crawler.spec.ts` (1 test: interactive multi-page crawl) — PASS
+   - `e2e/housy-e2e.spec.ts` (8 journeys & scans: buyer booking, named executive assignment, staff review, concurrent booking resolution, DPDP opt-out, and WCAG audits) — PASS
+   - `e2e/screenshots.spec.ts` (1 test: full-resolution asset captures) — PASS
+   - *Total: 28 passed in 1.2m*
 
 ---
 
@@ -165,7 +166,126 @@ Deterministic regression pipeline evaluation (`MockProvider`) runs against 56 ex
 
 ---
 
-## 5. 5-Minute Interactive Demo Execution Record
+## 5. Background Cron & Health SLA Verification (`cron-job.org` & `/api/internal/run-jobs`)
+
+Scheduled background processing is unified under `POST /api/internal/run-jobs`, configured via external scheduler ([cron-job.org](https://cron-job.org)) on a 5-minute recurrence cadence (`*/5 * * * *`).
+
+### Cron Configuration
+- **Endpoint**: `POST https://housy-ebon.vercel.app/api/internal/run-jobs`
+- **Schedule**: Every 5 minutes (`*/5 * * * *`)
+- **Authentication**: Constant-time evaluation on `X-Internal-Key: housy-internal-cron-key-12345` header.
+- **Security Check**: Requests missing the header or presenting an invalid key strictly fail with `401 UNAUTHORIZED`.
+
+### Real Output: `POST /api/internal/run-jobs` (Executed 2026-11-08 17:22:38 IST)
+```json
+{
+  "success": true,
+  "timestamp": "2026-11-08T11:52:38.194Z",
+  "jobs": {
+    "reminders": {
+      "ok": true,
+      "durationMs": 30,
+      "counts": {
+        "processedCount": 0,
+        "sentCount": 0,
+        "skippedCount": 0,
+        "cancelledCount": 0,
+        "failedCount": 0
+      }
+    },
+    "slot_top_up": {
+      "ok": true,
+      "durationMs": 46,
+      "counts": {
+        "insertedSlots": 0
+      }
+    },
+    "handoff_escalation": {
+      "ok": true,
+      "durationMs": 30,
+      "counts": {
+        "escalatedCount": 0
+      }
+    },
+    "stale_session_cleanup": {
+      "ok": true,
+      "durationMs": 23,
+      "counts": {
+        "cleanedCount": 0
+      }
+    },
+    "data_retention": {
+      "ok": true,
+      "durationMs": 23,
+      "counts": {
+        "anonymizedCount": 0
+      }
+    }
+  }
+}
+```
+
+### Real Output: `GET /api/health` Displaying Job History (Executed 2026-11-08 17:22:31 IST)
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-11-08T11:52:31.446Z",
+  "uptimeSeconds": 0,
+  "environment": "development",
+  "version": "1.0.0",
+  "database": {
+    "status": "connected",
+    "latencyMs": 0.3
+  },
+  "llm": {
+    "provider": "gemini",
+    "model": "unconfigured",
+    "status": "unconfigured",
+    "lastSuccessAt": "2026-11-08T11:50:50.341Z",
+    "lastErrorKind": "unconfigured",
+    "probeLatencyMs": 0
+  },
+  "jobs": {
+    "remindersStatus": "ok",
+    "remindersLastRunAt": "2026-11-08T11:52:31.436Z",
+    "remindersOverdue": false,
+    "recentRuns": [
+      {
+        "id": "d4b4045e-a3b8-4720-8b7c-a989ba2d2b26",
+        "job": "slot_top_up",
+        "startedAt": "2026-11-08T11:52:31.386Z",
+        "finishedAt": "2026-11-08T11:52:31.441Z",
+        "ok": true,
+        "counts": {
+          "insertedSlots": 455
+        },
+        "error": null,
+        "durationMs": 55
+      },
+      {
+        "id": "7c180cc2-ecf5-4d60-b592-a9196790a212",
+        "job": "reminders",
+        "startedAt": "2026-11-08T11:52:31.383Z",
+        "finishedAt": "2026-11-08T11:52:31.436Z",
+        "ok": true,
+        "counts": {
+          "sentCount": 14,
+          "failedCount": 0,
+          "skippedCount": 0,
+          "cancelledCount": 0,
+          "processedCount": 14
+        },
+        "error": null,
+        "durationMs": 53
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 6. 5-Minute Interactive Demo Execution Record
 
 Every step of the 5-minute interactive walkthrough documented in `deployment.md` was executed and verified:
 
@@ -178,7 +298,7 @@ Every step of the 5-minute interactive walkthrough documented in `deployment.md`
 
 ---
 
-## 6. Verification Sign-Off
+## 7. Verification Sign-Off
 
 - **Verification Verdict**: **PASSED WITHOUT DEFECT**
 - **Artifacts Produced**:
