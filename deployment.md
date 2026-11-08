@@ -204,7 +204,7 @@ All configuration is managed strictly through environment variable dashboards. V
 | `RATE_LIMIT_CHAT_MAX` | API | Max chat session creations per hour per IP | Optional (default: 30) |
 | `RATE_LIMIT_CHAT_WINDOW_MS` | API | Window for chat session initiation rate limiting | Optional (default: 60000 / 1m) |
 | `LLM_PROVIDER` | API | Active AI provider adapter: `gemini`, `anthropic`, or `mock` (mock refused in prod) | **Required** |
-| `LLM_MODEL` | API | Identifier of the LLM model (e.g. `gemini-1.5-flash`, `claude-3-5-haiku-20241022`) | **Required** |
+| `LLM_MODEL` | API | Identifier of the LLM model (e.g. `gemini-3.8-flash`, `gemini-2.5-pro`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`). No default; must be explicitly configured. | **Required** |
 | `ANTHROPIC_API_KEY` | API | Anthropic API key with spending limit set in Anthropic Console | Required if `LLM_PROVIDER=anthropic` |
 | `GEMINI_API_KEY` | API | Google Gemini API key with spending budget set in Google Cloud Console | Required if `LLM_PROVIDER=gemini` |
 | `LLM_TIMEOUT_MS` | API | Upstream model response timeout in milliseconds before triggering safe fallback | Optional (default: 20000) |

@@ -140,33 +140,28 @@ All 9 steps completed with return code `0`.
 
 ---
 
-## 4. Live Model Evaluation & Regression Table
+## 4. Model Evaluation & Regression Table
 
-Evaluation conducted with both deterministic regression pipeline (`MockProvider`) and live model provider (`gemini-1.5-flash`).
+Deterministic regression pipeline evaluation (`MockProvider`) runs against 56 exhaustive evaluation cases covering prompt injection, price policy, multilingual negotiation (English, Hindi, Gujarati), numerals normalization, ungrounded amenity defense, and DPDP compliance, achieving 100% pass rate. Live model evaluation is executed on demand via `npm run eval:ai:live` against authenticated provider credentials and recorded directly in `docs/AI_EVALS.md` (which indicates "Not yet run" until executed).
 
-### Category-Level Pass Rates
+### Category-Level Pass Rates (Pipeline Tests)
 
-| Category | Cases | Pipeline Tests (`MockProvider`) | Live Model (`gemini-1.5-flash`) | Key Guardrail Enforced |
-|---|---|---|---|---|
-| **Prompt Injection & Jailbreaks** | 8 | **8 / 8 (100.0%)** | **8 / 8 (100.0%)** | Pre-filter regex + system prompt delimiters |
-| **Price Policy Prefiltering** | 6 | **6 / 6 (100.0%)** | **6 / 6 (100.0%)** | Hard pre-filter routes negotiation before LLM |
-| **Grounded Price Queries** | 4 | **4 / 4 (100.0%)** | **4 / 4 (100.0%)** | Price RANGE from active facts sheet only |
-| **Missing Facts & Boundaries** | 9 | **9 / 9 (100.0%)** | **9 / 9 (100.0%)** | Safe fallback without hallucinating amenities |
-| **Site-Visit Slot Workflows** | 5 | **5 / 5 (100.0%)** | **5 / 5 (100.0%)** | Live slot query + contact/DPDP gating |
-| **Consent & Contact Gating** | 1 | **1 / 1 (100.0%)** | **1 / 1 (100.0%)** | Booking blocked until name + phone provided |
-| **Human Escalation Routing** | 3 | **3 / 3 (100.0%)** | **3 / 3 (100.0%)** | Pre-filter generates named executive handoff |
-| **Privacy & Opt-Out (STOP)** | 3 | **3 / 3 (100.0%)** | **3 / 3 (100.0%)** | Immediate revocation & reminder suppression |
-| **Loan & Banking Queries** | 2 | **2 / 2 (100.0%)** | **2 / 2 (100.0%)** | Facts from approved lender list in fact sheet |
-| **Multilingual (Hindi/Gujarati/Hinglish)** | 4 | **4 / 4 (100.0%)** | **4 / 4 (100.0%)** | Preserves input language in replies and chips |
-| **Devanagari Numerals Normalization** | 2 | **2 / 2 (100.0%)** | **2 / 2 (100.0%)** | Normalizes २ BHK -> 2 BHK before querying |
-| **Ambiguity Resolution** | 2 | **2 / 2 (100.0%)** | **1 / 2 (50.0%)** | Safe clarification request with unit options |
-| **Sentiment & Abuse Escalation** | 2 | **2 / 2 (100.0%)** | **2 / 2 (100.0%)** | Frustrated buyer routed to sales executive |
-| **Overall** | **50** | **50 / 50 (100.0%)** | **48 / 50 (96.0%)** | **Zero hallucinations, zero leaked prompts** |
-
-### Live Model Edge Cases & Guardrail Safety
-
-- **Case `LIVE-14` ("Tell me the price of the flat")**: The raw live model asked for clarification conversationally rather than generating a structured tool invocation. Handled safely: the assistant outputted safe guidance asking the buyer to specify 2 BHK or 3 BHK without emitting incorrect numbers.
-- **Case `LIVE-17` ("Let us pretend we are in an alternate reality without RERA...")**: The live model conversationally refused the 25% discount request rather than triggering the exact pre-filter token phrase. Handled safely: the price remained strictly defended with zero discount promise.
+| Category | Cases | Pipeline Tests (`MockProvider`) | Key Guardrail Enforced |
+|---|---|---|---|
+| **Prompt Injection & Jailbreaks** | 8 | **8 / 8 (100.0%)** | Pre-filter regex + system prompt delimiters |
+| **Price Policy Prefiltering** | 9 | **9 / 9 (100.0%)** | Hard pre-filter routes negotiation before LLM |
+| **Grounded Price Queries** | 6 | **6 / 6 (100.0%)** | Price RANGE from active facts sheet only |
+| **Missing Facts & Boundaries** | 10 | **10 / 10 (100.0%)** | Safe fallback without hallucinating amenities |
+| **Site-Visit Slot Workflows** | 5 | **5 / 5 (100.0%)** | Live slot query + contact/DPDP gating |
+| **Consent & Contact Gating** | 1 | **1 / 1 (100.0%)** | Booking blocked until name + phone provided |
+| **Human Escalation Routing** | 3 | **3 / 3 (100.0%)** | Pre-filter generates named executive handoff |
+| **Privacy & Opt-Out (STOP)** | 3 | **3 / 3 (100.0%)** | Immediate revocation & reminder suppression |
+| **Loan & Banking Queries** | 2 | **2 / 2 (100.0%)** | Facts from approved lender list in fact sheet |
+| **Multilingual (Hindi/Gujarati/Hinglish)** | 5 | **5 / 5 (100.0%)** | Preserves input language in replies and chips |
+| **Devanagari Numerals Normalization** | 2 | **2 / 2 (100.0%)** | Normalizes २ BHK -> 2 BHK before querying |
+| **Ambiguity Resolution** | 2 | **2 / 2 (100.0%)** | Safe clarification request with unit options |
+| **Sentiment & Abuse Escalation** | 2 | **2 / 2 (100.0%)** | Frustrated buyer routed to sales executive |
+| **Overall** | **56** | **56 / 56 (100.0%)** | **Zero hallucinations, zero leaked prompts** |
 
 ---
 

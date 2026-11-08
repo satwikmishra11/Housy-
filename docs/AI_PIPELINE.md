@@ -79,8 +79,8 @@ export interface LLMProvider {
 ```
 
 ### Implementations
-- **`AnthropicProvider`**: Native HTTP integration with Claude (`claude-3-5-sonnet-20241022` or `claude-3-haiku-20240307`), parsing tool use blocks and candidate messages.
-- **`GeminiProvider`**: Native HTTP integration with Google Gemini (`gemini-1.5-pro` or `gemini-1.5-flash`), formatting function declarations and candidate parts.
+- **`AnthropicProvider`**: Native HTTP integration with Claude (`claude-3-5-sonnet-20241022` or `claude-3-5-haiku-20241022`), parsing tool use blocks and candidate messages.
+- **`GeminiProvider`**: Native HTTP integration with Google Gemini (`gemini-3.8-flash`, `gemini-2.5-pro`, `gemini-flash-latest`, or `gemini-2.5-flash-lite`), formatting function declarations and candidate parts.
 - **`MockProvider`**: Deterministic test double supporting queued responses, simulated tool execution, timeout injection, and call introspection. Used in automated CI and Playwright suites.
 
 ### Safety & Telemetry
