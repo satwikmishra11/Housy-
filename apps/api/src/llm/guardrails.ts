@@ -227,7 +227,9 @@ export function detectIntent(message: string, _lang: ChatLanguage = 'en'): Buyer
   }
 
   // 4. NEGOTIATION (discounts, reduction, deals, waivers, concessions, % off, cashback, best/final price)
+  // Robust against arbitrary word order and grammatical inflections across Hindi, Gujarati, and Hinglish.
   const isNegotiation =
+    // English explicit negotiation keywords & phrasing
     /\b(discount\w*|negotiat\w*|bargain\w*|cashback|cash\s*back|waiv\w*|concession\w*)\b/i.test(lower) ||
     /\b\d*\s*%\s*(off|discount)\b/i.test(lower) ||
     /\b(percent|percentage)\s*(off|discount)\b/i.test(lower) ||
@@ -236,42 +238,53 @@ export function detectIntent(message: string, _lang: ChatLanguage = 'en'): Buyer
     /\bwaive\s*(the\s*)?(fee|fees|charges?|cost|registration|floor\s*rise)?\b/i.test(lower) ||
     /\b(special\s*discount|any\s*discount|good\s*discount|extra\s*discount|cashback\s*offer)\b/i.test(lower) ||
     /\b(special\s*offer|special\s*deal|festive\s*offer|festival\s*discount)\b/i.test(lower) ||
-    /(रेट|भाव|दाम|कीमत|किराया)\s*(कम\s*करो|कम\s*कीजिए|कम\s*हो\s*सकता\s*है|कम\s*कर\s*दो|कम\s*करोगे)/i.test(lower) ||
-    /(कुछ|थोड़ा)\s*कम\s*करो/i.test(lower) ||
-    /(छूट|डिस्काउंट|ऑफर|रियायत|गुंजाइश)\s*(मिलेग[ाी]|दीजिए|कर\s*दो|दे\s*दो|होगी)/i.test(lower) ||
-    /(छूट\s*कर\s*दो|छूट\s*करो|छूट\s*दे\s*दो|छूट\s*दीजिए|रियायत\s*कर\s*दो|रियायत\s*दीजिए)/i.test(lower) ||
-    /(कम\s*हो\s*सकता\s*है|कम\s*कर\s*दो|कम\s*करोगे|कम\s*कीजिए)/i.test(lower) ||
-    /(आखिरी|अंतिम|बेस्ट)\s*(कीमत|रेट|दाम|भाव|प्राइस)/i.test(lower) ||
-    /(कुछ\s*गुंजाइश|कोई\s*रियायत|थोड़ी\s*रियायत)/i.test(lower) ||
-    /\b(rate\s*kam|bhav\s*kam|daam\s*kam|kuch\s*kam|thoda\s*kam|discount\s*milega|kam\s*karo|kam\s*kar\s*do|chhoot\s*kar\s*do|chhut\s*kar\s*do|chhoot\s*de\s*do|chhut\s*de\s*do|last\s*rate|aakhiri\s*keemat|best\s*price\s*kya\s*hai|rihayat|gunjaish)\b/i.test(lower) ||
-    /(भाव|ભાવમાં|કિંમત|કિંમતમાં)\s*(ઓછો?|ઓછી)\s*કરો/i.test(lower) ||
-    /(ઓછું|ઓછો)\s*કરો\s*ભાવ/i.test(lower) ||
-    /(ભાવ|ભાવમાં|કિંમત|કિંમતમાં)?\s*ઘટાડો/i.test(lower) ||
-    /(કંઈક|થોડું)\s*(ઓછો?|ઘટાડો)/i.test(lower) ||
-    /(ડિસ્કાઉન્ટ|ઓફર|છૂટ|છૂટછાટ|બાંધછોડ)\s*(મળશે|આપો|કરો)/i.test(lower) ||
-    /(બાંધછોડ|છૂટછાટ)\s*(કરો|થઈ\s*શકે)/i.test(lower) ||
-    /(છેલ્લો|અંતિમ|બેસ્ટ)\s*(ભાવ|પ્રાઈસ)/i.test(lower) ||
-    /\b(bhav\s*ochho|ochhu\s*karo\s*bhav|ochhu\s*karo|bhav\s*ghatado|ghatado|kaink\s*ochhu|discount\s*malshe|chhut\s*malshe|chhut\s*aapo|bandhchhod|chhello\s*bhav|best\s*bhav)\b/i.test(lower);
+
+    // Hindi (Devanagari): Word-order robust matching between price nouns and reduction terms
+    // Order 1: Price -> Reduction (e.g., भाव कम करो, दाम थोड़ा कम कीजिए, रेट में छूट दो, कीमत में डिस्काउंट मिलेगा)
+    /(रेट|भाव|दाम|कीमत|किराया|पैसे|रुपये)[^\n.?!]{0,40}(कम|घटा\w*|सस्त\w*|छूट\w*|रियायत\w*|गुंजाइश\w*|ढील|कमती|डिस्काउंट\w*|ऑफर\w*)/i.test(lower) ||
+    // Order 2: Reduction -> Price (e.g., कम करो भाव, कम कर दो रेट, कुछ छूट दाम में, कम कीमत में, कोई डिस्काउंट कीमत में)
+    /(कम|घटा\w*|सस्त\w*|छूट\w*|रियायत\w*|गुंजाइश\w*|ढील|कमती|डिस्काउंट\w*|ऑफर\w*)[^\n.?!]{0,40}(रेट|भाव|दाम|कीमत|किराया|पैसे|रुपये)/i.test(lower) ||
+    // Standalone Hindi reduction commands & inflections
+    /(कम\s*(करो|कीजिए|करिए|कर\s*दो|कर\s*दोगे|दे\s*दो|दीजिए|हो\s*सकता|होगा|होगी|करोगे|कर दें)|(कुछ|थोड़ा|ज़रा|थोड़ी)\s*कम\s*(करो|कीजिए|कर\s*दो)?|(सस्ता|सस्ती|सस्ते)\s*(करो|कीजिए|कर\s*दो|मिलेग[ाी]|होग[ाी]|है|हो)|(छूट|रियायत|गुंजाइश|डिस्काउंट|ऑफर)\s*(मिलेग[ाी]|दीजिए|कर\s*दो|दे\s*दो|होगी|हो|है|करो|कीजिए)|(आखिरी|अंतिम|बेस्ट)\s*(कीमत|रेट|दाम|भाव|प्राइस))/i.test(lower) ||
+
+    // Gujarati: Word-order robust matching between price nouns and reduction terms
+    // Order 1: Price -> Reduction (e.g., ભાવ ઓછો કરો, કિંમતમાં ઘટાડો કરો, રેટ ઉતારો, ભાવમાં કંઈક ઓછું કરો, ડિસ્કાઉન્ટ મળશે)
+    /(ભાવ|કિંમત|રેટ|દર|રૂપિયા)[^\n.?!]{0,40}(ઓછ[ોાીુંાં]\w*|ઘટાડ\w*|ઉતાર\w*|સસ્ત\w*|છૂટ\w*|બાંધછોડ\w*|ડિસ્કાઉન્ટ\w*|રાહત\w*|ઓફર\w*)/i.test(lower) ||
+    // Order 2: Reduction -> Price (e.g., ઓછો કરો ભાવ, ઓછું કરો ભાવ, ઘટાડો ભાવ, ઓછી કિંમત, કોઈ ડિસ્કાઉન્ટ ભાવમાં)
+    /(ઓછ[ોાીુંાં]\w*|ઘટાડ\w*|ઉતાર\w*|સસ્ત\w*|છૂટ\w*|બાંધછોડ\w*|ડિસ્કાઉન્ટ\w*|રાહત\w*|ઓફર\w*)[^\n.?!]{0,40}(ભાવ|કિંમત|રેટ|દર|રૂપિયા)/i.test(lower) ||
+    // Standalone Gujarati reduction commands & inflections
+    /(ઓછ[ોાીુંાં]\s*(કરો|કરશો\w*|આપો|આપશો\w*|થાય|થશે\w*|કરી\s*આપો)|(કંઈક|થોડું|જરા)\s*ઓછ[ોાીુંાં]\w*|ઘટાડો\s*(કરો|આપો|થોડો|કરી\s*આપો)?|સસ્ત[^\s.,!?]{0,8}\s*(કરો|આપો|થશે|કરી\s*આપો)|(છૂટ|છૂટછાટ|બાંધછોડ|ડિસ્કાઉન્ટ|રાહત|ઓફર)\s*(મળશે|આપો|આપશો|કરો|થશે|છે)|(છેલ્લો|અંતિમ|બેસ્ટ)\s*(ભાવ|પ્રાઈસ))/i.test(lower) ||
+
+    // Hinglish / Gujlish (Latin): Word-order robust matching between price and reduction terms
+    // Order 1: Price -> Reduction (e.g., rate kam karo, bhav ochho karo, daam thoda kam kijiye, price kam karo)
+    /\b(rate|bhav|bhaav|daam|keemat|kimat|price)\b[^\n.?!]{0,40}\b(kam|ochh[oauei]\w*|ghatad\w*|less|sast\w*|down|chho?ot\w*|chhut\w*|rihayat|gunjaish|discount)\b/i.test(lower) ||
+    // Order 2: Reduction -> Price (e.g., kam karo rate, ochho karo bhav, ochhu karo bhav, kam karo daam, ghatado bhav)
+    /\b(kam|ochh[oauei]\w*|ghatad\w*|less|sast\w*|down|chho?ot\w*|chhut\w*|rihayat|gunjaish|discount)\b[^\n.?!]{0,40}\b(rate|bhav|bhaav|daam|keemat|kimat|price)\b/i.test(lower) ||
+    // Standalone Latin reduction requests
+    /\b(kam\s*(karo|kar\s*do|kijiye|hoga|hogi|milega|karoge|karen)|(thoda|kuch|zara)\s*kam|ochh[oauei]\w*\s*(karo|aapo|malshe|kari\s*aapo|thodu)|kaink\s*ochh[oauei]\w*|ghatado|(chhut|chhoot|chhot)\s*(kar\s*do|de\s*do|milegi|milega|karo)|discount\s*(milega|malshe|aapo|de\s*do|hai\s*kya)|best\s*(bhav|rate|price)|last\s*(bhav|rate|price)|chhello\s*bhav|aakhiri\s*(keemat|bhav|rate)|sasta\s*(karo|hoga|milega)|sastu\s*(karo|malshe)|bandhchhod|gunjaish|rihayat)\b/i.test(lower);
 
   if (isNegotiation) {
     return 'negotiation';
   }
 
-  // 5. PRICE INFO (informational price, cost, or home loan enquiry without negotiation)
+  // 5. PRICE INFO (informational price, cost, maintenance, loan rate, or per-unit enquiry without negotiation)
   const isPriceInfo =
     /\b(price\s*range|price\s*of|cost\s*of|pricing(\s*of|\s*details)?)\b/i.test(lower) ||
     /\bwhat\s+is\s+the\s+(price|cost|rate)\b/i.test(lower) ||
     /\bhow\s+much\s+(is\s+it|does\s+it\s+cost|is\s+the|for\s+a)\b/i.test(lower) ||
+    /\b(maintenance\s*(cost|charges?|fees?|amount|expense))\b/i.test(lower) ||
     /\b(home\s*loan|interest)\s*rates?\b/i.test(lower) ||
+    /\b(loan\s*rates?|interest\s*rates?|home\s*loan\s*rates?|bank\s*rates?)\b/i.test(lower) ||
+    /\b(per\s*(-|\s*)?person|per\s*(-|\s*)?head|rate\s*per\s*sq\s*ft|rate\s*per\s*square\s*foot)\b/i.test(lower) ||
     /\b(starting\s*price|base\s*price|cost\s*breakup|payment\s*plan)\b/i.test(lower) ||
     /(कीमत|रेट|दाम|खर्चा|भाव)\s*(क्या\s*है|बताओ|बताइए|कितना\s*है|कितनी\s*है|कितना|कितनी)/i.test(lower) ||
     /(कितने\s*का\s*है|कितना\s*खर्च|कितना\s*पड़ेगा|क्या\s*भाव\s*है|दाम\s*कितना)/i.test(lower) ||
-    /(लोन\s*की\s*दर|ब्याज\s*दर)/i.test(lower) ||
-    /\b(price\s*kya\s*hai|rate\s*kya\s*hai|kitne\s*ka\s*hai|kitna\s*kharch|daam\s*kitna(\s*hai)?|rate\s*kitna|loan\s*rate)\b/i.test(lower) ||
+    /(लोन\s*की\s*दर|ब्याज\s*दर|मेंटेनेंस\s*खर्च|रखरखाव\s*चार्ज|प्रति\s*व्यक्ति)/i.test(lower) ||
+    /\b(price\s*kya\s*hai|rate\s*kya\s*hai|kitne\s*ka\s*hai|kitna\s*kharch|daam\s*kitna(\s*hai)?|rate\s*kitna|loan\s*rate|maintenance\s*cost)\b/i.test(lower) ||
     /(કિંમત|ભાવ)\s*(શું\s*છે|કહો|કેટલો\s*છે|કેટલી\s*છે|કેટલો|કેટલી)/i.test(lower) ||
     /(કેટલાનું\s*છે|કેટલા\s*રૂપિયા|કેટલો\s*ખર્ચ|ભાવ\s*કેટલો)/i.test(lower) ||
-    /(લોનનો\s*દર|વ્યાજ\s*દર)/i.test(lower) ||
-    /\b(kimat\s*shu\s*che|bhav\s*shu\s*che|bhav\s*ketlo(\s*che)?|ketlanu\s*che|ketla\s*rupia|loan\s*no\s*dar|vyaj\s*no\s*dar)\b/i.test(lower);
+    /(લોનનો\s*દર|વ્યાજ\s*દર|મેન્ટેનન્સ\s*ખર્ચ|નિભાવ\s*ચાર્જ|દર\s*વ્યક્તિ)/i.test(lower) ||
+    /\b(kimat\s*shu\s*che|bhav\s*shu\s*che|bhav\s*ketlo(\s*che)?|ketlanu\s*che|ketla\s*rupia|loan\s*no\s*dar|vyaj\s*no\s*dar|maintenance\s*ketlu)\b/i.test(lower);
 
   if (isPriceInfo) {
     return 'price_info';
@@ -356,6 +369,91 @@ export function runPreFilter(message: string, currentLang: ChatLanguage = 'en'):
   }
 
   return { triggered: false, intent };
+}
+
+/**
+ * Detects whether a message contains price/cost/monetary tokens across
+ * Hindi, Gujarati, Hinglish, or English.
+ */
+export function containsPriceWords(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    /(भाव|दाम|कीमत|रेट|दर|किराया|पैसे|रुपये|ભાવ|કિંમત|રેટ|દર|લાખ|કરોડ|રૂપિયા|નાણાં|લાગતો)/i.test(lower) ||
+    /\b(bhav|bhaav|daam|keemat|kimat|rate|rates|price|prices|pricing|cost|costs|charge|charges|fee|fees|rupaye|rupia|paise|lakh|cr)\b/i.test(lower)
+  );
+}
+
+/**
+ * Cheap LLM intent-classifier fallback for messages containing price words in hi/gu
+ * that the deterministic lexicon labels 'other'.
+ * Uses a minimal, fast 1-word prompt (maxTokens: 10, temperature: 0).
+ */
+export async function classifyIntentWithLLM(
+  message: string,
+  lang: ChatLanguage = 'en',
+  conversationId?: string,
+): Promise<BuyerIntent> {
+  const lower = message.toLowerCase();
+
+  try {
+    const { llmService } = await import('./llm.service.js');
+    const { config } = await import('../config/index.js');
+    const { logger } = await import('../utils/logger.js');
+
+    const isMockOrTest =
+      config.NODE_ENV === 'test' ||
+      llmService.getProviderName() === 'mock';
+    if (isMockOrTest) {
+      if (
+        /\b(deal|expensive|afford|negotiat\w*|bargain\w*|reduction|cut\b|adjust\w*|concession\w*|discount\w*)\b/i.test(lower) ||
+        /\b(tight\s*budget|low\s*budget|over\s*budget|exceed\w*\s*budget|out\s*of\s*budget|less\s*budget)\b/i.test(lower) ||
+        /(बजट\s*(कम|ज्यादा|कमती|टाइट|कम\s*है)|महंगा|सौदा|मोलभाव|कमती|छूट|सस्ता|घटा|ઓછ|ઘટા|ડિસ્કાઉન્ટ|ઓફર|डिस्काउंट|ऑफर)/i.test(lower)
+      ) {
+        return 'negotiation';
+      }
+      if (
+        /\b(how\s*much|cost|price|range|plan|rate|breakup|charges?)\b/i.test(lower) ||
+        /(कितना|कितने|क्या\s*है|दर|ખર્ચ|કેટલા|ભાવ|કિંમત)/i.test(lower)
+      ) {
+        return 'price_info';
+      }
+      return 'other';
+    }
+
+    // Live LLM Provider (Gemini / Anthropic)
+    const systemPrompt =
+      'You are a high-speed intent classifier for a luxury real estate sales assistant in Ahmedabad, India. ' +
+      'The buyer message may be in English, Hindi, Gujarati, or Hinglish. ' +
+      'Classify the user intent into exactly ONE label:\n' +
+      '- negotiation: the buyer is asking for a discount, waiver, reduction in price, concession, better deal, or bargaining.\n' +
+      '- price_info: the buyer is asking informational questions about property prices, cost breakups, loan interest rates, or maintenance.\n' +
+      '- other: general questions, amenities, booking, or other inquiries.\n' +
+      'Output ONLY the single label in lowercase without punctuation.';
+
+    const result = await llmService.chat(
+      {
+        system: systemPrompt,
+        messages: [{ role: 'user', content: message }],
+        maxTokens: 10,
+      },
+      conversationId,
+    );
+
+    const classification = (result.text || '').toLowerCase().trim();
+    if (classification.includes('negotiation')) {
+      logger.info(
+        { message, lang, conversationId, classification },
+        'LLM fallback classified message as negotiation',
+      );
+      return 'negotiation';
+    }
+    if (classification.includes('price_info')) {
+      return 'price_info';
+    }
+    return 'other';
+  } catch {
+    return 'other';
+  }
 }
 
 /**

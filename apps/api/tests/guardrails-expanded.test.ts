@@ -8,6 +8,8 @@ import {
   verifyPostChecks,
   normalizeNumerals,
   extractNumericTokens,
+  containsPriceWords,
+  classifyIntentWithLLM,
   type BuyerIntent,
 } from '../src/llm/guardrails.js';
 import { chatService } from '../src/services/chat.service.js';
@@ -65,7 +67,64 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       { input: 'chhello bhav shu aapsho?', expected: 'negotiation', desc: 'gu chhello bhav' },
       { input: 'ભાવમાં થોડી બાંધછોડ કરો, જો આજે ટોકન આપું તો શું છૂટછાટ મળશે?', expected: 'negotiation', desc: 'gu negotiation with bandhchhod and chhutchhat' },
 
-      // --- PRICE INFO (NOT NEGOTIATION) ---
+      // --- 40+ NEW NEGOTIATION PHRASES: WORD ORDER & INFLECTIONS (gu / hi / Hinglish) ---
+      // Gujarati word-order variations & inflections
+      { input: 'ઓછો કરો ભાવ', expected: 'negotiation', desc: 'gu inverted: ochho karo bhav' },
+      { input: 'ઓછો ભાવ કરો ભાઈ', expected: 'negotiation', desc: 'gu inverted: ochho bhav karo' },
+      { input: 'કરો ભાવ ઓછો થોડો', expected: 'negotiation', desc: 'gu verb-first: karo bhav ochho' },
+      { input: 'ભાવમાં થોડું ઓછું કરો ને', expected: 'negotiation', desc: 'gu inflection: bhav ma thodu ochhu karo ne' },
+      { input: 'કિંમતમાં કંઈક ઘટાડો કરશો?', expected: 'negotiation', desc: 'gu inflection: kimat ma kaink ghatado karsho' },
+      { input: 'ભાવ ઓછો કરી આપો', expected: 'negotiation', desc: 'gu inflection: bhav ochho kari aapo' },
+      { input: 'ઘટાડો ભાવ', expected: 'negotiation', desc: 'gu inverted: ghatado bhav' },
+      { input: 'ભાવ થોડો ઉતારો', expected: 'negotiation', desc: 'gu inflection: bhav thodo utaro' },
+      { input: 'કંઈક સસ્તું કરી આપો', expected: 'negotiation', desc: 'gu inflection: kaink sastu kari aapo' },
+      { input: 'આજે ટોકન આપું તો ભાવ ઓછો થશે?', expected: 'negotiation', desc: 'gu inflection: bhav ochho thashe' },
+      { input: 'કિંમત થોડી ઓછી કરો', expected: 'negotiation', desc: 'gu inflection: kimat thodi ochhi karo' },
+      { input: 'રેટ કંઈક ઘટાડી આપો', expected: 'negotiation', desc: 'gu inflection: rate kaink ghatadi aapo' },
+
+      // Hindi word-order variations & inflections
+      { input: 'कम करो भाव', expected: 'negotiation', desc: 'hi inverted: kam karo bhav' },
+      { input: 'कम कर दो रेट', expected: 'negotiation', desc: 'hi inverted: kam kar do rate' },
+      { input: 'कम भाव करो भाई', expected: 'negotiation', desc: 'hi inverted: kam bhav karo' },
+      { input: 'करो भाव कम थोड़ा', expected: 'negotiation', desc: 'hi verb-first: karo bhav kam' },
+      { input: 'दाम थोड़ा कम कीजिए', expected: 'negotiation', desc: 'hi inflection/polite: daam thoda kam kijiye' },
+      { input: 'कम दाम में मिलेगा क्या?', expected: 'negotiation', desc: 'hi inverted with modifier: kam daam me milega kya' },
+      { input: 'कीमत कम कर दोगे क्या?', expected: 'negotiation', desc: 'hi inflection: keemat kam kar doge kya' },
+      { input: 'रेट घटा दीजिए थोड़ा', expected: 'negotiation', desc: 'hi inflection: rate ghata dijiye thoda' },
+      { input: 'कुछ तो सस्ता करो', expected: 'negotiation', desc: 'hi standalone: kuch to sasta karo' },
+      { input: 'रेट में थोड़ी ढील दो', expected: 'negotiation', desc: 'hi idiom: rate me thodi dheel do' },
+      { input: 'दाम में कोई रियायत कर दो', expected: 'negotiation', desc: 'hi inflection: daam me koi rihayat kar do' },
+      { input: 'अगर आज फाइनल करें तो रेट कम करोगे?', expected: 'negotiation', desc: 'hi inflection future: rate kam karoge' },
+
+      // Hinglish / Gujlish word-order variations & inflections
+      { input: 'kam karo rate', expected: 'negotiation', desc: 'Hinglish inverted: kam karo rate' },
+      { input: 'kam karo bhav', expected: 'negotiation', desc: 'Hinglish inverted: kam karo bhav' },
+      { input: 'kam kar do daam thoda', expected: 'negotiation', desc: 'Hinglish inverted: kam kar do daam' },
+      { input: 'ochho karo bhav please', expected: 'negotiation', desc: 'Gujlish inverted: ochho karo bhav' },
+      { input: 'ochho bhav karo', expected: 'negotiation', desc: 'Gujlish inverted: ochho bhav karo' },
+      { input: 'karo bhav ochho thodu', expected: 'negotiation', desc: 'Gujlish verb-first: karo bhav ochho' },
+      { input: 'ghatado bhav thodo', expected: 'negotiation', desc: 'Gujlish inverted: ghatado bhav' },
+      { input: 'rate thoda kam kijiye please', expected: 'negotiation', desc: 'Hinglish polite: rate thoda kam kijiye' },
+      { input: 'price thoda kam karoge?', expected: 'negotiation', desc: 'Hinglish price kam karoge' },
+      { input: 'kam rate me mil sakta hai?', expected: 'negotiation', desc: 'Hinglish kam rate me mil sakta hai' },
+      { input: 'thoda discount de do na', expected: 'negotiation', desc: 'Hinglish thoda discount de do' },
+      { input: 'kaink ochhu kari aapo bhai', expected: 'negotiation', desc: 'Gujlish kaink ochhu kari aapo' },
+
+      // --- PRICE INFO (NOT NEGOTIATION, INCLUDING CRITICAL FALSE POSITIVES) ---
+      { input: 'what is the maintenance cost?', expected: 'price_info', desc: 'false positive check: maintenance cost' },
+      { input: 'what are the monthly maintenance charges?', expected: 'price_info', desc: 'false positive check: maintenance charges' },
+      { input: 'maintenance charge kitna padega?', expected: 'price_info', desc: 'false positive check: hi maintenance charge' },
+      { input: 'what is the home loan rate?', expected: 'price_info', desc: 'false positive check: home loan rate' },
+      { input: 'loan rate kya chal raha hai?', expected: 'price_info', desc: 'false positive check: hi loan rate' },
+      { input: 'What is the bank loan interest rate?', expected: 'price_info', desc: 'false positive check: bank interest rate' },
+      { input: 'rate per person kitna hai?', expected: 'price_info', desc: 'false positive check: rate per person' },
+      { input: 'what is the per-person ticket for site visit?', expected: 'price_info', desc: 'false positive check: per-person ticket' },
+      { input: 'per person cost kitna hai?', expected: 'price_info', desc: 'false positive check: per person cost' },
+      { input: 'rate per sq ft kya hai?', expected: 'price_info', desc: 'false positive check: rate per sq ft' },
+      { input: 'what is the rate per square foot?', expected: 'price_info', desc: 'false positive check: rate per square foot' },
+      { input: 'square feet ka rate kitna hai?', expected: 'price_info', desc: 'false positive check: sq ft rate hi' },
+      { input: 'does maintenance fee include gym and clubhouse?', expected: 'price_info', desc: 'false positive check: maintenance fee inclusions' },
+      { input: 'maintenance ketlu che per month?', expected: 'price_info', desc: 'false positive check: gu maintenance ketlu' },
       { input: '3 BHK का दाम कितना है', expected: 'price_info', desc: 'hi 3 BHK ka daam kitna hai' },
       { input: '3 BHK का दाम कितना', expected: 'price_info', desc: 'hi दाम कितना without hai' },
       { input: 'दाम कितना है 2 BHK का?', expected: 'price_info', desc: 'hi inverted daam kitna hai' },
@@ -155,6 +214,30 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
         expect(detectIntent(tc.input)).toBe(tc.expected);
       });
     }
+
+    it('containsPriceWords() identifies price tokens across en, hi, gu, and Hinglish', () => {
+      expect(containsPriceWords('3 BHK ka daam kitna hai?')).toBe(true);
+      expect(containsPriceWords('ભાવ કેટલો છે?')).toBe(true);
+      expect(containsPriceWords('Can we discuss pricing and rate?')).toBe(true);
+      expect(containsPriceWords('Is there any cost for parking?')).toBe(true);
+      expect(containsPriceWords('કિંમત શું છે?')).toBe(true);
+      expect(containsPriceWords('What is the clubhouse timing?')).toBe(false);
+      expect(containsPriceWords('Hello how are you?')).toBe(false);
+    });
+
+    it('classifyIntentWithLLM() fallback accurately categorizes ambiguous negotiation vs informational queries', async () => {
+      // Negotiation fallback
+      const negFallback = await classifyIntentWithLLM('This flat is too expensive, can we adjust the budget?');
+      expect(negFallback).toBe('negotiation');
+
+      // Price info fallback
+      const priceFallback = await classifyIntentWithLLM('Tell me the breakup of the payment plan');
+      expect(priceFallback).toBe('price_info');
+
+      // Other fallback
+      const otherFallback = await classifyIntentWithLLM('Where is the swimming pool located?');
+      expect(otherFallback).toBe('other');
+    });
   });
 
   // ============================================================================

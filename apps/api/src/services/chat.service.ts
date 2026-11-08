@@ -24,6 +24,8 @@ import {
   runPreFilter,
   getLocalizedFallback,
   verifyPostChecks,
+  containsPriceWords,
+  classifyIntentWithLLM,
 } from '../llm/guardrails.js';
 import { verifyReplyClaims } from '../llm/verifier.js';
 import { runAgentLoop } from '../llm/agent-loop.js';
@@ -330,24 +332,25 @@ export class ChatService {
       }
 
       if (preFilter.type === 'price_ask') {
-        await chatRepository.flagConversation(conversation.id, ['price_ask']);
-        const reply: ChatReply = {
-          text: preFilter.responseText!,
-          language: preFilter.language ?? targetLang,
-          confidence: 1.0,
-          citedFactIds: [],
-          quickReplies: preFilter.quickReplies,
-          conversationId: conversation.id,
-          flagReasons: ['price_ask'],
-        };
-        await chatRepository.insertMessage(
-          conversation.id,
-          'assistant',
-          reply.text,
-          [],
-          { quickReplies: preFilter.quickReplies, flagReasons: ['price_ask'] },
-        );
-        return reply;
+        return this.createNegotiationReply(conversation.id, preFilter.language ?? targetLang, preFilter.quickReplies);
+      }
+    }
+
+    // 2b. Cheap LLM Intent-Classifier Fallback:
+    // If the lexicon returned 'other' but the message contains price words in hi/gu/Hinglish,
+    // run the cheap LLM classifier. If it classifies as negotiation, return the deterministic canned reply!
+    if (!preFilter.triggered && preFilter.intent === 'other' && containsPriceWords(payload.message)) {
+      const isIndicOrHinglish =
+        targetLang === 'hi' ||
+        targetLang === 'gu' ||
+        /[\u0900-\u097F\u0A80-\u0AFF]/.test(payload.message) ||
+        /\b(bhav|bhaav|daam|keemat|kimat|rupia|rupaye|paise|karo|ghatado|ochho|ochhu|sasta|chhoot|chhut)\b/i.test(payload.message);
+
+      if (isIndicOrHinglish) {
+        const fallbackIntent = await classifyIntentWithLLM(payload.message, targetLang, conversation.id);
+        if (fallbackIntent === 'negotiation') {
+          return this.createNegotiationReply(conversation.id, targetLang);
+        }
       }
     }
 
@@ -842,6 +845,45 @@ export class ChatService {
       message: confirmationText,
       visit: updated,
     };
+  }
+
+  /**
+   * Deterministic canned reply for negotiation queries, flagging price_ask.
+   */
+  private async createNegotiationReply(
+    conversationId: string,
+    lang: ChatLanguage,
+    customQuickReplies?: string[],
+  ): Promise<ChatReply> {
+    await chatRepository.flagConversation(conversationId, ['price_ask']);
+    const responses: Record<ChatLanguage, string> = {
+      en: 'Final pricing is confirmed by our sales team. Would you like me to connect you with an executive, or arrange a private site visit to review project options?',
+      hi: 'अंतिम मूल्य और विशेष ऑफ़र की पुष्टि सीधे हमारी सेल्स टीम द्वारा की जाती है। क्या आप चाहेंगे कि मैं आपको हमारे प्रतिनिधि से जोड़ूं या साइट विज़िट निर्धारित करूं?',
+      gu: 'અંતિમ કિંમત અને ઑફર્સની પુષ્ટિ સીધી અમારી સેલ્સ ટીમ દ્વારા કરવામાં આવે છે. શું તમે ઈચ્છો છો કે હું તમને અમારા પ્રતિનિધિ સાથે જોડું અથવા સાઇટ વિઝિટ ગોઠવું?',
+    };
+    const defaultQuickReplies: Record<ChatLanguage, string[]> = {
+      en: ['Connect with executive', 'Schedule a site visit'],
+      hi: ['एग्जीक्यूटिव से बात करें', 'साइट विजिट बुक करें'],
+      gu: ['એક્ઝિક્યુટિવ સાથે વાત કરો', 'સાઇટ વિઝિટ બુક કરો'],
+    };
+    const quickReplies = customQuickReplies ?? defaultQuickReplies[lang] ?? defaultQuickReplies.en;
+    const reply: ChatReply = {
+      text: responses[lang] ?? responses.en,
+      language: lang,
+      confidence: 1.0,
+      citedFactIds: [],
+      quickReplies,
+      conversationId,
+      flagReasons: ['price_ask'],
+    };
+    await chatRepository.insertMessage(
+      conversationId,
+      'assistant',
+      reply.text,
+      [],
+      { quickReplies, flagReasons: ['price_ask'] },
+    );
+    return reply;
   }
 
   /**
