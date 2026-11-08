@@ -265,6 +265,272 @@ describe('Comprehensive Guardrails, Intents, Language, Grounding & Transcript Su
       expect(checkWithoutCitations.passed).toBe(false);
       expect(checkWithoutCitations.reason).toBe('grounding_failed');
     });
+
+    it('enforces that answer_type="fact" must cite at least one active fact server-side', () => {
+      const activeFacts: Fact[] = [
+        {
+          id: 'fact-sample',
+          projectId: 'p1',
+          category: 'pricing',
+          title: 'Pricing',
+          value: 'Starts at ₹95 Lakh',
+          status: 'active',
+          version: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      const result = verifyPostChecks({
+        replyText: 'Yes, we are delighted to assist you with our residences.',
+        citedFactIds: [],
+        activeFacts,
+        answerType: 'fact',
+      });
+
+      expect(result.passed).toBe(false);
+      expect(result.reason).toBe('missing_fact');
+      expect(result.details).toContain('Answer type "fact" must cite at least one active fact');
+    });
+
+    it('rejects uncited amenity claim: "rooftop cinema and helipad"', () => {
+      const activeFacts: Fact[] = [
+        {
+          id: 'fact-amenities',
+          projectId: 'p1',
+          category: 'amenities',
+          title: 'Clubhouse Amenities',
+          value: 'Swimming pool, gymnasium, landscaped gardens',
+          status: 'active',
+          version: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      // Even if classified as conversational, stating property details/amenities without citations must fail
+      const resultConversational = verifyPostChecks({
+        replyText: 'Our project features an exclusive rooftop cinema and helipad for private arrivals.',
+        citedFactIds: [],
+        activeFacts,
+        answerType: 'conversational',
+      });
+      expect(resultConversational.passed).toBe(false);
+      expect(resultConversational.reason).toBe('grounding_failed');
+
+      // Also fails if answer_type="fact" without citations
+      const resultFact = verifyPostChecks({
+        replyText: 'Our project features an exclusive rooftop cinema and helipad for private arrivals.',
+        citedFactIds: [],
+        activeFacts,
+        answerType: 'fact',
+      });
+      expect(resultFact.passed).toBe(false);
+      expect(resultFact.reason).toBe('missing_fact');
+    });
+
+    it('enforces contextual grounding: rejects "Possession is in 2025" against "Launched 2025"', () => {
+      const facts: Fact[] = [
+        {
+          id: 'fact-launch',
+          projectId: 'p1',
+          category: 'timeline',
+          title: 'Project Launch',
+          value: 'Launched in 2025 with RERA approval',
+          status: 'active',
+          version: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      // Reply claims possession is 2025, but cited fact only states launched in 2025
+      const checkResult = verifyPostChecks({
+        replyText: 'Possession is in 2025.',
+        citedFactIds: ['fact-launch'],
+        activeFacts: facts,
+        answerType: 'fact',
+      });
+
+      expect(checkResult.passed).toBe(false);
+      expect(checkResult.reason).toBe('grounding_failed');
+      expect(checkResult.details).toContain('unit/label context');
+
+      // Matching against fact that actually states possession by 2025 succeeds
+      const matchingFact: Fact = {
+        id: 'fact-possession',
+        projectId: 'p1',
+        category: 'timeline',
+        title: 'Possession Timeline',
+        value: 'Possession by December 2025',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const checkValid = verifyPostChecks({
+        replyText: 'Possession is in 2025.',
+        citedFactIds: ['fact-possession'],
+        activeFacts: [matchingFact],
+        answerType: 'fact',
+      });
+      expect(checkValid.passed).toBe(true);
+    });
+
+    it('rejects number-in-wrong-context (e.g. 795 sq ft carpet area claimed as 795 Lakhs)', () => {
+      const specFact: Fact = {
+        id: 'fact-carpet',
+        projectId: 'p1',
+        category: 'specification',
+        title: '2 BHK Carpet Area',
+        value: 'Carpet area of 795 sq ft',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = verifyPostChecks({
+        replyText: 'The 2 BHK apartment costs 795 Lakhs.',
+        citedFactIds: ['fact-carpet'],
+        activeFacts: [specFact],
+        answerType: 'fact',
+      });
+
+      expect(result.passed).toBe(false);
+      expect(result.reason).toBe('grounding_failed');
+      expect(result.details).toContain('currency');
+    });
+
+    it('verifies grounding with Devanagari numerals (०-९)', () => {
+      const timelineFact: Fact = {
+        id: 'fact-poss-2027',
+        projectId: 'p1',
+        category: 'timeline',
+        title: 'पजेशन समयसीमा',
+        value: 'पजेशन २०२७ में निर्धारित है',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Mismatch: २०२५ (2025) vs २०२७ (2027)
+      const mismatch = verifyPostChecks({
+        replyText: 'पजेशन २०२५ में मिलेगा।',
+        citedFactIds: ['fact-poss-2027'],
+        activeFacts: [timelineFact],
+        answerType: 'fact',
+      });
+      expect(mismatch.passed).toBe(false);
+      expect(mismatch.reason).toBe('grounding_failed');
+
+      // Valid match: २०२७ (2027) matches timeline fact
+      const validMatch = verifyPostChecks({
+        replyText: 'पजेशन २०२७ में मिलेगा।',
+        citedFactIds: ['fact-poss-2027'],
+        activeFacts: [timelineFact],
+        answerType: 'fact',
+      });
+      expect(validMatch.passed).toBe(true);
+
+      // Devanagari numerals in price and BHK
+      const priceFact: Fact = {
+        id: 'fact-price-hi',
+        projectId: 'p1',
+        category: 'pricing',
+        title: 'मूल्य सूची',
+        value: '२ BHK की कीमत ९५ लाख से शुरू है',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const validPrice = verifyPostChecks({
+        replyText: '२ BHK का मूल्य ९५ लाख है।',
+        citedFactIds: ['fact-price-hi'],
+        activeFacts: [priceFact],
+        answerType: 'fact',
+      });
+      expect(validPrice.passed).toBe(true);
+    });
+
+    it('verifies grounding with Gujarati numerals (૦-૯)', () => {
+      const guFact: Fact = {
+        id: 'fact-gu-price',
+        projectId: 'p1',
+        category: 'pricing',
+        title: 'કિંમત યાદી',
+        value: '૨ BHK ની કિંમત ૯૫ લાખ છે',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Valid Gujarati match
+      const valid = verifyPostChecks({
+        replyText: '૨ BHK ની કિંમત ૯૫ લાખ છે.',
+        citedFactIds: ['fact-gu-price'],
+        activeFacts: [guFact],
+        answerType: 'fact',
+      });
+      expect(valid.passed).toBe(true);
+
+      // Invalid: 3 BHK claimed at 95 Lakh
+      const invalid = verifyPostChecks({
+        replyText: '૩ BHK ની કિંમત ૯૫ લાખ છે.',
+        citedFactIds: ['fact-gu-price'],
+        activeFacts: [guFact],
+        answerType: 'fact',
+      });
+      expect(invalid.passed).toBe(false);
+      expect(invalid.reason).toBe('grounding_failed');
+    });
+
+    it('verifies grounding with mixed-language replies (Hinglish/Gujlish)', () => {
+      const priceFact: Fact = {
+        id: 'f-price',
+        projectId: 'p1',
+        category: 'pricing',
+        title: 'Pricing',
+        value: '2 BHK starting price ₹95 Lakh',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const timelineFact: Fact = {
+        id: 'f-time',
+        projectId: 'p1',
+        category: 'timeline',
+        title: 'Possession Date',
+        value: 'Possession scheduled for December 2027',
+        status: 'active',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Mixed Hinglish: 2 BHK starting price ₹95 Lakh hai aur possession December 2027 mein milega
+      const mixedHinglish = verifyPostChecks({
+        replyText: '2 BHK starting price ₹95 Lakh hai aur possession December 2027 mein milega.',
+        citedFactIds: ['f-price', 'f-time'],
+        activeFacts: [priceFact, timelineFact],
+        answerType: 'fact',
+      });
+      expect(mixedHinglish.passed).toBe(true);
+
+      // Mixed Gujlish with hallucinated possession 2025
+      const mixedHallucinated = verifyPostChecks({
+        replyText: '2 BHK price ₹95 Lakh che and possession 2025 ma thashe.',
+        citedFactIds: ['f-price', 'f-time'],
+        activeFacts: [priceFact, timelineFact],
+        answerType: 'fact',
+      });
+      expect(mixedHallucinated.passed).toBe(false);
+      expect(mixedHallucinated.reason).toBe('grounding_failed');
+    });
   });
 
   // ============================================================================

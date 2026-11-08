@@ -390,7 +390,10 @@ export function normalizeNumerals(text: string): string {
     normalized = normalized.replaceAll(gujaratiDigits[i]!, String(i));
   }
 
-  // 3. Normalize common number words in BHK/quantity contexts
+  // 3. Remove digit-grouping commas between numbers: e.g. 1,180 -> 1180, 12,500 -> 12500
+  normalized = normalized.replace(/(\d+),(\d+)/g, '$1$2');
+
+  // 4. Normalize common number words in BHK/quantity contexts
   const wordToDigitMap: Array<[RegExp, string]> = [
     [/\b(one|ek|एक|એક)\s*(bhk|bedroom|flat|unit|crore|cr|lakh|lac)\b/gi, '1 $2'],
     [/\b(two|do|दो|be|બે)\s*(bhk|bedroom|flat|unit|crore|cr|lakh|lac)\b/gi, '2 $2'],
@@ -446,6 +449,157 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export type NumericCategory =
+  | 'temporal_possession'
+  | 'temporal_launch'
+  | 'currency'
+  | 'area'
+  | 'bhk'
+  | 'floor_height'
+  | 'distance_time'
+  | 'percentage';
+
+export function getLocalClause(text: string, matchIndex: number, length: number): string {
+  // Walk backwards: stop at another digit, clause punctuation, or max 35 chars
+  let start = matchIndex;
+  while (start > 0 && matchIndex - start < 35) {
+    const char = text[start - 1];
+    if (char === '.' || char === '\n' || char === ';' || char === '!' || char === '?' || char === '|') {
+      break;
+    }
+    // Do not cross into a preceding number
+    if (/\d/.test(char!)) {
+      break;
+    }
+    start--;
+  }
+
+  // Walk forwards: stop at another digit, clause punctuation, or max 35 chars
+  let end = matchIndex + length;
+  while (end < text.length && end - (matchIndex + length) < 35) {
+    const char = text[end];
+    if (char === '.' || char === '\n' || char === ';' || char === '!' || char === '?' || char === '|') {
+      break;
+    }
+    // Do not cross into a succeeding number
+    if (/\d/.test(char!)) {
+      break;
+    }
+    end++;
+  }
+
+  return text.slice(start, end);
+}
+
+export function detectNumberCategoryAt(
+  text: string,
+  matchIndex: number,
+  numLength: number,
+): NumericCategory | undefined {
+  const beforeStart = Math.max(0, matchIndex - 35);
+  const textBefore = text.slice(beforeStart, matchIndex).toLowerCase();
+
+  const afterEnd = Math.min(text.length, matchIndex + numLength + 35);
+  const textAfter = text.slice(matchIndex + numLength, afterEnd).toLowerCase();
+
+  // 1. BHK: number followed immediately by BHK / bedroom / flat
+  if (/^\s*(bhk|bedroom|bedrooms|bed|flat|flats|unit|units|बीएचके|कमरा|બીએચકે|ઓરડા)\b/i.test(textAfter)) {
+    return 'bhk';
+  }
+
+  // 2. Area: number followed by sq ft / sqft / sq m, or preceded by carpet area
+  if (/^\s*(sq\s*ft|sqft|sq\.ft|square\s*feet|sq\s*m|square\s*meters|સ્ક્વેર\s*ફીટ|સ્કે\.ફૂટ|वर्ग\s*फुट|स्क्वायर\s*फीट)\b/i.test(textAfter)) {
+    return 'area';
+  }
+  if (/(carpet|carpet\s*area|super\s*built|built\s*up|કાર્પેટ|कारपेट)\s*(?:of|is|:)?\s*$/i.test(textBefore)) {
+    return 'area';
+  }
+
+  // 3. Currency: preceded by ₹ / Rs / INR or followed by Lakh / Crore / Rupees
+  if (/(₹|rs\.?|inr|रु\.?|રૂ\.?|कीमत|मूल्य|दाम|ભાવ|કિંમત)\s*(?:of|is|:)?\s*$/i.test(textBefore)) {
+    return 'currency';
+  }
+  if (/^\s*(lakh|lakhs|lac|lacs|crore|crores|cr|rupees?|रुपये|लाख|करोड़|રૂપિયા|કરોડ)\b/i.test(textAfter)) {
+    return 'currency';
+  }
+
+  // 4. Floor / height: followed by floor / storey / tower
+  if (/^\s*(floor|floors|storey|storeys|level|levels|tower|towers|मंजिल|टावर|માળ)\b/i.test(textAfter)) {
+    return 'floor_height';
+  }
+
+  // 5. Percentage: followed by %
+  if (/^\s*(%|percent|percentage|प्रतिशत|ટકા)\b/i.test(textAfter)) {
+    return 'percentage';
+  }
+
+  // 6. Distance / time: followed by km / min
+  if (/^\s*(km|kms|kilometer|kilometers|min|mins|minutes?|meter|meters?|किमी|मिनट|કિમી|મિનિટ)\b/i.test(textAfter)) {
+    return 'distance_time';
+  }
+
+  // 7. Temporal milestones for dates/years (possession vs launch)
+  if (
+    /(possession|handover|completion|ready\s*(by|to\s*move)?|delivery|पजेशन|कब्जा|हैंडओवर|પઝેશન|તાબો|તૈયાર)/i.test(textBefore) ||
+    /^\s*(?:में|માં)?\s*(पजेशन|કબજો|પઝેશન|તાબો)/i.test(textAfter)
+  ) {
+    return 'temporal_possession';
+  }
+
+  if (
+    /(launch(ed|ing)?|commenced|started|project\s*launch|लॉन्च|शुरू|शुरुआत|લોન્ચ)/i.test(textBefore) ||
+    /^\s*(?:में|માં)?\s*(लॉन्च|લોન્ચ|શરૂઆત)/i.test(textAfter)
+  ) {
+    return 'temporal_launch';
+  }
+
+  return undefined;
+}
+
+export function detectNumberCategory(clause: string): NumericCategory | undefined {
+  return detectNumberCategoryAt(clause, 0, clause.length);
+}
+
+/**
+ * Identify whether text states property details, configurations, pricing, timelines, or amenities.
+ */
+export function statesPropertyDetails(text: string): boolean {
+  const normalized = normalizeNumerals(text.toLowerCase());
+  // 1. Configurations, unit types
+  if (/\b(\d+\s*bhk|bhk|bedroom|flat|penthouse|studio|villa)\b/i.test(normalized)) {
+    return true;
+  }
+  // 2. Area, spaces, dimensions
+  if (/\b(carpet|carpet\s*area|sq\s*ft|square\s*feet|sq\s*m|sqft|super\s*built|built\s*up|balcony|terrace|floor\s*rise)\b/i.test(normalized)) {
+    return true;
+  }
+  // 3. Timelines, approvals, regulatory
+  if (/\b(possession|rera|launched|launching|launch|handover|completion)\b/i.test(normalized)) {
+    return true;
+  }
+  // 4. Structural, floors, towers
+  if (/\b(tower|floor|storeys?|block|elevation)\b/i.test(normalized)) {
+    return true;
+  }
+  // 5. Pricing, costs
+  if (/\b(price|pricing|cost|lakh|crore|₹|inr|maintenance\s*charge|stamp\s*duty)\b/i.test(normalized)) {
+    return true;
+  }
+  // 6. Amenities and features (including rooftop cinema, helipad, pool, gym, etc.)
+  if (/\b(amenit\w*|pool|swimming|gym|clubhouse|cinema|theatre|theater|helipad|rooftop|garden|sports|court|squash|tennis|badminton|jogging|ev\s*charging|spa|gazebo|parking|security|cctv|intercom)\b/i.test(normalized)) {
+    return true;
+  }
+  // 7. Hindi property terms
+  if (/बीएचके|कारपेट|स्क्वायर\s*फीट|वर्ग\s*फुट|पजेशन|कब्जा|रेरा|टावर|मंजिल|सुविधा|पूल|स्विमिंग|जिम|क्लब|सिनेमा|थियेटर|हेलीपैड|रूफटॉप|कीमत|लाख|करोड़/i.test(normalized)) {
+    return true;
+  }
+  // 8. Gujarati property terms
+  if (/બીએચકે|કાર્પેટ|સ્ક્વેર\s*ફીટ|સ્કે\.ફૂટ|પઝેશન|રેરા|ટાવર|માળ|સુવિધા|પૂલ|સ્વિમિંગ|જિમ|ક્લબ|સિનેમા|થિયેટર|હેલિપેડ|રૂફટોપ|કિંમત|લાખ|કરોડ/i.test(normalized)) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Verify post-checks on model reply:
  * 1. Confidence check against minimum threshold (0.70).
@@ -453,15 +607,17 @@ function escapeRegex(str: string): string {
  * 3. Cited Fact IDs verification.
  * 4. Grounding Check:
  *    - Any reply stating a property fact requires at least one cited fact.
- *    - Every number, amount, or date must appear in cited facts with strict token boundaries.
+ *    - Answer type 'fact' requires at least one active cited fact.
+ *    - Every number, amount, or date must match its unit or label inside the same cited fact.
  */
 export function verifyPostChecks(params: {
   replyText: string;
   citedFactIds: string[];
   activeFacts: Fact[];
   confidence?: number;
+  answerType?: 'fact' | 'conversational' | 'question';
 }): PostCheckResult {
-  const { replyText, citedFactIds, activeFacts, confidence } = params;
+  const { replyText, citedFactIds, activeFacts, confidence, answerType } = params;
 
   // 1. Confidence check
   if (confidence !== undefined && confidence < 0.7) {
@@ -502,25 +658,32 @@ export function verifyPostChecks(params: {
   const normalizedReply = normalizeNumerals(replyText);
 
   // 4. Property Fact Citation Requirement
-  // If the reply mentions property specifications, it must cite at least one active fact
-  const statesPropertyFact =
-    /\b(\d+\s*bhk|carpet|sq\s*ft|square\s*feet|super\s*built|possession|rera|tower|floor|amenit|pool|gym|clubhouse|pricing|price|cost|lakh|crore|₹)\b/i.test(
-      normalizedReply,
-    );
-
-  if (statesPropertyFact && citedFacts.length === 0) {
+  // Answer type 'fact' must cite at least one active fact
+  if (answerType === 'fact' && citedFacts.length === 0) {
     return {
       passed: false,
-      reason: 'grounding_failed',
-      details: 'Reply states property specifications but cited no facts from active fact sheet',
+      reason: 'missing_fact',
+      details: 'Answer type "fact" must cite at least one active fact from the fact sheet',
     };
   }
 
-  // 5. Strict Numeric Grounding Check with Token Boundaries
-  const numbersInReply = extractNumericTokens(replyText);
+  // Any reply stating property specifications or amenities must cite active facts
+  if (statesPropertyDetails(replyText) && citedFacts.length === 0) {
+    return {
+      passed: false,
+      reason: 'grounding_failed',
+      details: 'Reply states property details or amenities without citing active facts',
+    };
+  }
 
-  if (numbersInReply.length > 0) {
+  // 5. Strict Numeric & Contextual Grounding Check
+  // Number grounding must match the number and its unit or label inside the same cited fact, not anywhere in it.
+  const replyTokenRegex = /(?<=^|[^0-9a-zA-Z])\d+(?:\.\d+)?(?=$|[^0-9a-zA-Z])/g;
+  const replyMatches = [...normalizedReply.matchAll(replyTokenRegex)];
+
+  if (replyMatches.length > 0) {
     if (citedFacts.length === 0) {
+      const numbersInReply = Array.from(new Set(replyMatches.map((m) => m[0])));
       return {
         passed: false,
         reason: 'grounding_failed',
@@ -528,20 +691,43 @@ export function verifyPostChecks(params: {
       };
     }
 
-    const factsCombinedText = citedFacts
-      .map((f) => `${f.title} ${f.value}`)
-      .join(' ')
-      .toLowerCase();
-    const factsNormalized = normalizeNumerals(factsCombinedText);
+    const factsWithNormalized = citedFacts.map((fact) => ({
+      fact,
+      text: normalizeNumerals(`${fact.title}: ${fact.value}`),
+    }));
 
-    for (const num of numbersInReply) {
-      // Token boundary match: "5" must not match inside "2025" or "15"
-      const tokenRegex = new RegExp(`(?:^|[^0-9a-zA-Z])${escapeRegex(num)}(?:$|[^0-9a-zA-Z])`, 'i');
-      if (!tokenRegex.test(factsNormalized)) {
+    for (const match of replyMatches) {
+      const num = match[0];
+      const matchIndex = match.index ?? 0;
+      const replyCategory = detectNumberCategoryAt(normalizedReply, matchIndex, num.length);
+
+      let foundGroundedMatch = false;
+
+      for (const { text: factText } of factsWithNormalized) {
+        // Look for occurrences of `num` in THIS specific fact using lookbehind and lookahead
+        const factTokenRegex = new RegExp(`(?<=^|[^0-9a-zA-Z])${escapeRegex(num)}(?=$|[^0-9a-zA-Z])`, 'gi');
+        const factMatches = [...factText.matchAll(factTokenRegex)];
+
+        for (const fMatch of factMatches) {
+          const fMatchIndex = fMatch.index ?? 0;
+          const factCategory = detectNumberCategoryAt(factText, fMatchIndex, num.length);
+
+          if (!replyCategory || !factCategory || replyCategory === factCategory) {
+            foundGroundedMatch = true;
+            break;
+          }
+        }
+
+        if (foundGroundedMatch) {
+          break;
+        }
+      }
+
+      if (!foundGroundedMatch) {
         return {
           passed: false,
           reason: 'grounding_failed',
-          details: `Number/date token "${num}" from reply does not appear in cited facts`,
+          details: `Number token "${num}" with unit/label context "${replyCategory ?? 'unclassified'}" does not match inside any cited fact`,
         };
       }
     }
