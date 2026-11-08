@@ -79681,33 +79681,55 @@ var GeminiProvider = class {
         }
       };
     }
-    const url3 = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
-    let response;
-    try {
-      response = await fetch(url3, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": this.apiKey
-        },
-        body: JSON.stringify(body),
-        signal: params.signal
-      });
-    } catch (err) {
-      if (err instanceof LLMError) throw err;
-      const error123 = err;
-      if (error123.name === "AbortError") {
-        throw new LLMError("Gemini request timed out or was aborted", "timeout");
+    const candidateModels = [
+      this.model,
+      ...this.model.startsWith("gemini-3") ? ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite-preview", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"].filter((m) => m !== this.model) : []
+    ];
+    let data = null;
+    for (let i = 0; i < candidateModels.length; i++) {
+      const activeModel = candidateModels[i];
+      const url3 = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent`;
+      let response;
+      try {
+        response = await fetch(url3, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": this.apiKey
+          },
+          body: JSON.stringify(body),
+          signal: params.signal
+        });
+      } catch (err) {
+        if (err instanceof LLMError) throw err;
+        const error123 = err;
+        if (error123.name === "AbortError") {
+          throw new LLMError("Gemini request timed out or was aborted", "timeout");
+        }
+        throw new LLMError(`Gemini network failure: ${redactApiKey(error123.message, [this.apiKey])}`, "server");
       }
-      throw new LLMError(`Gemini network failure: ${redactApiKey(error123.message, [this.apiKey])}`, "server");
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "Unknown error");
+        const safeErrText = redactApiKey(errText, [this.apiKey]);
+        const kind = mapStatusToErrorKind2(response.status);
+        if (response.status === 429 && (safeErrText.includes("QuotaFailure") || safeErrText.includes("rate-limits") || safeErrText.includes("quota") || safeErrText.includes("RESOURCE_EXHAUSTED")) && i < candidateModels.length - 1) {
+          const nextModel = candidateModels[i + 1];
+          logger.warn(
+            { currentModel: activeModel, nextModel, error: safeErrText.slice(0, 120) },
+            "Gemini model quota exhausted; falling back to continued model"
+          );
+          this.model = nextModel;
+          continue;
+        }
+        throw new LLMError(`Gemini API error (${response.status}): ${safeErrText}`, kind, response.status);
+      }
+      this.model = activeModel;
+      data = await response.json();
+      break;
     }
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "Unknown error");
-      const safeErrText = redactApiKey(errText, [this.apiKey]);
-      const kind = mapStatusToErrorKind2(response.status);
-      throw new LLMError(`Gemini API error (${response.status}): ${safeErrText}`, kind, response.status);
+    if (!data) {
+      throw new LLMError("Gemini returned empty response", "server");
     }
-    const data = await response.json();
     const candidate = data.candidates?.[0];
     const parts = candidate?.content?.parts ?? [];
     let text;
@@ -90075,6 +90097,13 @@ var reminderService = new ReminderService();
 
 // src/services/jobs.service.ts
 var JobsService = class {
+  async safeRecordRun(data) {
+    try {
+      await jobRunRepository.createRun(data);
+    } catch (dbErr) {
+      logger.warn({ dbErr, job: data.job }, "Could not persist job run record to database");
+    }
+  }
   /**
    * Runs all periodic background jobs in isolated try/catch blocks.
    * Logs execution status to job_runs table and returns per-job execution metrics
@@ -90112,7 +90141,7 @@ var JobsService = class {
       const counts = await reminderService.processDueReminders(100);
       const finishedAt = /* @__PURE__ */ new Date();
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "reminders",
         startedAt,
         finishedAt,
@@ -90130,7 +90159,7 @@ var JobsService = class {
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error({ err, job: "reminders" }, "Internal jobs runner: reminders error");
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "reminders",
         startedAt,
         finishedAt,
@@ -90157,7 +90186,7 @@ var JobsService = class {
       const finishedAt = /* @__PURE__ */ new Date();
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const counts = { insertedSlots };
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "slot_top_up",
         startedAt,
         finishedAt,
@@ -90175,7 +90204,7 @@ var JobsService = class {
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error({ err, job: "slot_top_up" }, "Internal jobs runner: slot_top_up error");
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "slot_top_up",
         startedAt,
         finishedAt,
@@ -90202,7 +90231,7 @@ var JobsService = class {
       const finishedAt = /* @__PURE__ */ new Date();
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const counts = { escalatedCount };
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "handoff_escalation",
         startedAt,
         finishedAt,
@@ -90220,7 +90249,7 @@ var JobsService = class {
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error({ err, job: "handoff_escalation" }, "Internal jobs runner: handoff_escalation error");
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "handoff_escalation",
         startedAt,
         finishedAt,
@@ -90247,7 +90276,7 @@ var JobsService = class {
       const finishedAt = /* @__PURE__ */ new Date();
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const counts = { cleanedCount: res.cleanedCount };
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "stale_session_cleanup",
         startedAt,
         finishedAt,
@@ -90265,7 +90294,7 @@ var JobsService = class {
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error({ err, job: "stale_session_cleanup" }, "Internal jobs runner: stale_session_cleanup error");
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "stale_session_cleanup",
         startedAt,
         finishedAt,
@@ -90292,7 +90321,7 @@ var JobsService = class {
       const finishedAt = /* @__PURE__ */ new Date();
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const counts = { anonymizedCount: res.anonymizedCount };
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "data_retention",
         startedAt,
         finishedAt,
@@ -90310,7 +90339,7 @@ var JobsService = class {
       const durationMs = Math.round(import_node_perf_hooks.performance.now() - start);
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error({ err, job: "data_retention" }, "Internal jobs runner: data_retention error");
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: "data_retention",
         startedAt,
         finishedAt,

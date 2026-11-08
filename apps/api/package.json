@@ -2,17 +2,17 @@
   "name": "@housy/api",
   "version": "1.0.0",
   "private": true,
-  "main": "./dist/server.js",
+  "main": "./index.js",
   "exports": {
-    ".": "./dist/server.js"
+    ".": "./index.js"
   },
   "scripts": {
     "prebuild": "npm run build --workspace=@housy/shared",
-    "build": "tsc && esbuild src/server.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/server.js --external:argon2 --footer:js=\"module.exports = app; module.exports.default = app; module.exports.app = app; module.exports.createApp = createApp;\" && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=index.js --external:argon2 --footer:js=\"module.exports = app; module.exports.default = app; module.exports.app = app; module.exports.createApp = createApp;\" && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=app.js --external:argon2 --footer:js=\"module.exports = app; module.exports.default = app; module.exports.app = app; module.exports.createApp = createApp;\" && cp index.js dist/index.js && cp app.js dist/app.js",
+    "build": "tsc --noEmit && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=index.js --external:argon2 --footer:js=\"module.exports = app; module.exports.default = app; module.exports.app = app; module.exports.createApp = createApp;\"",
     "pretypecheck": "npm run build --workspace=@housy/shared",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "start": "node index.js",
     "test": "vitest run",
     "eval:ai": "tsx evals/eval-runner.ts --provider=mock",
     "eval:ai:live": "tsx evals/eval-runner.ts --provider=live",

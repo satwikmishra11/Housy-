@@ -60,6 +60,11 @@ jobs:
       - name: Run typecheck
         run: npm run typecheck
 
+      - name: Verify tracked API bundle matches source
+        run: |
+          npm run build:api
+          git diff --exit-code apps/api/index.js
+
       - name: Setup environment
         run: cp apps/api/.env.example apps/api/.env
 

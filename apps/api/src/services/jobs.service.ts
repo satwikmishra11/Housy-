@@ -27,6 +27,14 @@ export interface RunAllJobsResult {
 }
 
 export class JobsService {
+  private async safeRecordRun(data: Parameters<typeof jobRunRepository.createRun>[0]): Promise<void> {
+    try {
+      await jobRunRepository.createRun(data);
+    } catch (dbErr) {
+      logger.warn({ dbErr, job: data.job }, 'Could not persist job run record to database');
+    }
+  }
+
   /**
    * Runs all periodic background jobs in isolated try/catch blocks.
    * Logs execution status to job_runs table and returns per-job execution metrics
@@ -74,7 +82,7 @@ export class JobsService {
       const finishedAt = new Date();
       const durationMs = Math.round(performance.now() - start);
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'reminders',
         startedAt,
         finishedAt,
@@ -95,7 +103,7 @@ export class JobsService {
 
       logger.error({ err, job: 'reminders' }, 'Internal jobs runner: reminders error');
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'reminders',
         startedAt,
         finishedAt,
@@ -125,7 +133,7 @@ export class JobsService {
       const durationMs = Math.round(performance.now() - start);
       const counts = { insertedSlots };
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'slot_top_up',
         startedAt,
         finishedAt,
@@ -146,7 +154,7 @@ export class JobsService {
 
       logger.error({ err, job: 'slot_top_up' }, 'Internal jobs runner: slot_top_up error');
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'slot_top_up',
         startedAt,
         finishedAt,
@@ -176,7 +184,7 @@ export class JobsService {
       const durationMs = Math.round(performance.now() - start);
       const counts = { escalatedCount };
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'handoff_escalation',
         startedAt,
         finishedAt,
@@ -197,7 +205,7 @@ export class JobsService {
 
       logger.error({ err, job: 'handoff_escalation' }, 'Internal jobs runner: handoff_escalation error');
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'handoff_escalation',
         startedAt,
         finishedAt,
@@ -227,7 +235,7 @@ export class JobsService {
       const durationMs = Math.round(performance.now() - start);
       const counts = { cleanedCount: res.cleanedCount };
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'stale_session_cleanup',
         startedAt,
         finishedAt,
@@ -248,7 +256,7 @@ export class JobsService {
 
       logger.error({ err, job: 'stale_session_cleanup' }, 'Internal jobs runner: stale_session_cleanup error');
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'stale_session_cleanup',
         startedAt,
         finishedAt,
@@ -278,7 +286,7 @@ export class JobsService {
       const durationMs = Math.round(performance.now() - start);
       const counts = { anonymizedCount: res.anonymizedCount };
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'data_retention',
         startedAt,
         finishedAt,
@@ -299,7 +307,7 @@ export class JobsService {
 
       logger.error({ err, job: 'data_retention' }, 'Internal jobs runner: data_retention error');
 
-      await jobRunRepository.createRun({
+      await this.safeRecordRun({
         job: 'data_retention',
         startedAt,
         finishedAt,

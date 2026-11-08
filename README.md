@@ -82,6 +82,12 @@ GEMINI_API_KEY=your_key_here
 - Behind the scenes, the system logs the buyer's query into `unanswered_questions`, flags the chat session for Sales Head review, and escalates the lead to a human sales executive handoff queue.
 - *(Note: During automated test execution under `NODE_ENV=test`, the system automatically uses `LLM_PROVIDER=mock` so all test suites run deterministically without requiring live third-party API credentials).*
 
+### 5. Tracked API Bundle & Vercel Serverless Architecture
+The Express API compiles into a single tracked CommonJS bundle at [`apps/api/index.js`](apps/api/index.js):
+- **Why it is tracked**: In Vercel's multi-service architecture with framework preset `"express"` (`vercel.json`), Vercel resolves the root entrypoint directly at `apps/api/index.js`. Because serverless execution environments require a self-contained entrypoint with explicit CommonJS exports (`module.exports = app`) without runtime TypeScript compilation or dynamic module tracing overhead, `apps/api/index.js` packages the Express application cleanly.
+- **Single-Bundle Discipline**: All duplicate bundle artifacts (such as `app.js`) have been removed and added to `.gitignore`. Exactly one bundle (`apps/api/index.js`) remains tracked.
+- **Automated CI Drift Verification**: GitHub Actions CI executes `npm run build:api && git diff --exit-code apps/api/index.js` on every pull request and commit, guaranteeing that the committed bundle remains strictly identical to the TypeScript source code and failing the build if any drift is detected.
+
 ---
 
 ## Verification & Test Commands
