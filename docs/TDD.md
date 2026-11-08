@@ -58,7 +58,7 @@ To ship a production-grade, hardened solution within the 6-week timeline and ₹
 
 The system adheres to a strict 3-tier architectural model: a client presentation tier (Vite + React 18 SPA), an API and orchestration tier (Express + Node.js with domain service isolation), and an ACID relational data tier (PostgreSQL 16).
 
-![System Architecture](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/architecture.png)
+![System Architecture](./assets/diagrams/architecture.png)
 
 ### Key Architectural Choices & Rejected Alternatives
 
@@ -88,7 +88,7 @@ The system adheres to a strict 3-tier architectural model: a client presentation
 
 The relational schema is designed for strict referential integrity, tenant isolation, and mathematical prevention of duplicate records.
 
-![Entity Relationship Diagram](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/er-diagram.png)
+![Entity Relationship Diagram](./assets/diagrams/er-diagram.png)
 
 ### Key Constraints Enforcing Correctness
 
@@ -134,22 +134,22 @@ The relational schema is designed for strict referential integrity, tenant isola
 ### Flow 1: Buyer Chat, Grounding & Site Visit Booking
 The buyer initiates an anonymous conversation from a marketing channel, asks property questions in their native language, completes DPDP consent verification, and confirms an appointment.
 
-![Chat to Booking Sequence](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/seq-chat-booking.png)
+![Chat to Booking Sequence](./assets/diagrams/seq-chat-booking.png)
 
 ### Flow 2: Multi-Source Ingestion & Deduplication
 External leads arriving via webhooks are authenticated via SHA-256 API keys, checked for idempotency, matched against existing records, and flagged for review when necessary.
 
-![Ingest and Dedupe Sequence](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/seq-ingest-dedupe.png)
+![Ingest and Dedupe Sequence](./assets/diagrams/seq-ingest-dedupe.png)
 
 ### Flow 3: Reminder Background Worker & Opt-Out Halting
 The unified runner executes periodic routines, claiming due appointments using `SKIP LOCKED`, verifying DPDP consent status, and halting dispatch immediately if an opt-out has been recorded.
 
-![Reminder Worker Sequence](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/seq-reminder-worker.png)
+![Reminder Worker Sequence](./assets/diagrams/seq-reminder-worker.png)
 
 ### Flow 4: Human Escalation & Executive Handoff
 When a buyer asks for a sales executive or requests unapproved pricing, the guardrail intercepts the query, generates an LLM consultation summary, and routes the lead to an executive inbox.
 
-![Handoff Sequence](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/seq-handoff.png)
+![Handoff Sequence](./assets/diagrams/seq-handoff.png)
 
 ---
 
@@ -166,7 +166,7 @@ The agent has access to four structured tool schemas defined with strict Zod typ
 
 ### Guardrail Pipeline Architecture
 
-![Guardrail Pipeline](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/diagrams/guardrails-pipeline.png)
+![Guardrail Pipeline](./assets/diagrams/guardrails-pipeline.png)
 
 ### Failure Modes & Defensive Behaviors
 
@@ -180,8 +180,8 @@ The agent has access to four structured tool schemas defined with strict Zod typ
 | **Upstream LLM Outage** | External AI provider returns HTTP 500, gateway timeout, or rate-limit error. | Service catches exception and falls back to deterministic template engine based on detected intent. | Emits client notification; logs error in `llm_calls`; response latency < 2s. |
 | **Wrong Language / Hinglish** | *"bhai 3 BHK ka carpet area kitna hai aur possession kab milega"* | Script-first analyzer + weighted Latin lexicon correctly categorizes Hinglish, avoiding Gujarati misclassification on shared words (`ghar`, `bhai`). | Responds accurately in conversational Hinglish adhering to fact sheet. |
 
-### AI Evaluation Matrix ([docs/AI_EVALS.md](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_EVALS.md))
-The guardrail suite is evaluated against 50 adversarial test cases using `npm run eval:ai`:
+### AI Evaluation Matrix ([docs/AI_EVALS.md](./AI_EVALS.md))
+The guardrail suite is evaluated against 56 adversarial test cases using `npm run eval:ai`:
 
 ```
 ================================================================================
@@ -242,49 +242,49 @@ On load, the buyer is welcomed by the residence advisor with active project cont
 
 | Desktop (1280px) | Mobile (390px) |
 |---|---|
-| ![Buyer Chat Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/01-chat-greeting-desktop.png) | ![Buyer Chat Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/01-chat-greeting-phone.png) |
+| ![Buyer Chat Desktop](./assets/screenshots/01-chat-greeting-desktop.png) | ![Buyer Chat Mobile](./assets/screenshots/01-chat-greeting-phone.png) |
 
 #### 2. Buyer Chat: In-Conversation Booking & Map Confirmation
 After discussing 2 BHK options in Hindi, the buyer completes the DPDP contact form, selects an open slot chip, and receives a confirmed visit card with an interactive Google Maps pin.
 
 | Interactive Booking & Confirmation (Mobile 390px) |
 |---|
-| ![Booking Confirmed Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/02-chat-booking-confirmed-phone.png) |
+| ![Booking Confirmed Mobile](./assets/screenshots/02-chat-booking-confirmed-phone.png) |
 
 #### 3. Staff Authentication & Role Switcher
 Staff sign-in screen featuring quick-demo switches between Sales Head (`harshil.mehta@example.com`) and Sales Executive (`amit.shah@example.com`).
 
 | Desktop (1280px) | Mobile (390px) |
 |---|---|
-| ![Staff Login Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/03-login-desktop.png) | ![Staff Login Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/03-login-phone.png) |
+| ![Staff Login Desktop](./assets/screenshots/03-login-desktop.png) | ![Staff Login Mobile](./assets/screenshots/03-login-phone.png) |
 
 #### 4. Unified Leads Management & Deduplication Hub
 Centralized lead roster displaying source attribution tags (`property portal`, `social ad`), duplicate warning badges, DPDP consent statuses, and quick action drawers.
 
 | Desktop Table (1280px) | Mobile Cards (390px) |
 |---|---|
-| ![Leads Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/04-leads-desktop.png) | ![Leads Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/04-leads-phone.png) |
+| ![Leads Desktop](./assets/screenshots/04-leads-desktop.png) | ![Leads Mobile](./assets/screenshots/04-leads-phone.png) |
 
 #### 5. Executive Handoff Inbox & Transcript Replay
 The executive triage workspace displaying AI consultation summaries, escalation tags (`price_ask`, `out_of_scope`), and full conversation history.
 
 | Desktop Handoffs (1280px) | Mobile Handoffs (390px) |
 |---|---|
-| ![Handoffs Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/05-handoffs-desktop.png) | ![Handoffs Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/05-handoffs-phone.png) |
+| ![Handoffs Desktop](./assets/screenshots/05-handoffs-desktop.png) | ![Handoffs Mobile](./assets/screenshots/05-handoffs-phone.png) |
 
 #### 6. Sales & Marketing Performance Analytics Dashboard
 Executive metrics cockpit computing median first response time, 48-hour SLA breach percentage, show-up rates, and marketing cost per completed visit by attribution source.
 
 | Desktop Analytics (1280px) | Mobile Analytics (390px) |
 |---|---|
-| ![Dashboard Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/06-dashboard-desktop.png) | ![Dashboard Mobile](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/06-dashboard-phone.png) |
+| ![Dashboard Desktop](./assets/screenshots/06-dashboard-desktop.png) | ![Dashboard Mobile](./assets/screenshots/06-dashboard-phone.png) |
 
 #### 7. Project Fact Sheet Knowledge Base & Slot Management
 Sales Head administrative editors for managing authoritative project facts, reviewing ungrounded questions, and viewing site visit calendars.
 
 | Fact Sheet Knowledge Base (1280px) | Site Visits & Calendar (1280px) |
 |---|---|
-| ![Fact Sheet Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/07-factsheet-desktop.png) | ![Site Visits Desktop](file:///Users/satwik/Documents/GitHub/Housy-/docs/assets/screenshots/08-visits-desktop.png) |
+| ![Fact Sheet Desktop](./assets/screenshots/07-factsheet-desktop.png) | ![Site Visits Desktop](./assets/screenshots/08-visits-desktop.png) |
 
 ---
 

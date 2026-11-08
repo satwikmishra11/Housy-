@@ -2,10 +2,10 @@
 
 This document details the conversational AI architecture, deterministic safety guardrails, tool definitions, failure mitigations, and evaluation benchmarks for the Housy AI assistant.
 
-- **System Architecture**: [`docs/ARCHITECTURE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/ARCHITECTURE.md)
-- **Data Model**: [`docs/DATA_MODEL.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/DATA_MODEL.md)
-- **Operations & Deployment**: [`docs/OPERATIONS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/OPERATIONS.md)
-- **Eval Benchmarks**: [`docs/AI_EVALS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_EVALS.md)
+- **System Architecture**: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
+- **Data Model**: [`docs/DATA_MODEL.md`](./DATA_MODEL.md)
+- **Operations & Deployment**: [`docs/OPERATIONS.md`](./OPERATIONS.md)
+- **Eval Benchmarks**: [`docs/AI_EVALS.md`](./AI_EVALS.md)
 
 ---
 

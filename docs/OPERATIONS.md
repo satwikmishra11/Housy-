@@ -2,9 +2,9 @@
 
 This document details the production deployment topology, Vercel multi-service configuration, background jobs, asynchronous channel outbox, regulatory compliance engines, and observability for the Housy platform.
 
-- **System Architecture**: [`docs/ARCHITECTURE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/ARCHITECTURE.md)
-- **Data Model**: [`docs/DATA_MODEL.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/DATA_MODEL.md)
-- **AI Pipeline**: [`docs/AI_PIPELINE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_PIPELINE.md)
+- **System Architecture**: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
+- **Data Model**: [`docs/DATA_MODEL.md`](./DATA_MODEL.md)
+- **AI Pipeline**: [`docs/AI_PIPELINE.md`](./AI_PIPELINE.md)
 
 ---
 

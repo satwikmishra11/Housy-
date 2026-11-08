@@ -1,6 +1,6 @@
 # Fresh-Clone Run & Verification Report
 
-This document records the literal, end-to-end execution of the setup instructions in [`deployment.md`](file:///Users/satwik/Documents/GitHub/Housy-/deployment.md) performed in a clean, isolated directory (`/tmp/housy-fresh-clone`). Every command, environment variable, migration, seed operation, test suite, and evaluation script was executed and verified.
+This document records the literal, end-to-end execution of the setup instructions in [`deployment.md`](../deployment.md) performed in a clean, isolated directory (`/tmp/housy-fresh-clone`). Every command, environment variable, migration, seed operation, test suite, and evaluation script was executed and verified.
 
 ---
 
@@ -386,12 +386,12 @@ Every step of the 5-minute interactive walkthrough documented in `deployment.md`
 - **Live AI Provider**: `Google Gemini (gemini-3.5-flash)` via official Generative Language API
 - **Live AI Evaluation Suite (`npm run eval:ai:live`)**:
   - Total Adversarial & Real-World Cases (n): 56
-  - Output Report: [`docs/AI_EVALS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_EVALS.md) (Section 2 generated strictly by the live evaluation harness)
+  - Output Report: [`docs/AI_EVALS.md`](./AI_EVALS.md) (Section 2 generated strictly by the live evaluation harness)
   - Zero Banned Claims: 100% of banned promotional or speculative ROI claims blocked
   - 100% Pre-Filter Accuracy: All price negotiations, human escalations, and DPDP opt-outs intercepted deterministically in < 5ms without token consumption
   - Known Limits Documented: All divergent cases logged verbatim in `AI_EVALS.md` and analyzed with complete candor in `docs/TDD.md` Section 11.
 - **Authentic Scripted Buyer Transcripts (`scripts/capture-transcripts.ts`)**:
-  - Output Document: [`docs/AI_TRANSCRIPTS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_TRANSCRIPTS.md)
+  - Output Document: [`docs/AI_TRANSCRIPTS.md`](./AI_TRANSCRIPTS.md)
   - 8 End-to-End Dialogues: 3 English, 3 Hindi, 2 Gujarati
   - Coverage: Price range questions, discount requests, missing facts, human handoffs, and full atomic site-visit booking
   - Independent Verifier Overhead (`VERIFY_REPLIES=true`): Average ~650ms per grounded turn (+32–35%), comfortably within 2-minute SLA.

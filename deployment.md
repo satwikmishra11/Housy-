@@ -157,7 +157,7 @@ npm run capture:transcripts
 ```
 *Script verification output:*
 - Pipeline tests: **56/56 (100.0%) passed**.
-- Live transcripts: **8 dialogues captured** across English, Hindi, and Gujarati in [`docs/AI_TRANSCRIPTS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_TRANSCRIPTS.md).
+- Live transcripts: **8 dialogues captured** across English, Hindi, and Gujarati in [`docs/AI_TRANSCRIPTS.md`](./docs/AI_TRANSCRIPTS.md).
 
 ---
 
@@ -190,7 +190,7 @@ Scheduled operations are managed by a single unified HTTPS webhook invoked by an
 
 ## 4. Environment Variables
 
-All configuration is managed strictly through environment variable dashboards. Variables are validated at application startup using Zod schemas defined in [apps/api/src/config/index.ts](file:///Users/satwik/Documents/GitHub/Housy-/apps/api/src/config/index.ts).
+All configuration is managed strictly through environment variable dashboards. Variables are validated at application startup using Zod schemas defined in [apps/api/src/config/index.ts](./apps/api/src/config/index.ts).
 
 ### Backend API Variables (`apps/api/src/config/index.ts`)
 
@@ -237,7 +237,7 @@ All configuration is managed strictly through environment variable dashboards. V
 
 The system is seeded with deterministic demo sample data adhering strictly to the client brief for **Company A (demo brand assumption: Aaranya Realty, Ahmedabad, per A89)**. Reviewers can log in immediately using the credentials below:
 
-### Seeded Staff Accounts ([apps/api/src/db/seed.ts](file:///Users/satwik/Documents/GitHub/Housy-/apps/api/src/db/seed.ts))
+### Seeded Staff Accounts ([apps/api/src/db/seed.ts](./apps/api/src/db/seed.ts))
 
 | Role | Name | Email | Password | Access Privileges |
 | :--- | :--- | :--- | :--- | :--- |

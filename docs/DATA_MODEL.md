@@ -2,9 +2,9 @@
 
 This document specifies the PostgreSQL data model, relational entity catalog, database constraints, partial unique indexes, and performance optimizations for the Housy platform.
 
-- **System Architecture**: [`docs/ARCHITECTURE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/ARCHITECTURE.md)
-- **AI Pipeline**: [`docs/AI_PIPELINE.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_PIPELINE.md)
-- **Operations & Deployment**: [`docs/OPERATIONS.md`](file:///Users/satwik/Documents/GitHub/Housy-/docs/OPERATIONS.md)
+- **System Architecture**: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
+- **AI Pipeline**: [`docs/AI_PIPELINE.md`](./AI_PIPELINE.md)
+- **Operations & Deployment**: [`docs/OPERATIONS.md`](./OPERATIONS.md)
 
 ---
 
