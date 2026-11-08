@@ -49935,7 +49935,7 @@ function getDevelopmentDefaults(nodeEnv = process.env.NODE_ENV || "development")
     DATABASE_URL: isTest ? process.env.TEST_DATABASE_URL || "postgres://housy_user:housy_password@localhost:5432/housy_test" : "postgres://housy_user:housy_password@localhost:5432/housy_db",
     TEST_DATABASE_URL: "postgres://housy_user:housy_password@localhost:5432/housy_test",
     ALLOW_PREVIEW_ORIGINS: "false",
-    CORS_ORIGIN: "http://localhost:5173",
+    CORS_ORIGIN: "http://localhost:5173,https://housy-ebon.vercel.app",
     LOG_LEVEL: "info",
     JWT_SECRET: DEV_JWT_SECRET,
     SESSION_SECRET: DEV_SESSION_SECRET,
@@ -92241,10 +92241,11 @@ function createApp() {
   app2.use(requestIdMiddleware);
   const allowedOrigins = config2.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
   const isOriginAllowed = (origin) => {
-    if (config2.ALLOW_PREVIEW_ORIGINS) {
-      if (origin.endsWith(".vercel.app") || origin === "https://vercel.live" || origin.endsWith(".vercel.dev")) {
-        return true;
-      }
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return true;
+    }
+    if (origin.endsWith(".vercel.app") || origin.endsWith(".vercel.dev") || origin === "https://vercel.live") {
+      return true;
     }
     return allowedOrigins.some((pattern) => {
       if (pattern === "*" || pattern === origin) return true;
@@ -92255,10 +92256,15 @@ function createApp() {
       return false;
     });
   };
-  const connectSources = ["'self'", ...allowedOrigins];
-  if (config2.ALLOW_PREVIEW_ORIGINS) {
-    connectSources.push("https://*.vercel.app", "https://vercel.live");
-  }
+  const connectSources = [
+    "'self'",
+    ...allowedOrigins,
+    "https://*.vercel.app",
+    "https://*.vercel.dev",
+    "https://vercel.live",
+    "http://localhost:*",
+    "http://127.0.0.1:*"
+  ];
   app2.use(
     helmet({
       contentSecurityPolicy: {
@@ -92296,7 +92302,10 @@ function createApp() {
           callback(new ForbiddenError(`Origin '${origin}' not allowed by CORS`));
         }
       },
-      credentials: true
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token", "X-Buyer-Session"],
+      maxAge: 86400
     })
   );
   app2.get("/api/ping", (_req, res) => {

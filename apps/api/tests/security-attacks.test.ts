@@ -159,6 +159,28 @@ describe('Security Attack Suite & Defensive Invariants', () => {
     expect(res.body.error.message).toContain('not allowed by CORS');
   });
 
+  it('permits requests from production and preview *.vercel.app origins and localhost', async () => {
+    const prodRes = await request(app)
+      .get('/api/ping')
+      .set('Origin', 'https://housy-ebon.vercel.app');
+    expect(prodRes.status).toBe(200);
+    expect(prodRes.headers['access-control-allow-origin']).toBe('https://housy-ebon.vercel.app');
+
+    const previewRes = await request(app)
+      .get('/api/ping')
+      .set('Origin', 'https://housy-git-feat-preview-satwik-mishras-projects.vercel.app');
+    expect(previewRes.status).toBe(200);
+    expect(previewRes.headers['access-control-allow-origin']).toBe(
+      'https://housy-git-feat-preview-satwik-mishras-projects.vercel.app',
+    );
+
+    const localRes = await request(app)
+      .get('/api/ping')
+      .set('Origin', 'http://localhost:5173');
+    expect(localRes.status).toBe(200);
+    expect(localRes.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+  });
+
   // 4. Executive Reading Another Executive's Assigned Lead
   it('Attack 4: Executive B attempting to read Executive A’s assigned lead is blocked with 403', async () => {
     // Owner Executive A can read the lead

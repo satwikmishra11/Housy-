@@ -20,18 +20,27 @@ export function createApp(): Express {
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 
-  // 2. Strict CORS allowlist from configuration (exact origins; wildcard previews only when ALLOW_PREVIEW_ORIGINS=true)
+  // 2. Comprehensive, resilient CORS allowlist for local development, Vercel deployments, and configured origins
   const allowedOrigins = config.CORS_ORIGIN.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
   const isOriginAllowed = (origin: string): boolean => {
-    // Only permit preview wildcards if explicitly opted-in via ALLOW_PREVIEW_ORIGINS=true
-    if (config.ALLOW_PREVIEW_ORIGINS) {
-      if (origin.endsWith('.vercel.app') || origin === 'https://vercel.live' || origin.endsWith('.vercel.dev')) {
-        return true;
-      }
+    // Always permit local development hosts on any port (localhost / 127.0.0.1)
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return true;
     }
+
+    // Always permit Vercel project domains and previews (*.vercel.app, *.vercel.dev, vercel.live) per A59
+    if (
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.vercel.dev') ||
+      origin === 'https://vercel.live'
+    ) {
+      return true;
+    }
+
+    // Match configured explicit origins (including patterns with wildcards)
     return allowedOrigins.some((pattern) => {
       if (pattern === '*' || pattern === origin) return true;
       if (pattern.includes('*')) {
@@ -42,10 +51,15 @@ export function createApp(): Express {
     });
   };
 
-  const connectSources = ["'self'", ...allowedOrigins];
-  if (config.ALLOW_PREVIEW_ORIGINS) {
-    connectSources.push('https://*.vercel.app', 'https://vercel.live');
-  }
+  const connectSources = [
+    "'self'",
+    ...allowedOrigins,
+    'https://*.vercel.app',
+    'https://*.vercel.dev',
+    'https://vercel.live',
+    'http://localhost:*',
+    'http://127.0.0.1:*',
+  ];
 
   // 3. Security headers via Helmet with hardened Content Security Policy and Production HSTS
   app.use(
@@ -92,6 +106,9 @@ export function createApp(): Express {
         }
       },
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'X-Buyer-Session'],
+      maxAge: 86400,
     }),
   );
 

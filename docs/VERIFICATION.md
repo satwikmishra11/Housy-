@@ -421,10 +421,10 @@ Every step of the 5-minute interactive walkthrough documented in `deployment.md`
 | Workspace / Target | Test Files | Tests Passed | Failures | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
-| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 453 | 0 | **PASS** |
 | **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **Total Automated Tests** | **53 files** | **644** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

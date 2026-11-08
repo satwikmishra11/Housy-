@@ -135,7 +135,7 @@ Detailed technical documentation is available in `docs/`:
 - **[Data Model & Constraints](docs/DATA_MODEL.md)**: 19 PostgreSQL tables, ER diagram, partial unique indexes, and Migration 005 performance indexing.
 - **[AI Pipeline & Guardrails](docs/AI_PIPELINE.md)**: Autonomous agent loop, tool schemas, multilingual regex pre-filters, failure mitigations, and evals.
 - **[Operations & Deployment](docs/OPERATIONS.md)**: Vercel multi-service project (`vercel.json`), serverless runtime, background reminder workers, and outbox.
-- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A102`).
+- **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A103`).
 - **[Demo Script & Walkthrough](docs/DEMO_SCRIPT.md)**: 5-minute walkthrough script with exact inputs/outputs and 15 grounded technical interview defenses.
 - **[Hardening & Security](docs/HARDENING.md)**: Rate limiting benchmarks, CSRF/CSP protections, secret scanning, and WCAG AA audits.
 - **[AI Evaluation Suite](docs/AI_EVALS.md)**: 56-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.
@@ -147,10 +147,10 @@ Detailed technical documentation is available in `docs/`:
 | Workspace / Target | Test Files | Tests Passed | Failures | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
-| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 453 | 0 | **PASS** |
 | **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **Total Automated Tests** | **53 files** | **644** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

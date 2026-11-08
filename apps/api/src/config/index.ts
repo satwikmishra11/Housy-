@@ -64,7 +64,7 @@ export function getDevelopmentDefaults(nodeEnv: string = process.env.NODE_ENV ||
       : 'postgres://housy_user:housy_password@localhost:5432/housy_db',
     TEST_DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_test',
     ALLOW_PREVIEW_ORIGINS: 'false',
-    CORS_ORIGIN: 'http://localhost:5173',
+    CORS_ORIGIN: 'http://localhost:5173,https://housy-ebon.vercel.app',
     LOG_LEVEL: 'info',
     JWT_SECRET: DEV_JWT_SECRET,
     SESSION_SECRET: DEV_SESSION_SECRET,

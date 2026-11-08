@@ -19,7 +19,7 @@ To keep documentation modular, maintainable, and cohesive, technical specificati
 | **[`docs/AI_PIPELINE.md`](./AI_PIPELINE.md)** | AI chat assistant architecture, LLM provider adapters, `detectIntent` pre-filters, script-first language detection, numeral normalization, token-boundary grounding, verifier, failure modes, and evals. |
 | **[`docs/AI_TRANSCRIPTS.md`](./AI_TRANSCRIPTS.md)** | 8 real buyer conversation transcripts across English, Hindi, and Gujarati with live model, cited facts, and independent verifier latency. |
 | **[`docs/OPERATIONS.md`](./OPERATIONS.md)** | Production topology, Vercel multi-service project (`vercel.json`), background reminder workers, channel outbox, DPDP 2023 opt-out & re-consent, and observability. |
-| **[`docs/ASSUMPTIONS.md`](./ASSUMPTIONS.md)** | Complete product, legal, technical, and operational assumptions log (`A1`–`A102`). |
+| **[`docs/ASSUMPTIONS.md`](./ASSUMPTIONS.md)** | Complete product, legal, technical, and operational assumptions log (`A1`–`A103`). |
 | **[`docs/DEMO_SCRIPT.md`](./DEMO_SCRIPT.md)** | 5-minute end-to-end walkthrough script and 15 technical interview questions with grounded answers. |
 | **[`docs/HARDENING.md`](./HARDENING.md)** | Security audits, rate limit enforcement, automated secret scanning, and WCAG AA accessibility verification. |
 | **[`docs/VERIFICATION.md`](./VERIFICATION.md)** | Fresh-clone test execution logs, comprehensive test counts (643 tests), and live AI model evaluation matrix. |
