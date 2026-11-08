@@ -60,8 +60,8 @@ export class GeminiProvider implements LLMProvider {
   private model: string;
 
   constructor(options: GeminiProviderOptions = {}) {
-    this.apiKey = options.apiKey || process.env.GEMINI_API_KEY || '';
-    this.model = options.model || process.env.LLM_MODEL || '';
+    this.apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? '';
+    this.model = options.model ?? process.env.LLM_MODEL ?? '';
 
     if (!this.apiKey) {
       logger.warn('GeminiProvider initialized without GEMINI_API_KEY');

@@ -28,8 +28,8 @@ export class AnthropicProvider implements LLMProvider {
   private model: string;
 
   constructor(options: AnthropicProviderOptions = {}) {
-    this.apiKey = options.apiKey || process.env.ANTHROPIC_API_KEY || '';
-    this.model = options.model || process.env.LLM_MODEL || '';
+    this.apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
+    this.model = options.model ?? process.env.LLM_MODEL ?? '';
 
     if (!this.apiKey) {
       logger.warn('AnthropicProvider initialized without ANTHROPIC_API_KEY');

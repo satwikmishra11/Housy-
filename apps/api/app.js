@@ -79476,8 +79476,8 @@ var AnthropicProvider = class {
   apiKey;
   model;
   constructor(options = {}) {
-    this.apiKey = options.apiKey || process.env.ANTHROPIC_API_KEY || "";
-    this.model = options.model || process.env.LLM_MODEL || "";
+    this.apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY ?? "";
+    this.model = options.model ?? process.env.LLM_MODEL ?? "";
     if (!this.apiKey) {
       logger.warn("AnthropicProvider initialized without ANTHROPIC_API_KEY");
     }
@@ -79639,8 +79639,8 @@ var GeminiProvider = class {
   apiKey;
   model;
   constructor(options = {}) {
-    this.apiKey = options.apiKey || process.env.GEMINI_API_KEY || "";
-    this.model = options.model || process.env.LLM_MODEL || "";
+    this.apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? "";
+    this.model = options.model ?? process.env.LLM_MODEL ?? "";
     if (!this.apiKey) {
       logger.warn("GeminiProvider initialized without GEMINI_API_KEY");
     }
