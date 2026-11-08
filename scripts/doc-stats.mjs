@@ -146,8 +146,8 @@ function updateDocFile(filePath, blockContent) {
   let content = fs.readFileSync(absPath, 'utf-8');
   if (content.includes('<!-- DOC_STATS:START -->') && content.includes('<!-- DOC_STATS:END -->')) {
     content = content.replace(
-      /<!-- DOC_STATS:START -->[\s\S]*?<!-- DOC_STATS:END -->/,
-      blockContent
+      /(^|\n)<!-- DOC_STATS:START -->[\s\S]*?<!-- DOC_STATS:END -->/m,
+      `$1${blockContent}`
     );
   } else {
     // Append or place before final section if not present
@@ -302,10 +302,11 @@ async function main() {
       continue;
     }
 
-    const blockMatch = content.match(/<!-- DOC_STATS:START -->[\s\S]*?<!-- DOC_STATS:END -->/);
-    if (!blockMatch || blockMatch[0].trim() !== expectedBlock.trim()) {
+    const blockMatch = content.match(/(?:^|\n)(<!-- DOC_STATS:START -->[\s\S]*?<!-- DOC_STATS:END -->)/m);
+    const matchedBlock = blockMatch ? blockMatch[1] : null;
+    if (!matchedBlock || matchedBlock.trim() !== expectedBlock.trim()) {
       console.error(`ERROR: ${doc} contains an outdated DOC_STATS block.`);
-      console.error(`Expected:\n${expectedBlock}\n\nFound:\n${blockMatch ? blockMatch[0] : 'None'}`);
+      console.error(`Expected:\n${expectedBlock}\n\nFound:\n${matchedBlock || 'None'}`);
       hasErrors = true;
     }
 
