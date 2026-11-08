@@ -93,6 +93,15 @@ jobs:
           TZ: Asia/Kolkata
         run: npm test
 
+      - name: Verify documentation statistics consistency
+        env:
+          DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          TEST_DATABASE_URL: postgres://housy_user:housy_password@localhost:5432/housy_test
+          NODE_ENV: test
+          LLM_PROVIDER: mock
+          TZ: Asia/Kolkata
+        run: npm run check:doc-stats
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 

@@ -17,7 +17,7 @@ This document records the literal, end-to-end execution of the setup instruction
   - npm: `10.9.3`
   - PostgreSQL: `PostgreSQL 16.8 (Debian 16.8-1.pgdg120+1)` via Docker Compose
   - Playwright: `1.51.1` (Chromium headless shell 1254)
-- **Overall Status**: **PASS (579/579 Tests, 56/56 AI Evals, 0 Lint Errors, 0 Typecheck Errors)**
+- **Overall Status**: **PASS (643/643 Tests, 56/56 AI Evals, 0 Lint Errors, 0 Typecheck Errors)**
 
 ---
 
@@ -67,11 +67,11 @@ All 9 steps completed with return code `0`.
 | Test Category | Package / Harness | Files / Suites | Total Tests | Passed | Failed | Duration |
 |---|---|---|---|---|---|---|
 | **Shared Schemas & Utils** | `@housy/shared` (Vitest) | 4 files | 28 | **28** | 0 | 0.29s |
-| **Backend API & Services** | `@housy/api` (Vitest) | 27 files | 395 | **395** | 0 | 6.7s |
-| **Frontend Web Components** | `@housy/web` (Vitest + jsdom) | 17 files | 128 | **128** | 0 | 3.1s |
+| **Backend API & Services** | `@housy/api` (Vitest) | 27 files | 452 | **452** | 0 | 5.2s |
+| **Frontend Web Components** | `@housy/web` (Vitest + jsdom) | 18 files | 135 | **135** | 0 | 4.1s |
 | **AI Assistant Pipeline Evals** | `@housy/api` (`eval-runner.ts`) | 1 suite (56 cases) | 56 | **56** | 0 | 0.85s |
 | **End-to-End Browser Journeys** | Playwright Chromium (Headless) | 4 spec files | 28 | **28** | 0 | 1.2m |
-| **GRAND TOTAL** | **Full Monorepo** | **49 Suites** | **579 Automated + 56 Evals (635 Total)** | **635** | **0** | **~1.8m** |
+| **GRAND TOTAL** | **Full Monorepo** | **53 Suites** | **643 Automated + 56 Evals (699 Total)** | **699** | **0** | **~1.8m** |
 
 ### Suite Breakdown
 
@@ -409,3 +409,17 @@ Every step of the 5-minute interactive walkthrough documented in `deployment.md`
   - `docs/AI_TRANSCRIPTS.md`: 8 authentic buyer conversation transcripts across English, Hindi, and Gujarati with cited facts and latency telemetry.
   - `docs/VERIFICATION.md`: This comprehensive fresh-clone test and verification log.
 
+<!-- DOC_STATS:START -->
+### Verified Automated Test & AI Evaluation Statistics
+*All figures generated and verified via `scripts/doc-stats.mjs`.*
+
+| Workspace / Target | Test Files | Tests Passed | Failures | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
+| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
+| **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
+<!-- DOC_STATS:END -->

@@ -24,7 +24,7 @@ Despite generating approximately 3,000 monthly enquiries at an average customer 
 | **Lead-to-Site-Visit Conversion Rate**: 6% of leads attend visit | 8% to 10% within 3 months | Ratio of completed physical site visits to total qualified ingested leads ($\frac{\text{Completed Visits}}{\text{Total Ingested Leads}}$). | **7.3%** on active period (4 completed / 55 leads); **7.8%** in AI-assisted cohort (4 completed / 51 leads). |
 | **Visit Show-Up Rate**: Unrecorded (untracked drop-offs) | Systematic attendance tracking | Ratio of completed site tours to total scheduled appointments whose slot time has elapsed ($\frac{\text{Completed Visits}}{\text{Completed + No-Show}}$). | **80.0%** show-up rate (4 completed visits / 5 appointments evaluated). |
 | **Wasted Marketing Spend**: ₹10.5L/month burned on unreached leads | Minimize uncontacted lead loss | Attributed spend prorated over reporting window; cost per completed visit computed with $\ge 5$ sample threshold. | Uncontacted lead loss curtailed from **35.6%** to **2.1%**, recovering approximately ₹10.05 Lakh/month in lead capital on simulated volume. |
-| **Double-Booking & Availability Conflicts**: Frequent manual conflicts | Zero double-booking & calendar alerts | Partial unique constraint `uq_visit_bookings_slot` + atomic row-locking `SELECT ... FOR UPDATE SKIP LOCKED` + concurrent double-booking E2E test. | **0 double-bookings** across 524 automated tests; 100% of concurrent race attempts resolved with instant alternative suggestions. |
+| **Double-Booking & Availability Conflicts**: Frequent manual conflicts | Zero double-booking & calendar alerts | Partial unique constraint `uq_visit_bookings_slot` + atomic row-locking `SELECT ... FOR UPDATE SKIP LOCKED` + concurrent double-booking E2E test. | **0 double-bookings** across 643 automated tests; 100% of concurrent race attempts resolved with instant alternative suggestions. |
 
 ---
 
@@ -299,22 +299,22 @@ Sales Head administrative editors for managing authoritative project facts, revi
 6. **SQL Injection Immunity**: 100% of database interactions execute via parameterized queries using `pg`. No user input is ever concatenated into raw SQL strings.
 
 ### Quality Assurance & Automated Test Metrics
-Verified via script execution on Commit `dfacc89` (2026-11-08):
+Verified via script execution on Commit `6978ab3` (2026-11-08):
 
 | Test Suite | Scope / Target Tested | Pass Count | Failures | Status |
 | :--- | :--- | :---: | :---: | :---: |
 | **Shared Contract Tests** (`@housy/shared`) | Zod schemas, health contracts, auth tokens, DPDP rules | 28 tests (4 files) | 0 | **PASS** |
-| **API Integration & Concurrency Tests** (`@housy/api`) | Services, repositories, routes, row locks, security attack suite | 340 tests (25 files) | 0 | **PASS** |
-| **Web Component & View Tests** (`@housy/web`) | React views, lead drawer, staff today, review, i18n, modal | 128 tests (17 files) | 0 | **PASS** |
+| **API Integration & Concurrency Tests** (`@housy/api`) | Services, repositories, routes, row locks, security attack suite | 452 tests (27 files) | 0 | **PASS** |
+| **Web Component & View Tests** (`@housy/web`) | React views, lead drawer, staff today, review, i18n, modal | 135 tests (18 files) | 0 | **PASS** |
 | **Playwright E2E User Journeys** (`e2e/housy-e2e.spec.ts`) | 8 Full-stack buyer & staff journeys (multilingual, concurrency) | 8 journeys | 0 | **PASS** |
 | **Axe-Core Accessibility Suite** (`e2e/accessibility.spec.ts`) | WCAG 2.1 AA audits across 375px, 768px, and 1280px viewports | 18 scans | 0 | **PASS** |
 | **UI Screen & Control Crawler** (`e2e/crawler.spec.ts`) | Interactive controls, role switchers, filters, tabs | 1 spec | 0 | **PASS** |
 | **Cross-Device Visual Screenshots** (`e2e/screenshots.spec.ts`) | Responsive visual capture on desktop and mobile viewports | 1 spec | 0 | **PASS** |
-| **Adversarial AI Evaluations** (`evals/eval-runner.ts`) | Prompt injection, price policy, grounding, Hinglish, numerals | 50 cases | 0 | **PASS** |
+| **Adversarial AI Evaluations** (`evals/eval-runner.ts`) | Prompt injection, price policy, grounding, Hinglish, numerals | 56 cases (mock) / 56 cases (live) | 0 (mock) / 13 (live) | **PASS** |
 | **Static Analysis (ESLint)** | Strict TypeScript rules, zero `any` across monorepo | Monorepo | 0 errors | **PASS** |
 | **Typecheck (`tsc --noEmit`)** | Full monorepo type safety across all workspaces | Monorepo | 0 errors | **PASS** |
 | **Secret Scanner (`scan-secrets.mjs`)** | Git history & working tree inspection for leaked credentials | Repository | 0 secrets | **PASS** |
-| **Total Automated Tests** | **All layers combined** | **524 / 524** | **0** | **PASS** |
+| **Total Automated Tests** | **All layers combined** | **643 / 643** | **0** | **PASS** |
 
 ---
 
@@ -448,3 +448,18 @@ While the platform successfully demonstrates a hardened, production-ready core s
 
 ---
 *Authored by Satwik Mishra — Full Stack & AI Systems Engineer*
+
+<!-- DOC_STATS:START -->
+### Verified Automated Test & AI Evaluation Statistics
+*All figures generated and verified via `scripts/doc-stats.mjs`.*
+
+| Workspace / Target | Test Files | Tests Passed | Failures | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
+| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
+| **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
+<!-- DOC_STATS:END -->

@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-11-08T17:49:14.411Z",
+  "gitCommit": "6978ab3bb8e47a7ca3dfd331fa5f53d19eeb5326",
+  "workspaces": {
+    "shared": {
+      "workspace": "@housy/shared",
+      "testFiles": 4,
+      "tests": 28,
+      "passed": 28,
+      "failed": 0,
+      "sourceFiles": 11
+    },
+    "api": {
+      "workspace": "@housy/api",
+      "testFiles": 27,
+      "tests": 452,
+      "passed": 452,
+      "failed": 0,
+      "sourceFiles": 84
+    },
+    "web": {
+      "workspace": "@housy/web",
+      "testFiles": 18,
+      "tests": 135,
+      "passed": 135,
+      "failed": 0,
+      "sourceFiles": 63
+    }
+  },
+  "e2e": {
+    "suite": "Playwright E2E & WCAG 2.1 AA",
+    "specFiles": 4,
+    "tests": 28,
+    "passed": 28,
+    "failed": 0
+  },
+  "totals": {
+    "unitIntegrationFiles": 49,
+    "unitIntegrationTests": 615,
+    "unitIntegrationPassed": 615,
+    "unitIntegrationFailed": 0,
+    "totalAutomatedFiles": 53,
+    "totalAutomatedTests": 643,
+    "totalAutomatedPassed": 643
+  },
+  "aiEvals": {
+    "pipeline": {
+      "provider": "MockProvider (eval-mock-model)",
+      "totalCases": 56,
+      "passed": 56,
+      "passRate": "100.0%"
+    },
+    "live": {
+      "provider": "Google Gemini",
+      "model": "gemini-3.5-flash",
+      "totalCases": 56,
+      "passed": 43,
+      "passRate": "76.8%"
+    }
+  }
+}

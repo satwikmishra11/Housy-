@@ -138,3 +138,18 @@ Detailed technical documentation is available in `docs/`:
 - **[Assumptions Log](docs/ASSUMPTIONS.md)**: Product, architectural, and regulatory assumptions log (`A1`–`A97`).
 - **[Hardening & Security](docs/HARDENING.md)**: Rate limiting benchmarks, CSRF/CSP protections, secret scanning, and WCAG AA audits.
 - **[AI Evaluation Suite](docs/AI_EVALS.md)**: 56-case benchmark verifying fact grounding, prompt injection resistance, and multilingual fidelity.
+
+<!-- DOC_STATS:START -->
+### Verified Automated Test & AI Evaluation Statistics
+*All figures generated and verified via `scripts/doc-stats.mjs`.*
+
+| Workspace / Target | Test Files | Tests Passed | Failures | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
+| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
+| **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
+<!-- DOC_STATS:END -->

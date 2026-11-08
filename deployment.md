@@ -132,16 +132,16 @@ npm run dev
 ### Step 8: Run automated test suites
 Execute the automated test suites:
 ```bash
-# 1. Run all unit and integration tests (551 tests across 48 test files)
+# 1. Run all unit and integration tests (615 tests across 49 test files)
 npm test
 
 # 2. Run Playwright end-to-end browser journeys and Axe-Core accessibility audits (28 tests)
 npm run test:e2e
 ```
-*Script verification output (Commit `62d795d`, 2026-11-08):*
-- Vitest: **48 test files passed, 551 tests passed** (0 failures).
+*Script verification output (Commit `6978ab3`, 2026-11-08):*
+- Vitest: **49 test files passed, 615 tests passed** (0 failures).
 - Playwright: **28 tests passed** (18 Axe-Core WCAG 2.1 AA audits across 375px/768px/1280px + 8 user journeys + 1 UI crawler + 1 screenshots).
-- Total automated tests: **579 passed**.
+- Total automated tests: **643 passed**.
 
 ### Step 9: Run AI evals and transcripts
 Run the conversational evaluation benchmark verifying grounded answers, price guardrails, and handoff triggers:
@@ -329,11 +329,26 @@ Every step below has been executed, tested, and verified:
 ## 8. Verification Record (Commit & Script Data)
 
 - **Audit Date**: 2026-11-08
-- **Git Commit Hash**: `dfacc8953fd0a6f189a247ba3a7554a49ce18ca6` (`dfacc89`)
-- **Automated Tests**: **524 passed (0 failures)**
+- **Git Commit Hash**: `6978ab3bb8e47a7ca3dfd331fa5f53d19eeb5326` (`6978ab3`)
+- **Automated Tests**: **643 passed (0 failures)**
   - `@housy/shared`: 4 test files, 28 tests passed.
-  - `@housy/api`: 25 test files, 340 tests passed.
-  - `@housy/web`: 17 test files, 128 tests passed.
+  - `@housy/api`: 27 test files, 452 tests passed.
+  - `@housy/web`: 18 test files, 135 tests passed.
   - `e2e` Playwright: 28 tests passed (18 Axe-Core accessibility + 8 journeys + 1 crawler + 1 screenshots).
-- **AI Evals Benchmark**: **50 / 50 (100.0%) passed** ([docs/AI_EVALS.md](file:///Users/satwik/Documents/GitHub/Housy-/docs/AI_EVALS.md)).
+- **AI Evals Benchmark**: **56 / 56 (100.0%) pipeline passed**, **43 / 56 (76.8%) live Gemini passed** ([docs/AI_EVALS.md](./docs/AI_EVALS.md)).
 - **Accessibility Status**: **WCAG 2.1 AA compliant** across Mobile (375x667), Tablet (768x1024), and Desktop (1280x800) viewports with 0 violations.
+
+<!-- DOC_STATS:START -->
+### Verified Automated Test & AI Evaluation Statistics
+*All figures generated and verified via `scripts/doc-stats.mjs`.*
+
+| Workspace / Target | Test Files | Tests Passed | Failures | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 27 | 452 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
+| **Total Automated Tests** | **53 files** | **643** | **0** | **PASS** |
+| **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
+| **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
+<!-- DOC_STATS:END -->
