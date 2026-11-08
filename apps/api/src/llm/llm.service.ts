@@ -30,7 +30,7 @@ export class LLMService {
 
   constructor() {
     this.providerName = config.LLM_PROVIDER;
-    this.modelName = config.LLM_MODEL;
+    this.modelName = config.LLM_MODEL || '';
 
     if (this.providerName === 'mock') {
       if (config.NODE_ENV !== 'test') {

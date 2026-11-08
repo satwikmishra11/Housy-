@@ -16,7 +16,7 @@ describe('Shared Schemas', () => {
       },
       llm: {
         provider: 'gemini',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.8-flash',
         status: 'ok',
         lastSuccessAt: new Date().toISOString(),
         lastErrorKind: null,
@@ -57,7 +57,7 @@ describe('Shared Schemas', () => {
   it('validates LLMHealthSchema with unconfigured and down states', () => {
     const unconfigured = {
       provider: 'gemini',
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.8-flash',
       status: 'unconfigured',
     };
     expect(LLMHealthSchema.safeParse(unconfigured).success).toBe(true);

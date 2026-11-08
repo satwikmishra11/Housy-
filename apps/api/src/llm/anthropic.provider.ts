@@ -29,16 +29,22 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(options: AnthropicProviderOptions = {}) {
     this.apiKey = options.apiKey || process.env.ANTHROPIC_API_KEY || '';
-    this.model = options.model || process.env.LLM_MODEL || 'claude-3-5-sonnet-20241022';
+    this.model = options.model || process.env.LLM_MODEL || '';
 
     if (!this.apiKey) {
       logger.warn('AnthropicProvider initialized without ANTHROPIC_API_KEY');
+    }
+    if (!this.model) {
+      logger.warn('AnthropicProvider initialized without LLM_MODEL');
     }
   }
 
   async chat(params: LLMChatParams): Promise<LLMChatResult> {
     if (!this.apiKey) {
       throw new LLMError('ANTHROPIC_API_KEY is not configured', 'auth');
+    }
+    if (!this.model) {
+      throw new LLMError('LLM_MODEL is not configured', 'bad_request');
     }
 
     const messages = this.formatMessages(params.messages);

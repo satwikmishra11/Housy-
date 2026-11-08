@@ -62,7 +62,7 @@ export class HealthService {
       },
       llm: {
         provider: config.LLM_PROVIDER,
-        model: config.LLM_MODEL,
+        model: config.LLM_MODEL || 'unconfigured',
         status: llmStatus,
         lastSuccessAt,
         lastErrorKind,

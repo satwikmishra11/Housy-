@@ -4,6 +4,7 @@ import {
   booleanSchema,
   evaluateConfig,
   validateConfig,
+  getDevelopmentDefaults,
   KNOWN_DEFAULT_SECRETS,
 } from '../src/config/index.js';
 
@@ -59,7 +60,7 @@ describe('Configuration & Strict Boolean Parsing', () => {
       SESSION_SECRET: PROD_TEST_SESSION_SECRET,
       INTERNAL_API_KEY: PROD_TEST_INTERNAL_KEY,
       LLM_PROVIDER: 'gemini',
-      LLM_MODEL: 'gemini-1.5-flash',
+      LLM_MODEL: 'gemini-3.8-flash',
       GEMINI_API_KEY: PROD_TEST_GEMINI_KEY,
       COOKIE_SECURE: 'true',
       DEMO_MODE: 'false',
@@ -217,6 +218,11 @@ describe('Configuration & Strict Boolean Parsing', () => {
   });
 
   describe('evaluateConfig() in Development and Test environments', () => {
+    it('ensures LLM_MODEL has no default in development defaults', () => {
+      const devDefaults = getDevelopmentDefaults('development');
+      expect(devDefaults.LLM_MODEL).toBeUndefined();
+    });
+
     it('populates defaults when env fields are empty strings in test mode', () => {
       const result = evaluateConfig({
         NODE_ENV: 'test',

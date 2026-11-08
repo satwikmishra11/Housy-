@@ -60,6 +60,7 @@ describe('LLM Provider Adapters & Error Mapping', () => {
 
       const provider = new AnthropicProvider({
         apiKey: dummyAuthKey,
+        model: 'claude-3-5-sonnet-20241022',
       });
 
       await expect(provider.chat({ messages: [{ role: 'user', content: 'test' }] })).rejects.toSatisfy(
@@ -77,7 +78,10 @@ describe('LLM Provider Adapters & Error Mapping', () => {
 
     it('maps 429 to rate_limit kind', async () => {
       global.fetch = vi.fn().mockResolvedValue(new Response('Quota exceeded', { status: 429 }));
-      const provider = new AnthropicProvider({ apiKey: 'valid-test-key' });
+      const provider = new AnthropicProvider({
+        apiKey: 'valid-test-key',
+        model: 'claude-3-5-sonnet-20241022',
+      });
 
       await expect(provider.chat({ messages: [{ role: 'user', content: 'test' }] })).rejects.toSatisfy(
         (err: unknown) => {
@@ -117,7 +121,7 @@ describe('LLM Provider Adapters & Error Mapping', () => {
 
       const provider = new GeminiProvider({
         apiKey: dummyGeminiHeaderKey,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.8-flash',
       });
 
       const res = await provider.chat({
@@ -232,6 +236,32 @@ describe('LLM Provider Adapters & Error Mapping', () => {
         mutableConfig.NODE_ENV = origEnv;
         mutableConfig.LLM_PROVIDER = origProvider;
       }
+    });
+
+    it('GeminiProvider refuses to chat if LLM_MODEL is not configured', async () => {
+      const provider = new GeminiProvider({
+        apiKey: 'test-key',
+        model: '',
+      });
+
+      await expect(
+        provider.chat({
+          messages: [{ role: 'user', content: 'test' }],
+        }),
+      ).rejects.toThrow(/LLM_MODEL is not configured/);
+    });
+
+    it('AnthropicProvider refuses to chat if LLM_MODEL is not configured', async () => {
+      const provider = new AnthropicProvider({
+        apiKey: 'test-key',
+        model: '',
+      });
+
+      await expect(
+        provider.chat({
+          messages: [{ role: 'user', content: 'test' }],
+        }),
+      ).rejects.toThrow(/LLM_MODEL is not configured/);
     });
 
     it('caches probe results for 60 seconds unless forced', async () => {

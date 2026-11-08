@@ -61,16 +61,22 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(options: GeminiProviderOptions = {}) {
     this.apiKey = options.apiKey || process.env.GEMINI_API_KEY || '';
-    this.model = options.model || process.env.LLM_MODEL || 'gemini-1.5-flash';
+    this.model = options.model || process.env.LLM_MODEL || '';
 
     if (!this.apiKey) {
       logger.warn('GeminiProvider initialized without GEMINI_API_KEY');
+    }
+    if (!this.model) {
+      logger.warn('GeminiProvider initialized without LLM_MODEL');
     }
   }
 
   async chat(params: LLMChatParams): Promise<LLMChatResult> {
     if (!this.apiKey) {
       throw new LLMError('GEMINI_API_KEY is not configured', 'auth');
+    }
+    if (!this.model) {
+      throw new LLMError('LLM_MODEL is not configured', 'bad_request');
     }
 
     const contents = this.formatContents(params.messages);
