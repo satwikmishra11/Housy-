@@ -222,6 +222,9 @@ describe('DPDP Consent, Opt-Out, Reminder Worker & Channel Rules', () => {
       );
       const bookingId = bookRes.rows[0]!.id;
 
+      // Drain any pre-existing due reminders so this idempotency test operates in complete isolation
+      await reminderService.processDueReminders(500);
+
       // Insert reminder due in the past (using far-past scheduled_at so it is prioritized first)
       const remRes = await query<{ id: string }>(
         `INSERT INTO reminders (booking_id, kind, scheduled_at, status)
