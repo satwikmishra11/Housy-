@@ -551,6 +551,39 @@ describe('Lead Ingest, Deduplication, Merge & Role Scoping', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.imported).toBe(2);
     });
+
+    it('rejects CSV preview with 403 Forbidden when called by sales executive', async () => {
+      const res = await request(app)
+        .post('/api/leads/csv-preview')
+        .set('Cookie', `staff_token=${exec1Token}`)
+        .set(CSRF_HEADER)
+        .send({ rows: [{ Name: 'Test', Phone: '9825012345' }], source: 'property_portal' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('rejects CSV commit with 403 Forbidden when called by sales executive', async () => {
+      const res = await request(app)
+        .post('/api/leads/csv-commit')
+        .set('Cookie', `staff_token=${exec1Token}`)
+        .set(CSRF_HEADER)
+        .send({
+          source: 'property_portal',
+          rows: [
+            {
+              name: 'Test Buyer',
+              phone: '+919825012345',
+              email: null,
+              wants: '2 BHK',
+              consent: true,
+            },
+          ],
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
   });
 
   describe('Keep Separate Action', () => {
