@@ -88820,6 +88820,7 @@ leadsRouter.post(
 leadsRouter.post(
   "/leads/csv-preview",
   requireAuth,
+  requireRole("sales_head"),
   validateRequest({ body: CsvPreviewBodySchema }),
   async (req, res, next) => {
     try {
@@ -88837,6 +88838,7 @@ leadsRouter.post(
 leadsRouter.post(
   "/leads/csv-commit",
   requireAuth,
+  requireRole("sales_head"),
   async (req, res, next) => {
     try {
       const parseResult = CsvCommitPayloadSchema.safeParse(req.body);
@@ -88951,11 +88953,20 @@ leadsRouter.get(
   async (req, res, next) => {
     try {
       const isExecutive = req.user.role === "executive";
-      const executiveId = isExecutive ? req.user.id : req.query["executiveId"];
+      let executiveId = null;
+      if (isExecutive) {
+        executiveId = req.user.id;
+      } else if (typeof req.query["executiveId"] === "string" && req.query["executiveId"].trim()) {
+        const parsed = external_exports.string().uuid().safeParse(req.query["executiveId"].trim());
+        if (!parsed.success) {
+          throw new ValidationError("Invalid executiveId query parameter: must be a valid UUID");
+        }
+        executiveId = parsed.data;
+      }
       const visitsTodayRes = await query(
         `SELECT b.id AS booking_id, s.starts_at, s.ends_at, b.status,
                 l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
-                p.name AS project_name, b.notes
+                p.name AS project_name
          FROM visit_bookings b
          JOIN visit_slots s ON b.slot_id = s.id
          JOIN projects p ON s.project_id = p.id
@@ -88963,7 +88974,7 @@ leadsRouter.get(
          WHERE (s.starts_at AT TIME ZONE 'Asia/Kolkata')::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
            AND ($1::uuid IS NULL OR s.executive_id = $1)
          ORDER BY s.starts_at ASC`,
-        [executiveId ?? null]
+        [executiveId]
       );
       const awaitingRes = await query(
         `SELECT b.id AS booking_id, s.starts_at, s.ends_at, b.status,
@@ -88977,7 +88988,7 @@ leadsRouter.get(
            AND b.status = 'confirmed'
            AND ($1::uuid IS NULL OR s.executive_id = $1)
          ORDER BY s.starts_at ASC`,
-        [executiveId ?? null]
+        [executiveId]
       );
       const handoffsRes = await query(
         `SELECT h.id, h.conversation_id, l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
@@ -88988,7 +88999,7 @@ leadsRouter.get(
          WHERE h.status = 'new'
            AND ($1::uuid IS NULL OR h.executive_id = $1)
          ORDER BY (h.priority = 'urgent') DESC, h.created_at DESC`,
-        [executiveId ?? null]
+        [executiveId]
       );
       const unansweredRes = await query(
         `SELECT l.id, l.public_id, l.name, l.phone_e164, l.source,
@@ -89000,35 +89011,38 @@ leadsRouter.get(
            AND l.consent_status != 'withdrawn'
            AND ($1::uuid IS NULL OR l.assigned_to = $1)
          ORDER BY l.first_touch_at ASC`,
-        [executiveId ?? null]
+        [executiveId]
       );
       const nowTime = Date.now();
-      const unansweredLeads = unansweredRes.rows.map((r) => ({
-        leadId: r.id,
-        publicId: r.public_id,
-        name: r.name,
-        phoneE164: r.phone_e164,
-        source: r.source,
-        projectName: r.project_name,
-        firstTouchAt: r.first_touch_at.toISOString(),
-        hoursElapsed: Math.round((nowTime - r.first_touch_at.getTime()) / (1e3 * 3600) * 10) / 10,
-        consentStatus: r.consent_status
-      }));
+      const unansweredLeads = unansweredRes.rows.map((r) => {
+        const firstTouch = new Date(r.first_touch_at);
+        return {
+          leadId: r.id,
+          publicId: r.public_id,
+          name: r.name,
+          phoneE164: r.phone_e164,
+          source: r.source,
+          projectName: r.project_name,
+          firstTouchAt: firstTouch.toISOString(),
+          hoursElapsed: Math.round((nowTime - firstTouch.getTime()) / (1e3 * 3600) * 10) / 10,
+          consentStatus: r.consent_status
+        };
+      });
       const visitsToday = visitsTodayRes.rows.map((v2) => ({
         bookingId: v2.booking_id,
-        startsAt: v2.starts_at.toISOString(),
-        endsAt: v2.ends_at.toISOString(),
+        startsAt: new Date(v2.starts_at).toISOString(),
+        endsAt: new Date(v2.ends_at).toISOString(),
         status: v2.status,
         leadId: v2.lead_id,
         leadName: v2.lead_name,
         leadPhone: v2.lead_phone,
         projectName: v2.project_name,
-        notes: v2.notes
+        notes: null
       }));
       const awaitingOutcome = awaitingRes.rows.map((v2) => ({
         bookingId: v2.booking_id,
-        startsAt: v2.starts_at.toISOString(),
-        endsAt: v2.ends_at.toISOString(),
+        startsAt: new Date(v2.starts_at).toISOString(),
+        endsAt: new Date(v2.ends_at).toISOString(),
         status: v2.status,
         leadId: v2.lead_id,
         leadName: v2.lead_name,
@@ -89045,7 +89059,7 @@ leadsRouter.get(
         reason: h.reason,
         summary: h.summary || {},
         priority: h.priority || "normal",
-        createdAt: h.created_at.toISOString()
+        createdAt: new Date(h.created_at).toISOString()
       }));
       res.status(200).json({
         success: true,

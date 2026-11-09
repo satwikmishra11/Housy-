@@ -453,23 +453,32 @@ leadsRouter.get(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const isExecutive = req.user!.role === 'executive';
-      const executiveId = isExecutive ? req.user!.id : (req.query['executiveId'] as string | undefined);
+      let executiveId: string | null = null;
+
+      if (isExecutive) {
+        executiveId = req.user!.id;
+      } else if (typeof req.query['executiveId'] === 'string' && req.query['executiveId'].trim()) {
+        const parsed = z.string().uuid().safeParse(req.query['executiveId'].trim());
+        if (!parsed.success) {
+          throw new ValidationError('Invalid executiveId query parameter: must be a valid UUID');
+        }
+        executiveId = parsed.data;
+      }
 
       // 1. Visits scheduled for today (Asia/Kolkata date = today)
       const visitsTodayRes = await query<{
         booking_id: string;
-        starts_at: Date;
-        ends_at: Date;
+        starts_at: Date | string;
+        ends_at: Date | string;
         status: string;
         lead_id: string;
         lead_name: string;
         lead_phone: string | null;
         project_name: string;
-        notes: string | null;
       }>(
         `SELECT b.id AS booking_id, s.starts_at, s.ends_at, b.status,
                 l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
-                p.name AS project_name, b.notes
+                p.name AS project_name
          FROM visit_bookings b
          JOIN visit_slots s ON b.slot_id = s.id
          JOIN projects p ON s.project_id = p.id
@@ -477,14 +486,14 @@ leadsRouter.get(
          WHERE (s.starts_at AT TIME ZONE 'Asia/Kolkata')::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
            AND ($1::uuid IS NULL OR s.executive_id = $1)
          ORDER BY s.starts_at ASC`,
-        [executiveId ?? null],
+        [executiveId],
       );
 
       // 2. Visits awaiting attendance outcome (starts_at < NOW() and status = 'confirmed')
       const awaitingRes = await query<{
         booking_id: string;
-        starts_at: Date;
-        ends_at: Date;
+        starts_at: Date | string;
+        ends_at: Date | string;
         status: string;
         lead_id: string;
         lead_name: string;
@@ -502,7 +511,7 @@ leadsRouter.get(
            AND b.status = 'confirmed'
            AND ($1::uuid IS NULL OR s.executive_id = $1)
          ORDER BY s.starts_at ASC`,
-        [executiveId ?? null],
+        [executiveId],
       );
 
       // 3. New handoffs (status = 'new')
@@ -516,7 +525,7 @@ leadsRouter.get(
         reason: string;
         summary: Record<string, unknown>;
         priority: string | null;
-        created_at: Date;
+        created_at: Date | string;
       }>(
         `SELECT h.id, h.conversation_id, l.id AS lead_id, l.name AS lead_name, l.phone_e164 AS lead_phone,
                 p.name AS project_name, h.reason, h.summary, h.priority, h.created_at
@@ -526,7 +535,7 @@ leadsRouter.get(
          WHERE h.status = 'new'
            AND ($1::uuid IS NULL OR h.executive_id = $1)
          ORDER BY (h.priority = 'urgent') DESC, h.created_at DESC`,
-        [executiveId ?? null],
+        [executiveId],
       );
 
       // 4. Leads unanswered for over 2 hours
@@ -537,7 +546,7 @@ leadsRouter.get(
         phone_e164: string | null;
         source: LeadSource;
         project_name: string | null;
-        first_touch_at: Date;
+        first_touch_at: Date | string;
         consent_status: ConsentStatus;
       }>(
         `SELECT l.id, l.public_id, l.name, l.phone_e164, l.source,
@@ -549,38 +558,41 @@ leadsRouter.get(
            AND l.consent_status != 'withdrawn'
            AND ($1::uuid IS NULL OR l.assigned_to = $1)
          ORDER BY l.first_touch_at ASC`,
-        [executiveId ?? null],
+        [executiveId],
       );
 
       const nowTime = Date.now();
-      const unansweredLeads = unansweredRes.rows.map((r) => ({
-        leadId: r.id,
-        publicId: r.public_id,
-        name: r.name,
-        phoneE164: r.phone_e164,
-        source: r.source,
-        projectName: r.project_name,
-        firstTouchAt: r.first_touch_at.toISOString(),
-        hoursElapsed: Math.round(((nowTime - r.first_touch_at.getTime()) / (1000 * 3600)) * 10) / 10,
-        consentStatus: r.consent_status,
-      }));
+      const unansweredLeads = unansweredRes.rows.map((r) => {
+        const firstTouch = new Date(r.first_touch_at);
+        return {
+          leadId: r.id,
+          publicId: r.public_id,
+          name: r.name,
+          phoneE164: r.phone_e164,
+          source: r.source,
+          projectName: r.project_name,
+          firstTouchAt: firstTouch.toISOString(),
+          hoursElapsed: Math.round(((nowTime - firstTouch.getTime()) / (1000 * 3600)) * 10) / 10,
+          consentStatus: r.consent_status,
+        };
+      });
 
       const visitsToday = visitsTodayRes.rows.map((v) => ({
         bookingId: v.booking_id,
-        startsAt: v.starts_at.toISOString(),
-        endsAt: v.ends_at.toISOString(),
+        startsAt: new Date(v.starts_at).toISOString(),
+        endsAt: new Date(v.ends_at).toISOString(),
         status: v.status,
         leadId: v.lead_id,
         leadName: v.lead_name,
         leadPhone: v.lead_phone,
         projectName: v.project_name,
-        notes: v.notes,
+        notes: null,
       }));
 
       const awaitingOutcome = awaitingRes.rows.map((v) => ({
         bookingId: v.booking_id,
-        startsAt: v.starts_at.toISOString(),
-        endsAt: v.ends_at.toISOString(),
+        startsAt: new Date(v.starts_at).toISOString(),
+        endsAt: new Date(v.ends_at).toISOString(),
         status: v.status,
         leadId: v.lead_id,
         leadName: v.lead_name,
@@ -598,7 +610,7 @@ leadsRouter.get(
         reason: h.reason,
         summary: h.summary || {},
         priority: h.priority || 'normal',
-        createdAt: h.created_at.toISOString(),
+        createdAt: new Date(h.created_at).toISOString(),
       }));
 
       res.status(200).json({
