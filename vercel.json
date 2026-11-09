@@ -5,7 +5,7 @@
       "root": "apps/api",
       "framework": "express",
       "installCommand": "cd ../.. && npm install",
-      "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build"
+      "buildCommand": "cd ../.. && npm run build:shared && cd apps/api && npm run build && (npm run db:setup:prod || true)"
     },
     "web": {
       "root": "apps/web",

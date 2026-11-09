@@ -4,6 +4,7 @@ import { config } from '../config/index.js';
 import { jobsService } from '../services/jobs.service.js';
 import { reminderService } from '../services/reminder.service.js';
 import { handoffService } from '../services/handoff.service.js';
+import { setupProdDatabase } from '../db/setup-prod.js';
 import { UnauthorizedError } from '../errors/AppError.js';
 
 export const internalRouter = Router();
@@ -97,6 +98,27 @@ internalRouter.post(
         success: true,
         message: 'Handoff SLA escalation check completed',
         escalatedCount,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /api/internal/setup-db
+ * Runs pending schema migrations and conditionally seeds demo accounts.
+ * Secured strictly with X-Internal-Key header.
+ */
+internalRouter.post(
+  '/internal/setup-db',
+  requireInternalKey,
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await setupProdDatabase();
+      res.status(200).json({
+        success: true,
+        ...result,
       });
     } catch (err) {
       next(err);

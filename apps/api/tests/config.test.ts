@@ -276,5 +276,34 @@ describe('Configuration & Strict Boolean Parsing', () => {
         expect(result.data.LLM_PROVIDER).toBe('gemini');
       }
     });
+
+    it('resolves POSTGRES_PRISMA_URL or POSTGRES_URL when running in Vercel or production', () => {
+      const vercelPrismaResult = evaluateConfig({
+        NODE_ENV: 'development',
+        VERCEL: '1',
+        DATABASE_URL: 'postgres://housy_user:housy_password@localhost:5432/housy_db',
+        POSTGRES_PRISMA_URL: 'postgres://postgres.pooler.supabase.com:6543/postgres?pgbouncer=true',
+      });
+
+      expect(vercelPrismaResult.success).toBe(true);
+      if (vercelPrismaResult.success) {
+        expect(vercelPrismaResult.data.DATABASE_URL).toBe(
+          'postgres://postgres.pooler.supabase.com:6543/postgres?pgbouncer=true',
+        );
+      }
+
+      const vercelDirectResult = evaluateConfig({
+        NODE_ENV: 'development',
+        VERCEL: '1',
+        POSTGRES_URL: 'postgres://postgres:secret@db.supabase.co:5432/postgres',
+      });
+
+      expect(vercelDirectResult.success).toBe(true);
+      if (vercelDirectResult.success) {
+        expect(vercelDirectResult.data.DATABASE_URL).toBe(
+          'postgres://postgres:secret@db.supabase.co:5432/postgres',
+        );
+      }
+    });
   });
 });

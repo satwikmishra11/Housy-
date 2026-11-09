@@ -91,6 +91,9 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   TEST_DATABASE_URL: z.string().optional(),
+  POSTGRES_URL: z.string().optional(),
+  POSTGRES_PRISMA_URL: z.string().optional(),
+  POSTGRES_URL_NON_POOLING: z.string().optional(),
   ALLOW_PREVIEW_ORIGINS: booleanSchema.default(false),
   CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN is required'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -136,6 +139,28 @@ export function evaluateConfig(rawEnv: Record<string, string | undefined>): Conf
   for (const [key, value] of Object.entries(rawEnv)) {
     if (value !== undefined && value.trim() !== '') {
       cleanedRawEnv[key] = value.trim();
+    }
+  }
+
+  // Support cloud database providers and Vercel Postgres / Supabase integrations
+  // Standard Vercel Postgres / Supabase auto-injects POSTGRES_PRISMA_URL (pooled) and POSTGRES_URL
+  const isVercelRuntime = Boolean(
+    process.env.VERCEL ||
+    process.env.VERCEL_ENV ||
+    rawEnv['VERCEL'] ||
+    rawEnv['VERCEL_ENV']
+  );
+
+  const rawDbUrl = cleanedRawEnv['DATABASE_URL'];
+  const cloudPoolUrl =
+    cleanedRawEnv['POSTGRES_PRISMA_URL'] ||
+    cleanedRawEnv['POSTGRES_URL'] ||
+    cleanedRawEnv['POSTGRES_URL_NON_POOLING'];
+
+  if (cloudPoolUrl) {
+    const isLocalUrl = Boolean(rawDbUrl && (rawDbUrl.includes('localhost') || rawDbUrl.includes('127.0.0.1')));
+    if (!rawDbUrl || (isLocalUrl && (isVercelRuntime || isProduction))) {
+      cleanedRawEnv['DATABASE_URL'] = cloudPoolUrl;
     }
   }
 

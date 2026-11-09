@@ -34,7 +34,11 @@ export function resolveMigrationsDir(): string {
 }
 
 export async function setupProdDatabase(options?: SetupProdOptions): Promise<SetupProdResult> {
-  const targetUrl = options?.databaseUrl || config.DATABASE_URL;
+  const targetUrl =
+    options?.databaseUrl ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    config.DATABASE_URL;
   const isDemoMode =
     options?.demoMode !== undefined
       ? options.demoMode
