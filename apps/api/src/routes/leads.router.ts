@@ -11,7 +11,7 @@ import {
   type LeadSource,
 } from '@housy/shared';
 import { query } from '../db/index.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import { assertLeadOwnership } from '../middleware/ownership.js';
 import { leadRepository } from '../repositories/lead.repository.js';
@@ -281,6 +281,7 @@ leadsRouter.post(
 leadsRouter.post(
   '/leads/csv-preview',
   requireAuth,
+  requireRole('sales_head'),
   validateRequest({ body: CsvPreviewBodySchema }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -304,6 +305,7 @@ leadsRouter.post(
 leadsRouter.post(
   '/leads/csv-commit',
   requireAuth,
+  requireRole('sales_head'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const parseResult = CsvCommitPayloadSchema.safeParse(req.body);
