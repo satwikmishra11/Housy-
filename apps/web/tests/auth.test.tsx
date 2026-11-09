@@ -14,6 +14,12 @@ vi.mock('../src/lib/api.js', async () => {
     fetchMe: vi.fn(),
     loginStaff: vi.fn(),
     logoutStaff: vi.fn(),
+    fetchHealth: vi.fn().mockResolvedValue({
+      status: 'ok',
+      database: { status: 'ok', schema: 'ok', reason: null },
+      llm: { status: 'ok' },
+      jobs: { remindersStatus: 'ok', remindersOverdue: false },
+    }),
   };
 });
 
@@ -162,5 +168,147 @@ describe('Frontend Authentication & Protected Routes', () => {
       expect(screen.getByText('Access Restricted')).toBeInTheDocument();
     });
     expect(screen.queryByText('Sales Head Only Area')).not.toBeInTheDocument();
+  });
+
+  it('LoginPage displays "Setup incomplete" when database schema is missing', async () => {
+    vi.mocked(apiModule.fetchMe).mockRejectedValue(new Error('Unauthenticated'));
+    vi.mocked(apiModule.fetchHealth).mockResolvedValueOnce({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: 10,
+      environment: 'development',
+      version: '1.0.0',
+      database: {
+        status: 'degraded',
+        schema: 'missing',
+        reason: 'schema_missing',
+        latencyMs: 5,
+      },
+      llm: {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        status: 'ok',
+        lastSuccessAt: null,
+        lastErrorKind: null,
+      },
+      jobs: {
+        remindersStatus: 'ok',
+        remindersLastRunAt: null,
+        remindersOverdue: false,
+        recentRuns: [],
+      },
+    });
+
+    render(
+      <ToastProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/login']}>
+            <LoginPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Setup incomplete')).toBeInTheDocument();
+    });
+  });
+
+  it('LoginPage displays "Service is starting up" when database is unreachable', async () => {
+    vi.mocked(apiModule.fetchMe).mockRejectedValue(new Error('Unauthenticated'));
+    vi.mocked(apiModule.fetchHealth).mockResolvedValueOnce({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: 10,
+      environment: 'development',
+      version: '1.0.0',
+      database: {
+        status: 'down',
+        schema: 'missing',
+        reason: 'unreachable',
+        latencyMs: null,
+      },
+      llm: {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        status: 'ok',
+        lastSuccessAt: null,
+        lastErrorKind: null,
+      },
+      jobs: {
+        remindersStatus: 'ok',
+        remindersLastRunAt: null,
+        remindersOverdue: false,
+        recentRuns: [],
+      },
+    });
+
+    render(
+      <ToastProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/login']}>
+            <LoginPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Service is starting up')).toBeInTheDocument();
+    });
+  });
+
+  it('LoginPage shows "Reference: <id>" when login fails with requestId', async () => {
+    vi.mocked(apiModule.fetchMe).mockRejectedValue(new Error('Unauthenticated'));
+    vi.mocked(apiModule.fetchHealth).mockResolvedValueOnce({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: 10,
+      environment: 'development',
+      version: '1.0.0',
+      database: {
+        status: 'ok',
+        schema: 'ok',
+        reason: null,
+        latencyMs: 2,
+      },
+      llm: {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        status: 'ok',
+        lastSuccessAt: null,
+        lastErrorKind: null,
+      },
+      jobs: {
+        remindersStatus: 'ok',
+        remindersLastRunAt: null,
+        remindersOverdue: false,
+        recentRuns: [],
+      },
+    });
+
+    const errorWithReqId: apiModule.ApiError = new Error('Authentication service is temporarily unavailable. Please try again shortly.');
+    errorWithReqId.statusCode = 503;
+    errorWithReqId.requestId = 'req-trace-db-crash-99';
+    vi.mocked(apiModule.loginStaff).mockRejectedValueOnce(errorWithReqId);
+
+    render(
+      <ToastProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/login']}>
+            <LoginPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: 'harshil.mehta@example.com' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'Secret123!' } });
+    fireEvent.click(screen.getByRole('button', { name: /sign in to workspace/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Authentication service is temporarily unavailable. Please try again shortly.')).toBeInTheDocument();
+      expect(screen.getByText('Reference: req-trace-db-crash-99')).toBeInTheDocument();
+    });
   });
 });

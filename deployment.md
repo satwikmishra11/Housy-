@@ -326,7 +326,44 @@ Every step below has been executed, tested, and verified:
 
 ---
 
-## 8. Verification Record (Commit & Script Data)
+## 8. Production Database Setup & Troubleshooting
+
+### One-Command Production Setup: `npm run db:setup:prod`
+
+For production and staging deployments, Housy provides a unified database preparation routine:
+
+```bash
+# Run database migrations and conditionally seed demo accounts
+npm run db:setup:prod
+```
+
+**Execution Behavior:**
+1. **Migrations**: Automatically executes all pending SQL migrations up to the latest revision in `apps/api/migrations` via `node-pg-migrate`.
+2. **Conditional Demo Seeding**: Inspects `DEMO_MODE`:
+   - If `DEMO_MODE=true`: Seeds demo staff accounts (`harshil.mehta@example.com`, `amit.shah@example.com`, etc.) and sample residential projects.
+   - If `DEMO_MODE !== 'true'`: Safely skips demo seeding, preserving existing production records without risk of data truncation.
+3. **Execution Transparency**: Emits structured console logs stating the exact migrations applied and whether demo seeding was performed or skipped.
+
+### Health Reasons & Diagnostic Troubleshooting Table
+
+The public endpoint `GET /api/health` returns sanitized database diagnostics:
+`database: { status: 'ok' | 'degraded' | 'down', schema: 'ok' | 'missing' | 'outdated', reason: <reason> }`
+Raw error messages, hostnames, ports, and credentials are never exposed publicly and are logged server-side only.
+
+| Diagnostic Reason | Database Status | Root Cause | Recommended Remediation |
+| :--- | :---: | :--- | :--- |
+| **`ok`** (null reason) | `ok` | Database is responsive, `users` table exists, and latest migration is applied. | No action required. Service is fully operational. |
+| **`unreachable`** | `down` | Connection refused (`ECONNREFUSED`), host not found (`ENOTFOUND`), or network unreachable (`EHOSTUNREACH`). | Verify cloud database instance is running and not paused. Confirm `DATABASE_URL` hostname and port are accessible from the deployment environment. |
+| **`auth_failed`** | `down` | PostgreSQL authentication rejected (`28P01` invalid password, `28000`). | Re-verify credentials in `DATABASE_URL`. Ensure special characters in database password are properly URL-encoded. |
+| **`timeout`** | `down` | Connection timed out (`ETIMEDOUT`, `57P01`, or exceeded 10,000 ms connection timeout). | Cloud database is waking from idle/sleep or experiencing high latency. The pool automatically retries transient timeouts once with 500 ms backoff. Ensure pooling proxy is used. |
+| **`ssl`** | `down` | TLS handshake failed or certificate validation rejected. | Ensure `?sslmode=require` is present on cloud connection strings (Neon, Supabase). Set `sslmode=disable` only for local non-SSL Docker setups. |
+| **`schema_missing`** | `degraded` | Database is connected, but the `users` table is missing, `pgmigrations` is empty, or pending migrations remain unapplied. | Run `npm run db:setup:prod` (or `npm run db:migrate`) to apply all pending schema migrations. On the login page, this surfaces as `"Setup incomplete"`. |
+| **`pool_exhausted`** | `down` | Client pool exhausted (`53300` "too many clients" or server pool full). | Switch `DATABASE_URL` to the provider's transaction connection pooler (e.g., Supabase port 6543 or Neon pooled endpoint). Vercel serverless execution automatically caps pool connections to `max: 3`. |
+| **`unknown`** | `down` | Unclassified database or driver exception. | Inspect backend server-side logs (`logger.error`) matching the corresponding `requestId` for full unredacted error codes. |
+
+---
+
+## 9. Verification Record (Commit & Script Data)
 
 - **Audit Date**: 2026-11-08
 - **Git Commit Hash**: `6978ab3bb8e47a7ca3dfd331fa5f53d19eeb5326` (`6978ab3`)
@@ -345,10 +382,10 @@ Every step below has been executed, tested, and verified:
 | Workspace / Target | Test Files | Tests Passed | Failures | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
-| **@housy/api** (Services & Concurrency) | 27 | 454 | 0 | **PASS** |
-| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 28 | 461 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 138 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **53 files** | **645** | **0** | **PASS** |
+| **Total Automated Tests** | **54 files** | **655** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
+import { fetchHealth, type ApiError } from '../lib/api.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/Card.js';
 import { Input } from '../components/Input.js';
 import { Button } from '../components/Button.js';
@@ -11,6 +12,8 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
+  const [dbStatusLine, setDbStatusLine] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login, isAuthenticated } = useAuth();
@@ -20,15 +23,37 @@ export const LoginPage: React.FC = () => {
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/leads';
 
   // If already authenticated, redirect
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
 
+  // Fetch /api/health once on mount and show small status line when database is not ok
+  useEffect(() => {
+    let active = true;
+    Promise.resolve()
+      .then(() => fetchHealth())
+      .then((health) => {
+        if (!active || !health?.database) return;
+        if (health.database.status !== 'ok') {
+          const reason = health.database.reason;
+          setDbStatusLine(reason === 'schema_missing' ? 'Setup incomplete' : 'Service is starting up');
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setDbStatusLine('Service is starting up');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setErrorMessage(null);
+    setErrorRequestId(null);
 
     if (!email.trim() || !password) {
       setErrorMessage('Please provide both email and password.');
@@ -41,7 +66,9 @@ export const LoginPage: React.FC = () => {
       navigate(from, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      const reqId = (err as ApiError)?.requestId || null;
       setErrorMessage(message);
+      setErrorRequestId(reqId);
     } finally {
       setIsSubmitting(false);
     }
@@ -54,6 +81,7 @@ export const LoginPage: React.FC = () => {
       setPassword(demoSeedPass);
     }
     setErrorMessage(null);
+    setErrorRequestId(null);
   };
 
   return (
@@ -111,12 +139,28 @@ export const LoginPage: React.FC = () => {
             </CardHeader>
 
             <CardContent className="pt-4">
+              {dbStatusLine && (
+                <div
+                  role="status"
+                  className="mb-4 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="font-medium">{dbStatusLine}</span>
+                  </div>
+                  <span className="text-[11px] text-amber-700 font-mono">System</span>
+                </div>
+              )}
+
               {errorMessage && (
                 <div
                   role="alert"
-                  className="mb-5 p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm flex items-start gap-2.5"
+                  className="mb-5 p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm flex flex-col gap-1"
                 >
                   <span className="font-medium">{errorMessage}</span>
+                  {errorRequestId && (
+                    <span className="text-xs opacity-90 font-mono">Reference: {errorRequestId}</span>
+                  )}
                 </div>
               )}
 

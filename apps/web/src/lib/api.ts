@@ -73,6 +73,7 @@ export interface ApiError extends Error {
   statusCode?: number;
   code?: string;
   alternatives?: SlotAlternative[];
+  requestId?: string;
 }
 
 /**
@@ -205,7 +206,14 @@ export async function apiFetch<T>(
       window.dispatchEvent(new CustomEvent('housy:session-expired'));
     }
 
-    const errorObj = data as { error?: { message?: string; code?: string; alternatives?: SlotAlternative[] } } | null;
+    const errorObj = data as {
+      error?: {
+        message?: string;
+        code?: string;
+        alternatives?: SlotAlternative[];
+        requestId?: string;
+      };
+    } | null;
     let message = errorObj?.error?.message;
     if (!message) {
       if (response.status === 502 || response.status === 504 || (response.status === 500 && !rawText)) {
@@ -223,6 +231,7 @@ export async function apiFetch<T>(
     error.statusCode = response.status;
     error.code = errorObj?.error?.code;
     error.alternatives = errorObj?.error?.alternatives;
+    error.requestId = errorObj?.error?.requestId;
     throw error;
   }
 
@@ -231,7 +240,13 @@ export async function apiFetch<T>(
 }
 
 export async function fetchHealth(): Promise<HealthCheckResponse> {
-  const data = await apiFetch<unknown>('/api/health');
+  const targetUrl = resolveApiUrl('/api/health');
+  const res = await fetch(targetUrl, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  const text = await res.text();
+  const data: unknown = text ? JSON.parse(text) : null;
   const parsed = HealthCheckResponseSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(

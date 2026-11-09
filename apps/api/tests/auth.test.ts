@@ -153,14 +153,19 @@ describe('Staff Authentication Endpoints', () => {
     expect(res.body.error.message).toContain('CSRF protection');
   });
 
-  it('with the DB down, POST /api/auth/login with demo password returns 503 and no cookie', async () => {
+  it('with the DB down, POST /api/auth/login with demo password returns 503, requestId and no cookie', async () => {
     const { userRepository } = await import('../src/repositories/user.repository.js');
     const { DatabaseError } = await import('../src/errors/index.js');
     const { isAccountIpLocked } = await import('../src/services/auth.service.js');
 
+    const dbDownError = Object.assign(
+      new DatabaseError('Connection terminated unexpectedly (ECONNREFUSED)'),
+      { code: 'ECONNREFUSED' },
+    );
+
     const findSpy = vi
       .spyOn(userRepository, 'findByEmail')
-      .mockRejectedValueOnce(new DatabaseError('Connection terminated unexpectedly (ECONNREFUSED)'));
+      .mockRejectedValueOnce(dbDownError);
 
     const res = await request(app)
       .post('/api/auth/login')
@@ -177,10 +182,67 @@ describe('Staff Authentication Endpoints', () => {
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
     expect(res.body.error.message).toBe('Authentication service is temporarily unavailable. Please try again shortly.');
+    expect(typeof res.body.error.requestId).toBe('string');
+    expect(res.body.error.requestId.length).toBeGreaterThan(0);
     expect(res.headers['set-cookie']).toBeUndefined();
 
     // Verify nothing recorded as a failed attempt
     expect(isAccountIpLocked('harshil.mehta@example.com', '192.168.1.99')).toBe(false);
+  });
+
+  it('with DB schema missing, POST /api/auth/login returns 503 plus requestId', async () => {
+    const { userRepository } = await import('../src/repositories/user.repository.js');
+    const schemaErr = Object.assign(new Error('relation "users" does not exist'), {
+      code: '42P01',
+    });
+
+    const findSpy = vi.spyOn(userRepository, 'findByEmail').mockRejectedValueOnce(schemaErr);
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set(CSRF_HEADER)
+      .set('X-Forwarded-For', '192.168.1.101')
+      .send({
+        email: 'harshil.mehta@example.com',
+        password: SEED_PASSWORD,
+      });
+
+    findSpy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(res.body.error.message).toBe('Authentication service is temporarily unavailable. Please try again shortly.');
+    expect(typeof res.body.error.requestId).toBe('string');
+    expect(res.body.error.requestId.length).toBeGreaterThan(0);
+  });
+
+  it('with DB auth failed, POST /api/auth/login returns 503 plus requestId', async () => {
+    const { userRepository } = await import('../src/repositories/user.repository.js');
+    const authErr = Object.assign(
+      new Error('password authentication failed for user "housy_user"'),
+      { code: '28P01' },
+    );
+
+    const findSpy = vi.spyOn(userRepository, 'findByEmail').mockRejectedValueOnce(authErr);
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set(CSRF_HEADER)
+      .set('X-Forwarded-For', '192.168.1.102')
+      .send({
+        email: 'harshil.mehta@example.com',
+        password: SEED_PASSWORD,
+      });
+
+    findSpy.mockRestore();
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(res.body.error.message).toBe('Authentication service is temporarily unavailable. Please try again shortly.');
+    expect(typeof res.body.error.requestId).toBe('string');
+    expect(res.body.error.requestId.length).toBeGreaterThan(0);
   });
 });
 

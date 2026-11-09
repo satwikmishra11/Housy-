@@ -177,7 +177,11 @@ export const HealthPage: React.FC = () => {
                 <div className="flex items-baseline gap-2">
                   <span
                     className={`inline-block w-2.5 h-2.5 rounded-full ${
-                      health.database.status === 'connected' ? 'bg-emerald-500' : 'bg-rose-500'
+                      health.database.status === 'ok' || health.database.status === 'connected'
+                        ? 'bg-emerald-500'
+                        : health.database.status === 'degraded'
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500'
                     }`}
                   />
                   <span className="text-lg font-semibold capitalize text-stone-900">
@@ -185,6 +189,16 @@ export const HealthPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="mt-3 pt-3 border-t border-stone-100 flex justify-between items-center text-xs">
+                  <span className="text-stone-500">Schema</span>
+                  <span
+                    className={`font-medium capitalize ${
+                      health.database.schema === 'ok' ? 'text-emerald-700' : 'text-amber-700'
+                    }`}
+                  >
+                    {health.database.schema || 'ok'}
+                  </span>
+                </div>
+                <div className="mt-1 flex justify-between items-center text-xs">
                   <span className="text-stone-500">Latency</span>
                   <span className="font-mono font-medium text-stone-800">
                     {health.database.latencyMs !== null && health.database.latencyMs !== undefined
@@ -192,10 +206,11 @@ export const HealthPage: React.FC = () => {
                       : 'Unavailable'}
                   </span>
                 </div>
-                {health.database.message && (
-                  <p className="mt-2 text-xs text-rose-600 bg-rose-50 p-2 rounded">
-                    {health.database.message}
-                  </p>
+                {health.database.reason && (
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50 p-2 rounded flex justify-between items-center border border-amber-200">
+                    <span>Issue</span>
+                    <span className="font-mono text-[11px] font-semibold">{health.database.reason}</span>
+                  </div>
                 )}
               </div>
 

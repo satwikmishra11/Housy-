@@ -5,6 +5,7 @@ import { LlmCallRepository, llmCallRepository } from '../repositories/llm-call.r
 import { JobRunRepository, jobRunRepository } from '../repositories/job-run.repository.js';
 import { llmService } from '../llm/llm.service.js';
 import { config } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
 export class HealthService {
   constructor(
@@ -14,7 +15,32 @@ export class HealthService {
   ) {}
 
   async getHealth(): Promise<HealthCheckResponse> {
-    const dbPing = await this.repo.pingDatabase();
+    const dbCheck =
+      typeof this.repo.checkDatabase === 'function'
+        ? await this.repo.checkDatabase()
+        : await (async () => {
+            const ping = await this.repo.pingDatabase();
+            return {
+              status: ping.connected ? ('ok' as const) : ('down' as const),
+              schema: ping.connected ? ('ok' as const) : ('missing' as const),
+              reason: ping.connected ? null : ('unreachable' as const),
+              latencyMs: ping.latencyMs,
+              rawError: ping.error,
+            };
+          })();
+
+    // Log raw error details server-side only; never leak hostnames, ports or stack traces to public endpoint
+    if (dbCheck.status !== 'ok') {
+      logger.error(
+        {
+          dbStatus: dbCheck.status,
+          dbSchema: dbCheck.schema,
+          dbReason: dbCheck.reason,
+          err: dbCheck.rawError,
+        },
+        'Database health check failed',
+      );
+    }
 
     // Query LLM telemetry and run cached 60s 1-token probe
     const probe = await llmService.probe();
@@ -42,9 +68,10 @@ export class HealthService {
 
     const lastErrorKind = !probe.ok && probe.errorKind ? probe.errorKind : lastErrorKindDb;
 
-    // Health is ok only if DB is connected, LLM is operational or unconfigured, and reminders are not overdue (>10 min)
+    // Health is ok only if DB is ok, schema is ok, LLM is operational or unconfigured, and reminders are not overdue (>10 min)
     const isHealthy =
-      dbPing.connected &&
+      dbCheck.status === 'ok' &&
+      dbCheck.schema === 'ok' &&
       (llmStatus === 'ok' || llmStatus === 'unconfigured') &&
       !jobsHealth.remindersOverdue;
     const status: HealthCheckResponse['status'] = isHealthy ? 'ok' : 'degraded';
@@ -56,9 +83,10 @@ export class HealthService {
       environment: config.NODE_ENV,
       version: '1.0.0',
       database: {
-        status: dbPing.connected ? ('connected' as const) : ('disconnected' as const),
-        latencyMs: dbPing.latencyMs,
-        message: dbPing.error,
+        status: dbCheck.status,
+        schema: dbCheck.schema,
+        reason: dbCheck.reason,
+        latencyMs: dbCheck.latencyMs,
       },
       llm: {
         provider: config.LLM_PROVIDER,

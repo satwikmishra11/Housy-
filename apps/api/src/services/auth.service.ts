@@ -63,7 +63,7 @@ export function resetAllLockouts(): void {
 export class AuthService {
   constructor(private readonly userRepo: UserRepository = userRepository) {}
 
-  async login(credentials: LoginRequest, ip = '127.0.0.1'): Promise<LoginResult> {
+  async login(credentials: LoginRequest, ip = '127.0.0.1', requestId?: string): Promise<LoginResult> {
     const normalizedEmail = credentials.email.toLowerCase().trim();
 
     if (isAccountIpLocked(normalizedEmail, ip)) {
@@ -75,8 +75,17 @@ export class AuthService {
     let user = null;
     try {
       user = await this.userRepo.findByEmail(credentials.email);
-    } catch (err) {
-      logger.error({ err, email: normalizedEmail }, 'Database error during staff login');
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      logger.error(
+        {
+          errCode: e?.code,
+          errMessage: e?.message,
+          requestId,
+          email: normalizedEmail,
+        },
+        'Database error during staff login',
+      );
       throw new ServiceUnavailableError('Authentication service is temporarily unavailable. Please try again shortly.');
     }
 

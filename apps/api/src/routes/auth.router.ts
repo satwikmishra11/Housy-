@@ -20,7 +20,11 @@ export function createAuthRouter(service: AuthService = authService): Router {
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
-        const result = await service.login(req.body, clientIp);
+        const requestId =
+          (res.locals['requestId'] as string) ||
+          (req.headers['x-request-id'] as string) ||
+          undefined;
+        const result = await service.login(req.body, clientIp, requestId);
 
         res.cookie('staff_token', result.token, {
           httpOnly: true,

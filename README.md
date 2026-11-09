@@ -147,10 +147,10 @@ Detailed technical documentation is available in `docs/`:
 | Workspace / Target | Test Files | Tests Passed | Failures | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
-| **@housy/api** (Services & Concurrency) | 27 | 454 | 0 | **PASS** |
-| **@housy/web** (Views & Components) | 18 | 135 | 0 | **PASS** |
+| **@housy/api** (Services & Concurrency) | 28 | 461 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 18 | 138 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **53 files** | **645** | **0** | **PASS** |
+| **Total Automated Tests** | **54 files** | **655** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

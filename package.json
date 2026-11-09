@@ -39,6 +39,7 @@
     "db:seed:demo": "npm run db:seed:demo --workspace=@housy/api",
     "db:reset": "npm run db:reset --workspace=@housy/api",
     "db:test:reset": "npm run db:test:reset --workspace=@housy/api",
+    "db:setup:prod": "npm run db:setup:prod --workspace=@housy/api",
     "check": "npm run lint && npm run typecheck && npm test",
     "prepare": "npm run build:shared && husky"
   },

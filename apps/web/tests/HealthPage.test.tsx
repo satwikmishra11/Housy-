@@ -42,6 +42,7 @@ describe('HealthPage Component', () => {
       version: '1.0.0',
       database: {
         status: 'connected',
+        schema: 'ok',
         latencyMs: 4.2,
       },
     });
@@ -79,6 +80,7 @@ describe('HealthPage Component', () => {
       version: '1.0.0',
       database: {
         status: 'connected',
+        schema: 'ok',
         latencyMs: 3.1,
       },
       jobs: {
@@ -119,6 +121,7 @@ describe('HealthPage Component', () => {
       version: '1.0.0',
       database: {
         status: 'connected',
+        schema: 'ok',
         latencyMs: 2.5,
       },
       jobs: {

@@ -1,7 +1,33 @@
 import { z } from 'zod';
 
+export const DatabaseHealthStatusSchema = z.enum([
+  'ok',
+  'degraded',
+  'down',
+  'connected',
+  'disconnected',
+  'error',
+]);
+export type DatabaseHealthStatus = z.infer<typeof DatabaseHealthStatusSchema>;
+
+export const DatabaseSchemaStatusSchema = z.enum(['ok', 'missing', 'outdated']);
+export type DatabaseSchemaStatus = z.infer<typeof DatabaseSchemaStatusSchema>;
+
+export const DatabaseHealthReasonSchema = z.enum([
+  'unreachable',
+  'auth_failed',
+  'timeout',
+  'ssl',
+  'schema_missing',
+  'pool_exhausted',
+  'unknown',
+]);
+export type DatabaseHealthReason = z.infer<typeof DatabaseHealthReasonSchema>;
+
 export const DatabaseHealthSchema = z.object({
-  status: z.enum(['connected', 'disconnected', 'error']),
+  status: DatabaseHealthStatusSchema,
+  schema: DatabaseSchemaStatusSchema.default('ok'),
+  reason: DatabaseHealthReasonSchema.nullable().optional(),
   latencyMs: z.number().nullable().optional(),
   message: z.string().optional(),
 });
