@@ -17,7 +17,15 @@ import {
 import type { StaffNotification } from '@housy/shared';
 import { formatTimeInKolkata } from '../lib/date.js';
 
-export const NotificationBell: React.FC = () => {
+export interface NotificationBellProps {
+  align?: 'left' | 'right';
+  className?: string;
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({
+  align = 'right',
+  className = '',
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<StaffNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -118,7 +126,7 @@ export const NotificationBell: React.FC = () => {
   };
 
   return (
-    <div className="relative inline-block" ref={containerRef}>
+    <div className={`relative inline-block ${className}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -135,7 +143,13 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-surface border border-hairline shadow-card z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div
+          role="region"
+          aria-label="Staff Notifications"
+          className={`absolute ${
+            align === 'left' ? 'left-0 right-auto' : 'right-0 left-auto'
+          } mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface border border-hairline shadow-card z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100`}
+        >
           <div className="px-4 py-3 border-b border-hairline flex items-center justify-between bg-surface/80 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-ink">Notifications</span>

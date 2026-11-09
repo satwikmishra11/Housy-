@@ -157,9 +157,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       <DemoRibbon />
       <div className="flex-1 flex flex-col md:flex-row min-w-0">
         {/* Desktop Sidebar (>= md) */}
-        <aside className="hidden md:flex flex-col w-64 border-r border-hairline bg-surface p-5 flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+        <aside className="hidden md:flex flex-col w-64 border-r border-hairline bg-surface p-5 flex-shrink-0 sticky top-0 h-screen overflow-visible z-30">
           {/* Brand */}
-          <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center justify-between mb-4 px-2 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center font-serif font-bold text-lg select-none shadow-subtle">
                 H
@@ -172,12 +172,12 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
                 </p>
               </div>
             </div>
-            <NotificationBell />
+            <NotificationBell align="left" />
           </div>
 
         {/* Ambient AI Health Status Chip (Admin only) */}
         {isSalesHead && health?.llm && (
-          <div className="mb-6 px-2">
+          <div className="mb-6 px-2 flex-shrink-0">
             <NavLink
               to="/health"
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
@@ -210,7 +210,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 flex flex-col gap-1.5" aria-label="Staff navigation">
+        <nav className="flex-1 flex flex-col gap-1.5 overflow-y-auto pr-1 min-h-0" aria-label="Staff navigation">
           {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
 
@@ -234,7 +234,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
         </nav>
 
         {/* User Card & Language */}
-        <div className="pt-4 border-t border-hairline flex flex-col gap-3">
+        <div className="pt-4 border-t border-hairline flex flex-col gap-3 flex-shrink-0">
           <div className="p-3 rounded-xl bg-background border border-hairline flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-ink truncate">{effectiveUserName}</span>
@@ -276,7 +276,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <NotificationBell />
+          <NotificationBell align="right" />
           {isSalesHead && health?.llm && (
             <NavLink
               to="/health"
