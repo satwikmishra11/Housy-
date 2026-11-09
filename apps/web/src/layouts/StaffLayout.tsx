@@ -59,8 +59,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
     authContext = null;
   }
 
-  const effectiveUserRole = authContext?.user?.role || propUserRole || 'sales_head';
-  const effectiveUserName = authContext?.user?.name || propUserName || 'Harshil Mehta';
+  const effectiveUserRole = authContext?.user?.role || propUserRole || 'executive';
+  const effectiveUserName = authContext?.user?.name || propUserName || 'Sales Staff';
+  const isSalesHead = effectiveUserRole === 'sales_head';
 
   const queryClient = React.useContext(QueryClientContext);
   const { data: health } = useQuery(
@@ -82,7 +83,12 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
   };
 
   const navItems = [
-    { label: 'System Health', path: '/', icon: <Activity className="w-4 h-4" /> },
+    {
+      label: 'System Health',
+      path: '/health',
+      icon: <Activity className="w-4 h-4" />,
+      adminOnly: true,
+    },
     { label: 'Today', path: '/today', icon: <Clock className="w-4 h-4" /> },
     { label: 'Unified Leads', path: '/leads', icon: <Users className="w-4 h-4" /> },
     { label: 'Handoffs', path: '/handoffs', icon: <UserCheck className="w-4 h-4" /> },
@@ -133,8 +139,15 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
       icon: <Sparkles className="w-4 h-4" />,
       adminOnly: true,
     },
-    { label: 'Design System', path: '/styleguide', icon: <Palette className="w-4 h-4" /> },
+    {
+      label: 'Design System',
+      path: '/styleguide',
+      icon: <Palette className="w-4 h-4" />,
+      adminOnly: true,
+    },
   ];
+
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isSalesHead);
 
   const roleLabel =
     effectiveUserRole === 'sales_head' ? 'Sales Head (Admin)' : 'Sales Executive';
@@ -162,11 +175,11 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
             <NotificationBell />
           </div>
 
-        {/* Ambient AI Health Status Chip */}
-        {health?.llm && (
+        {/* Ambient AI Health Status Chip (Admin only) */}
+        {isSalesHead && health?.llm && (
           <div className="mb-6 px-2">
             <NavLink
-              to="/"
+              to="/health"
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
                 health.llm.status === 'ok'
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
@@ -198,30 +211,23 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
 
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-1.5" aria-label="Staff navigation">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
-            const isRestrictedForUser =
-              item.adminOnly && effectiveUserRole === 'executive';
 
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`min - h - [44px] px - 3.5 py - 2.5 rounded - token text - sm font - medium flex items - center justify - between transition - colors ${
-            isActive
-            ? 'bg-accent-soft text-accent font-semibold'
-              : 'text-muted hover:text-ink hover:bg-background'
-          }`}
+                className={`min-h-[44px] px-3.5 py-2.5 rounded-xl text-sm font-medium flex items-center justify-between transition-colors ${
+                  isActive
+                    ? 'bg-accent-soft text-accent font-semibold'
+                    : 'text-muted hover:text-ink hover:bg-background'
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <span className={isActive ? 'text-accent' : 'text-muted'}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
-                {isRestrictedForUser && (
-                  <Badge variant="neutral" className="text-[10px] px-1.5 py-0">
-                    Admin
-                  </Badge>
-                )}
               </NavLink>
             );
           })}
@@ -271,9 +277,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
 
         <div className="flex items-center gap-2">
           <NotificationBell />
-          {health?.llm && (
+          {isSalesHead && health?.llm && (
             <NavLink
-              to="/"
+              to="/health"
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 health.llm.status === 'ok'
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -325,30 +331,25 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({
           </div>
 
           <nav className="flex flex-col gap-2">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`min - h - [44px] px - 4 py - 3 rounded - xl text - sm font - medium flex items - center justify - between ${
-            isActive? 'bg-accent-soft text-accent font-semibold': 'text-ink'
-          }`}
+                  className={`min-h-[44px] px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${
+                    isActive ? 'bg-accent-soft text-accent font-semibold' : 'text-ink'
+                  }`}
                 >
-          <div className="flex items-center gap-3">
-            {item.icon}
-            <span>{item.label}</span>
-          </div>
-          {item.adminOnly && effectiveUserRole === 'executive' && (
-            <Badge variant="neutral" className="text-[10px] px-1.5 py-0">
-              Admin
-            </Badge>
-          )}
-        </NavLink>
-        );
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                </NavLink>
+              );
             })}
-      </nav>
+          </nav>
 
       <div className="mt-auto pt-6 border-t border-hairline flex flex-col gap-4">
         <div className="flex items-center justify-between">

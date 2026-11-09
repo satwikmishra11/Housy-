@@ -14,6 +14,7 @@ import { LeadDetailDrawer } from '../components/LeadDetailDrawer.js';
 import { fetchLeads, mergeLeads, keepSeparateLead, type FetchLeadsParams } from '../lib/api.js';
 import { formatInKolkataTime } from '../lib/date.js';
 import { useToast } from '../components/Toast.js';
+import { useAuth } from '../context/AuthContext.js';
 import {
   Search,
   Upload,
@@ -31,6 +32,15 @@ import type { LeadListItem, LeadSource, LeadStatus } from '@housy/shared';
 export const LeadsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  let authUser: { role?: 'sales_head' | 'executive'; name?: string } | null = null;
+  try {
+    const auth = useAuth();
+    authUser = auth.user;
+  } catch {
+    authUser = null;
+  }
+  const isSalesHead = authUser?.role === 'sales_head';
 
   const [activeTab, setActiveTab] = useState<'all' | 'duplicates'>('all');
   const [search, setSearch] = useState('');
@@ -145,7 +155,7 @@ export const LeadsPage: React.FC = () => {
   };
 
   return (
-    <StaffLayout>
+    <StaffLayout userRole={authUser?.role} userName={authUser?.name}>
       <div className="space-y-6">
         {/* Page Header */}
         <PageHeader
@@ -161,14 +171,16 @@ export const LeadsPage: React.FC = () => {
               >
                 Refresh
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Upload className="w-4 h-4" />}
-                onClick={() => setIsCsvModalOpen(true)}
-              >
-                Import CSV
-              </Button>
+              {isSalesHead && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Upload className="w-4 h-4" />}
+                  onClick={() => setIsCsvModalOpen(true)}
+                >
+                  Import CSV
+                </Button>
+              )}
             </div>
           }
         />
