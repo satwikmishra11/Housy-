@@ -150,6 +150,10 @@ Centralized error handling middleware converts errors into predictable, typed JS
 - **Ownership Enforcement**:
   - `assertLeadOwnership(leadId, user)`: Sales Executives see and edit **only leads assigned to them**. The Sales Head has developer-wide visibility.
   - Access to an unassigned lead returns **HTTP 403 Forbidden** (not 404), distinguishing unassigned resources from non-existent resources.
+- **Navigation & Feature Guarding**:
+  - **Admin-Only Features**: Daily Review (`/daily-review`), Flagged Chats (`/flagged-chats`), Fact Sheet Editor (`/fact-sheet`), Slot Availability Rules (`/slot-rules`), Monthly Ad Spend (`/ad-spend`), Demo Simulation Controls (`/demo`), System Health Diagnostics (`/health`), and CSV Lead Ingestion (`POST /api/leads/csv-preview`, `POST /api/leads/csv-commit`) require `sales_head` role.
+  - **Executive Scoping**: In `StaffLayout`, all administrative navigation items and ambient AI telemetry chips are strictly omitted from rendering for `executive` users (e.g. Amit Shah), presenting only relevant executive workspace views (`Today`, `Unified Leads`, `Handoffs`, `Site Visits`, `Sales Dashboard`, `Message Outbox`).
+  - **Route Protection**: Direct URL navigation to restricted paths is intercepted by `<ProtectedRoute allowedRoles={['sales_head']}>`, rendering an informative `Access Restricted` state with navigation back to the executive workspace. CSV lead ingestion endpoints enforce `requireRole('sales_head')`, rejecting unauthorized executive requests with 403 Forbidden.
 
 ### Buyer Sessions & Magic Links
 - **Buyer Sessions**: Signed `buyer_session` cookie and `X-Buyer-Session` header tied to an active conversation UUID, preserving dialogue continuity across page refreshes without passwords.
