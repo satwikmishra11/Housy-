@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { config } from '../config/index.js';
 import { runSeed } from './seed.js';
-import { closePool } from './index.js';
+import { closePool, sanitizeConnectionUrl } from './index.js';
 
 export interface SetupProdOptions {
   databaseUrl?: string;
@@ -51,8 +51,18 @@ export async function setupProdDatabase(options?: SetupProdOptions): Promise<Set
   const migrationsDir = resolveMigrationsDir();
   console.info(`[db:setup:prod] Applying migrations from: ${migrationsDir}`);
 
+  const isLocal = targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1');
+  const sanitizedTargetUrl = sanitizeConnectionUrl(targetUrl, !isLocal);
+
+  const runnerDbConfig = !isLocal
+    ? {
+        connectionString: sanitizedTargetUrl,
+        ssl: { rejectUnauthorized: false },
+      }
+    : sanitizedTargetUrl;
+
   const appliedList = await runner({
-    databaseUrl: targetUrl,
+    databaseUrl: runnerDbConfig,
     dir: migrationsDir,
     direction: 'up',
     migrationsTable: 'pgmigrations',

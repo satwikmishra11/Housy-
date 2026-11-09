@@ -55556,6 +55556,16 @@ function parseSslMode(databaseUrl, isProduction, isVercel) {
   const isLocalhost = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
   return !isLocalhost && (isProduction || isVercel);
 }
+function sanitizeConnectionUrl(rawUrl, stripSslMode) {
+  if (!stripSslMode) return rawUrl;
+  try {
+    const u = new URL(rawUrl);
+    u.searchParams.delete("sslmode");
+    return u.toString();
+  } catch {
+    return rawUrl.replace(/([?&])sslmode=[^&]*/g, "").replace(/(\?&|&&)/g, "&").replace(/[?&]$/, "");
+  }
+}
 function isTransientDbError(err) {
   if (!err || typeof err !== "object") return false;
   const e = err;
@@ -55577,7 +55587,7 @@ async function query(text, params) {
 async function closePool() {
   await pool.end();
 }
-var Pool2, useSsl, pool;
+var Pool2, useSsl, effectiveConnectionUrl, pool;
 var init_db = __esm({
   "src/db/index.ts"() {
     "use strict";
@@ -55597,8 +55607,9 @@ var init_db = __esm({
       config2.NODE_ENV === "production",
       Boolean(process.env.VERCEL)
     );
+    effectiveConnectionUrl = sanitizeConnectionUrl(config2.DATABASE_URL, useSsl);
     pool = new Pool2({
-      connectionString: config2.DATABASE_URL,
+      connectionString: effectiveConnectionUrl,
       max: process.env.VERCEL ? 3 : 30,
       // Cap at max 3 connections in serverless to prevent pool exhaustion
       idleTimeoutMillis: 3e4,
@@ -102120,8 +102131,14 @@ async function setupProdDatabase(options) {
   console.info(`[db:setup:prod] Target Database: ${sanitizedDb}`);
   const migrationsDir = resolveMigrationsDir();
   console.info(`[db:setup:prod] Applying migrations from: ${migrationsDir}`);
+  const isLocal = targetUrl.includes("localhost") || targetUrl.includes("127.0.0.1");
+  const sanitizedTargetUrl = sanitizeConnectionUrl(targetUrl, !isLocal);
+  const runnerDbConfig = !isLocal ? {
+    connectionString: sanitizedTargetUrl,
+    ssl: { rejectUnauthorized: false }
+  } : sanitizedTargetUrl;
   const appliedList = await runner({
-    databaseUrl: targetUrl,
+    databaseUrl: runnerDbConfig,
     dir: migrationsDir,
     direction: "up",
     migrationsTable: "pgmigrations",

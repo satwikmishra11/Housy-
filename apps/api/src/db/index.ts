@@ -30,11 +30,24 @@ export function parseSslMode(databaseUrl: string, isProduction: boolean, isVerce
   return !isLocalhost && (isProduction || isVercel);
 }
 
+export function sanitizeConnectionUrl(rawUrl: string, stripSslMode: boolean): string {
+  if (!stripSslMode) return rawUrl;
+  try {
+    const u = new URL(rawUrl);
+    u.searchParams.delete('sslmode');
+    return u.toString();
+  } catch {
+    return rawUrl.replace(/([?&])sslmode=[^&]*/g, '').replace(/(\?&|&&)/g, '&').replace(/[?&]$/, '');
+  }
+}
+
 const useSsl = parseSslMode(
   config.DATABASE_URL,
   config.NODE_ENV === 'production',
   Boolean(process.env.VERCEL),
 );
+
+const effectiveConnectionUrl = sanitizeConnectionUrl(config.DATABASE_URL, useSsl);
 
 /**
  * PostgreSQL Connection Pool configuration:
@@ -45,7 +58,7 @@ const useSsl = parseSslMode(
  * - connectionTimeoutMillis: 10000 to give serverless cold-starts sufficient time to complete TLS handshakes.
  */
 export const pool = new Pool({
-  connectionString: config.DATABASE_URL,
+  connectionString: effectiveConnectionUrl,
   max: process.env.VERCEL ? 3 : 30, // Cap at max 3 connections in serverless to prevent pool exhaustion
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-09T10:48:28.978Z",
-  "gitCommit": "e3bee7a1c20b1cd923b14e60dd1e07385c331798",
+  "generatedAt": "2026-11-09T10:54:43.716Z",
+  "gitCommit": "29e6d9fe31ca32c1a0e6de1c253c53819db01d87",
   "workspaces": {
     "shared": {
       "workspace": "@housy/shared",
