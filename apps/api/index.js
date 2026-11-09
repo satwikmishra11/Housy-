@@ -92428,17 +92428,19 @@ async function csrfProtection(req, _res, next) {
 }
 
 // src/app.ts
-function createApp() {
+function createApp(appConfig = config2) {
   const app2 = (0, import_express15.default)();
   app2.set("trust proxy", 1);
   app2.use(requestIdMiddleware);
-  const allowedOrigins = config2.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  const allowedOrigins = appConfig.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
   const isOriginAllowed = (origin) => {
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    if (appConfig.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return true;
     }
-    if (origin.endsWith(".vercel.app") || origin.endsWith(".vercel.dev") || origin === "https://vercel.live") {
-      return true;
+    if (appConfig.ALLOW_PREVIEW_ORIGINS) {
+      if (origin.endsWith(".vercel.app") || origin.endsWith(".vercel.dev") || origin === "https://vercel.live") {
+        return true;
+      }
     }
     return allowedOrigins.some((pattern) => {
       if (pattern === "*" || pattern === origin) return true;
@@ -92449,15 +92451,13 @@ function createApp() {
       return false;
     });
   };
-  const connectSources = [
-    "'self'",
-    ...allowedOrigins,
-    "https://*.vercel.app",
-    "https://*.vercel.dev",
-    "https://vercel.live",
-    "http://localhost:*",
-    "http://127.0.0.1:*"
-  ];
+  const connectSources = ["'self'", ...allowedOrigins];
+  if (appConfig.NODE_ENV !== "production") {
+    connectSources.push("http://localhost:*", "http://127.0.0.1:*");
+  }
+  if (appConfig.ALLOW_PREVIEW_ORIGINS) {
+    connectSources.push("https://*.vercel.app", "https://*.vercel.dev", "https://vercel.live");
+  }
   app2.use(
     helmet({
       contentSecurityPolicy: {
@@ -92474,7 +92474,7 @@ function createApp() {
         }
       },
       referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-      hsts: config2.NODE_ENV === "production" ? {
+      hsts: appConfig.NODE_ENV === "production" ? {
         maxAge: 31536e3,
         includeSubDomains: true,
         preload: true
@@ -92506,7 +92506,7 @@ function createApp() {
   });
   app2.use(import_express15.default.json({ limit: "100kb" }));
   app2.use((0, import_cookie_parser.default)());
-  if (config2.NODE_ENV !== "test") {
+  if (appConfig.NODE_ENV !== "test") {
     app2.use((0, import_pino_http.pinoHttp)({ logger }));
     app2.use(generalRateLimiter);
   }

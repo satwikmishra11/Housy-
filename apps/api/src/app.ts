@@ -14,7 +14,7 @@ import {
   generalRateLimiter,
 } from './middleware/index.js';
 
-export function createApp(): Express {
+export function createApp(appConfig = config): Express {
   const app = express();
 
   // Trust first proxy hop (Vercel Edge, Cloudflare, NGINX reverse proxies)
@@ -23,27 +23,32 @@ export function createApp(): Express {
   // 1. Request correlation ID
   app.use(requestIdMiddleware);
 
-  // 2. Comprehensive, resilient CORS allowlist for local development, Vercel deployments, and configured origins
-  const allowedOrigins = config.CORS_ORIGIN.split(',')
+  // 2. Exact CORS allowlist: exact origins only, with previews gated by ALLOW_PREVIEW_ORIGINS and localhost in development only
+  const allowedOrigins = appConfig.CORS_ORIGIN.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
   const isOriginAllowed = (origin: string): boolean => {
-    // Always permit local development hosts on any port (localhost / 127.0.0.1)
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-      return true;
-    }
-
-    // Always permit Vercel project domains and previews (*.vercel.app, *.vercel.dev, vercel.live) per A59
+    // Keep localhost on any port in development only
     if (
-      origin.endsWith('.vercel.app') ||
-      origin.endsWith('.vercel.dev') ||
-      origin === 'https://vercel.live'
+      appConfig.NODE_ENV !== 'production' &&
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
     ) {
       return true;
     }
 
-    // Match configured explicit origins (including patterns with wildcards)
+    // Allow *.vercel.app, *.vercel.dev, and vercel.live ONLY when ALLOW_PREVIEW_ORIGINS=true
+    if (appConfig.ALLOW_PREVIEW_ORIGINS) {
+      if (
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.vercel.dev') ||
+        origin === 'https://vercel.live'
+      ) {
+        return true;
+      }
+    }
+
+    // Match configured explicit origins (exact matches, or wildcard patterns if explicitly configured in CORS_ORIGIN)
     return allowedOrigins.some((pattern) => {
       if (pattern === '*' || pattern === origin) return true;
       if (pattern.includes('*')) {
@@ -54,15 +59,13 @@ export function createApp(): Express {
     });
   };
 
-  const connectSources = [
-    "'self'",
-    ...allowedOrigins,
-    'https://*.vercel.app',
-    'https://*.vercel.dev',
-    'https://vercel.live',
-    'http://localhost:*',
-    'http://127.0.0.1:*',
-  ];
+  const connectSources = ["'self'", ...allowedOrigins];
+  if (appConfig.NODE_ENV !== 'production') {
+    connectSources.push('http://localhost:*', 'http://127.0.0.1:*');
+  }
+  if (appConfig.ALLOW_PREVIEW_ORIGINS) {
+    connectSources.push('https://*.vercel.app', 'https://*.vercel.dev', 'https://vercel.live');
+  }
 
   // 3. Security headers via Helmet with hardened Content Security Policy and Production HSTS
   app.use(
@@ -82,7 +85,7 @@ export function createApp(): Express {
       },
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       hsts:
-        config.NODE_ENV === 'production'
+        appConfig.NODE_ENV === 'production'
           ? {
               maxAge: 31536000,
               includeSubDomains: true,
@@ -125,7 +128,7 @@ export function createApp(): Express {
   app.use(cookieParser());
 
   // 5. Logging middleware
-  if (config.NODE_ENV !== 'test') {
+  if (appConfig.NODE_ENV !== 'test') {
     app.use(pinoHttp({ logger }));
     app.use(generalRateLimiter);
   }

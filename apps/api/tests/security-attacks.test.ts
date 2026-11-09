@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { SignJWT } from 'jose';
-import { app } from '../src/app.js';
+import { app, createApp } from '../src/app.js';
 import { query } from '../src/db/index.js';
 import { signStaffToken } from '../src/auth/tokens.js';
 import { config } from '../src/config/index.js';
@@ -159,26 +159,60 @@ describe('Security Attack Suite & Defensive Invariants', () => {
     expect(res.body.error.message).toContain('not allowed by CORS');
   });
 
-  it('permits requests from production and preview *.vercel.app origins and localhost', async () => {
-    const prodRes = await request(app)
+  it('exact-origin CORS: permits production and localhost in dev, and preview origins only when ALLOW_PREVIEW_ORIGINS=true', async () => {
+    const corsApp = createApp({
+      ...config,
+      CORS_ORIGIN: 'http://localhost:5173,https://housy-ebon.vercel.app',
+      ALLOW_PREVIEW_ORIGINS: false,
+    });
+
+    // 1. Configured exact production origin is permitted
+    const prodRes = await request(corsApp)
       .get('/api/ping')
       .set('Origin', 'https://housy-ebon.vercel.app');
     expect(prodRes.status).toBe(200);
     expect(prodRes.headers['access-control-allow-origin']).toBe('https://housy-ebon.vercel.app');
 
-    const previewRes = await request(app)
+    // 2. Unlisted preview origins are blocked when ALLOW_PREVIEW_ORIGINS is false (default)
+    const previewBlockedRes = await request(corsApp)
       .get('/api/ping')
       .set('Origin', 'https://housy-git-feat-preview-satwik-mishras-projects.vercel.app');
-    expect(previewRes.status).toBe(200);
-    expect(previewRes.headers['access-control-allow-origin']).toBe(
+    expect(previewBlockedRes.status).toBe(403);
+    expect(previewBlockedRes.body.error.message).toContain('not allowed by CORS');
+
+    // 3. Preview origins are permitted when ALLOW_PREVIEW_ORIGINS is true
+    const previewApp = createApp({
+      ...config,
+      CORS_ORIGIN: 'http://localhost:5173,https://housy-ebon.vercel.app',
+      ALLOW_PREVIEW_ORIGINS: true,
+    });
+    const previewAllowedRes = await request(previewApp)
+      .get('/api/ping')
+      .set('Origin', 'https://housy-git-feat-preview-satwik-mishras-projects.vercel.app');
+    expect(previewAllowedRes.status).toBe(200);
+    expect(previewAllowedRes.headers['access-control-allow-origin']).toBe(
       'https://housy-git-feat-preview-satwik-mishras-projects.vercel.app',
     );
 
-    const localRes = await request(app)
+    // 4. Localhost on any port is permitted in development (NODE_ENV !== 'production')
+    const localRes = await request(corsApp)
       .get('/api/ping')
       .set('Origin', 'http://localhost:5173');
     expect(localRes.status).toBe(200);
     expect(localRes.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+
+    // 5. In production, unlisted localhost origins are blocked
+    const prodApp = createApp({
+      ...config,
+      NODE_ENV: 'production',
+      ALLOW_PREVIEW_ORIGINS: false,
+      CORS_ORIGIN: 'https://housy-ebon.vercel.app',
+    });
+    const prodLocalRes = await request(prodApp)
+      .get('/api/ping')
+      .set('Origin', 'http://localhost:9999');
+    expect(prodLocalRes.status).toBe(403);
+    expect(prodLocalRes.body.error.message).toContain('not allowed by CORS');
   });
 
   // 4. Executive Reading Another Executive's Assigned Lead
