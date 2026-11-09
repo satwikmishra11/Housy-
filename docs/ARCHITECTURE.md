@@ -190,7 +190,7 @@ The client brief values clean, minimal, and premium design fitting ₹65L – �
 
 ### Application Shell Layouts
 - **`BuyerLayout`**: Centered single-column container (`max-w-2xl`), top navigation bar with language switcher, and regulatory footer displaying GujRERA registration (`PR/GJ/AHMEDABAD/AUDA/RAA01234/011126`) and DPDP privacy notice.
-- **`StaffLayout`**: Desktop persistent sidebar with developer branding, active role badge, navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Handoffs`), authenticated user profile, and responsive drawer navigation on mobile viewports.
+- **`StaffLayout`**: Desktop persistent sidebar with developer branding, active role badge, navigation links (`Leads`, `Visits`, `Fact Sheet`, `Analytics`, `Handoffs`), authenticated user profile, and responsive drawer navigation on mobile viewports. The sidebar container uses `overflow-visible z-30` with internal `<nav className="flex-1 overflow-y-auto min-h-0">` scrollability, allowing header popovers (such as `NotificationBell align="left"`) to open cleanly to the right into the main viewport without horizontal clipping or off-screen truncation. In the mobile header, `NotificationBell align="right"` aligns rightward with viewport boundary constraints (`max-w-[calc(100vw-2rem)]`).
 
 ### Routing & Public Entrypoints
 - **`/` (Root Route)**: Evaluates user authentication and inbound attribution:

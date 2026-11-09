@@ -464,9 +464,9 @@ While the platform successfully demonstrates a hardened, production-ready core s
 | :--- | :---: | :---: | :---: | :---: |
 | **@housy/shared** (Contract Schemas) | 4 | 28 | 0 | **PASS** |
 | **@housy/api** (Services & Concurrency) | 30 | 470 | 0 | **PASS** |
-| **@housy/web** (Views & Components) | 18 | 140 | 0 | **PASS** |
+| **@housy/web** (Views & Components) | 19 | 144 | 0 | **PASS** |
 | **E2E Playwright** (User Journeys & WCAG AA) | 4 | 28 | 0 | **PASS** |
-| **Total Automated Tests** | **56 files** | **666** | **0** | **PASS** |
+| **Total Automated Tests** | **57 files** | **670** | **0** | **PASS** |
 | **AI Evaluation (Pipeline Mock)** | 1 harness | 56 / 56 (100.0%) | 0 | **PASS** |
 | **AI Evaluation (Live Google Gemini gemini-3.5-flash)** | 1 harness | 43 / 56 (76.8%) | 13 | **PASS** |
 <!-- DOC_STATS:END -->

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-09T12:28:40.433Z",
-  "gitCommit": "4629f5566757f725895b2fe3388649e40860e150",
+  "generatedAt": "2026-11-09T12:36:01.859Z",
+  "gitCommit": "193a835930827f39475b3dc5e71129f913348200",
   "workspaces": {
     "shared": {
       "workspace": "@housy/shared",
@@ -20,9 +20,9 @@
     },
     "web": {
       "workspace": "@housy/web",
-      "testFiles": 18,
-      "tests": 140,
-      "passed": 140,
+      "testFiles": 19,
+      "tests": 144,
+      "passed": 144,
       "failed": 0,
       "sourceFiles": 63
     }
@@ -35,13 +35,13 @@
     "failed": 0
   },
   "totals": {
-    "unitIntegrationFiles": 52,
-    "unitIntegrationTests": 638,
-    "unitIntegrationPassed": 638,
+    "unitIntegrationFiles": 53,
+    "unitIntegrationTests": 642,
+    "unitIntegrationPassed": 642,
     "unitIntegrationFailed": 0,
-    "totalAutomatedFiles": 56,
-    "totalAutomatedTests": 666,
-    "totalAutomatedPassed": 666
+    "totalAutomatedFiles": 57,
+    "totalAutomatedTests": 670,
+    "totalAutomatedPassed": 670
   },
   "aiEvals": {
     "pipeline": {
