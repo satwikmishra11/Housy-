@@ -4,7 +4,7 @@ This document details the production deployment architecture, local development 
 
 - **GitHub Repository**: [https://github.com/satwikmishra11/Housy-](https://github.com/satwikmishra11/Housy-)
 - **Live Application**: [https://housy-ebon.vercel.app/](https://housy-ebon.vercel.app/)
-- **Latest Commit**: `dfacc89` (2026-11-08)
+- **Latest Commit**: `e7b6d48` (2026-11-09)
 
 ---
 

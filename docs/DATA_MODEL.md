@@ -19,7 +19,7 @@ erDiagram
     PROJECTS ||--o{ LEADS : attributes
     USERS ||--o{ AVAILABILITY_RULES : maintains
     USERS ||--o{ VISIT_SLOTS : hosts
-    USERS ||--o{ LEADS : assigned_to
+    USERS ||--o{ LEADS : "assigned_to"
     USERS ||--o{ FACT_ENTRY_VERSIONS : edits
     USERS ||--o{ HANDOFFS : accepts
     LEADS ||--o{ LEAD_TOUCHPOINTS : logs
