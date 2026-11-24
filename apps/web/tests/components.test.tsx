@@ -224,5 +224,26 @@ describe('Design System Components', () => {
       fireEvent.click(dismissBtn);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
+
+    it('dismisses immediately on housy:backend-ready without showing connected popup', () => {
+      render(<ServerColdStartBanner />);
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('housy:backend-waking-up', {
+            detail: { message: 'Waking up backend...' },
+          }),
+        );
+      });
+      expect(screen.getByText(/waking up backend/i)).toBeInTheDocument();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent('housy:backend-ready'));
+      });
+
+      // Quietly dismissed with no "Backend connected and ready!" popup
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByText(/backend connected and ready/i)).not.toBeInTheDocument();
+    });
   });
 });
