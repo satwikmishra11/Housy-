@@ -17,6 +17,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = React.useRef<AuthUser | null>(null);
+  userRef.current = user;
+  const lastSessionExpiredToastAt = React.useRef<number>(0);
   const { showToast } = useToast();
 
   const refetchUser = useCallback(async () => {
@@ -37,12 +40,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for session expiration events dispatched by apiFetch
   useEffect(() => {
     const handleSessionExpired = (): void => {
+      const wasAuthenticated = Boolean(userRef.current);
       setUser(null);
-      showToast({
-        type: 'warning',
-        title: 'Session Expired',
-        message: 'Your staff session has expired. Please log in again.',
-      });
+
+      // Only alert if the user was actively logged in and debounce rapid duplicate 401s
+      const now = Date.now();
+      if (wasAuthenticated && now - lastSessionExpiredToastAt.current > 5000) {
+        lastSessionExpiredToastAt.current = now;
+        showToast({
+          type: 'warning',
+          title: 'Session Expired',
+          message: 'Your staff session has expired. Please log in again.',
+        });
+      }
     };
 
     window.addEventListener('housy:session-expired', handleSessionExpired);

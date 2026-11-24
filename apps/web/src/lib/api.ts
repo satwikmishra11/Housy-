@@ -202,7 +202,13 @@ export async function apiFetch<T>(
   if (!response.ok) {
     notifyRequestEnd(false, response.status);
 
-    if (response.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    const isAuthMe = endpoint.includes('/auth/me');
+    if (
+      response.status === 401 &&
+      !isAuthMe &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
       window.dispatchEvent(new CustomEvent('housy:session-expired'));
     }
 

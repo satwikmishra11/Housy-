@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { LoginPage } from '../src/pages/LoginPage.js';
 import { ProtectedRoute } from '../src/components/ProtectedRoute.js';
@@ -310,5 +310,59 @@ describe('Frontend Authentication & Protected Routes', () => {
       expect(screen.getByText('Authentication service is temporarily unavailable. Please try again shortly.')).toBeInTheDocument();
       expect(screen.getByText('Reference: req-trace-db-crash-99')).toBeInTheDocument();
     });
+  });
+
+  it('does not show "Session Expired" toast to unauthenticated visitors', async () => {
+    vi.mocked(apiModule.fetchMe).mockRejectedValue(new Error('Unauthenticated'));
+
+    render(
+      <ToastProvider>
+        <AuthProvider>
+          <div>Guest Public View</div>
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('housy:session-expired'));
+      window.dispatchEvent(new CustomEvent('housy:session-expired'));
+    });
+
+    expect(screen.queryByText('Session Expired')).not.toBeInTheDocument();
+  });
+
+  it('shows debounced "Session Expired" toast when authenticated staff session expires', async () => {
+    vi.mocked(apiModule.fetchMe).mockResolvedValueOnce({
+      success: true,
+      user: {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Harshil Mehta',
+        email: 'harshil.mehta@example.com',
+        role: 'sales_head',
+        phone: '+919000000001',
+      },
+    });
+
+    render(
+      <ToastProvider>
+        <AuthProvider>
+          <div>Staff Workspace View</div>
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Staff Workspace View')).toBeInTheDocument();
+    });
+
+    // Dispatch two consecutive session expired events
+    act(() => {
+      window.dispatchEvent(new CustomEvent('housy:session-expired'));
+      window.dispatchEvent(new CustomEvent('housy:session-expired'));
+    });
+
+    // Should only render a single "Session Expired" toast, not duplicate stacked toasts
+    expect(screen.getAllByText('Session Expired')).toHaveLength(1);
+    expect(screen.getByText('Your staff session has expired. Please log in again.')).toBeInTheDocument();
   });
 });
