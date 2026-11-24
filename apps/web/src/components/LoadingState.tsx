@@ -8,7 +8,7 @@ interface LoadingStateProps {
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
   message = 'Loading system status...',
-  description = 'Connecting to service endpoints and verifying database health',
+  description = 'Connecting to service endpoints...',
 }) => {
   return (
     <div

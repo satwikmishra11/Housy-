@@ -25,7 +25,6 @@ import { TermsPage } from './pages/TermsPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { ToastProvider } from './components/Toast.js';
-import { ServerColdStartBanner } from './components/ServerColdStartBanner.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { ProtectedRoute } from './components/ProtectedRoute.js';
 import { LoadingState } from './components/LoadingState.js';
@@ -68,7 +67,6 @@ export const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProvider>
-            <ServerColdStartBanner />
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />

@@ -204,7 +204,7 @@ describe('Design System Components', () => {
   });
 
   describe('ServerColdStartBanner', () => {
-    it('is initially hidden and renders on housy:backend-waking-up event', () => {
+    it('returns null and renders no popup into the DOM', () => {
       render(<ServerColdStartBanner />);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
@@ -214,35 +214,12 @@ describe('Design System Components', () => {
             detail: { message: 'Cloud backend is booting up' },
           }),
         );
-      });
-
-      expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(screen.getByText(/cloud backend is booting up/i)).toBeInTheDocument();
-
-      // Dismiss button closes banner
-      const dismissBtn = screen.getByLabelText(/dismiss cold-start notification/i);
-      fireEvent.click(dismissBtn);
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
-
-    it('dismisses immediately on housy:backend-ready without showing connected popup', () => {
-      render(<ServerColdStartBanner />);
-
-      act(() => {
-        window.dispatchEvent(
-          new CustomEvent('housy:backend-waking-up', {
-            detail: { message: 'Waking up backend...' },
-          }),
-        );
-      });
-      expect(screen.getByText(/waking up backend/i)).toBeInTheDocument();
-
-      act(() => {
         window.dispatchEvent(new CustomEvent('housy:backend-ready'));
       });
 
-      // Quietly dismissed with no "Backend connected and ready!" popup
+      // Completely suppressed — zero popups rendered
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByText(/cloud backend/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/backend connected and ready/i)).not.toBeInTheDocument();
     });
   });
