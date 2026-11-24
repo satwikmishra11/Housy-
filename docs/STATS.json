@@ -21,8 +21,8 @@
     "web": {
       "workspace": "@housy/web",
       "testFiles": 19,
-      "tests": 144,
-      "passed": 144,
+      "tests": 146,
+      "passed": 146,
       "failed": 0,
       "sourceFiles": 63
     }
@@ -36,12 +36,12 @@
   },
   "totals": {
     "unitIntegrationFiles": 53,
-    "unitIntegrationTests": 642,
-    "unitIntegrationPassed": 642,
+    "unitIntegrationTests": 644,
+    "unitIntegrationPassed": 644,
     "unitIntegrationFailed": 0,
     "totalAutomatedFiles": 57,
-    "totalAutomatedTests": 670,
-    "totalAutomatedPassed": 670
+    "totalAutomatedTests": 672,
+    "totalAutomatedPassed": 672
   },
   "aiEvals": {
     "pipeline": {

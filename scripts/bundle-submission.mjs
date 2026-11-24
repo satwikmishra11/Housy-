@@ -10,7 +10,15 @@ const DEPLOYMENT_MD_PATH = path.resolve(REPO_ROOT, 'deployment.md');
 const ZIP_OUT_PATH = path.resolve(REPO_ROOT, 'submission.zip');
 
 console.info('Generating fresh docs/TDD.pdf via scripts/export-tdd-pdf.mjs...');
-execSync('node scripts/export-tdd-pdf.mjs', { cwd: REPO_ROOT, stdio: 'inherit' });
+try {
+  execSync('node scripts/export-tdd-pdf.mjs', { cwd: REPO_ROOT, stdio: 'inherit' });
+} catch {
+  if (fs.existsSync(TDD_PDF_PATH)) {
+    console.warn('Playwright export unavailable; using existing docs/TDD.pdf');
+  } else {
+    throw new Error('docs/TDD.pdf not found and could not be generated.');
+  }
+}
 
 if (!fs.existsSync(DEPLOYMENT_MD_PATH)) {
   console.error('ERROR: deployment.md not found at repository root.');
